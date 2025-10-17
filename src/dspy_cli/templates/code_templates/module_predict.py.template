@@ -1,0 +1,28 @@
+"""Example DSPy module using Predict."""
+
+import dspy
+from {package_name}.signatures.{program_name} import {signature_class}
+
+
+class {class_name}(dspy.Module):
+    """A simple DSPy module that uses the Predict predictor.
+
+    This is a basic example that demonstrates how to use a signature
+    with the Predict module. You can extend this with more complex logic,
+    chain of thought reasoning, or other DSPy predictors.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.predictor = dspy.Predict({signature_class})
+
+    def forward(self, {forward_args}):
+        """Execute the prediction.
+
+        Args:
+            {forward_args}: Input text to process
+
+        Returns:
+            dspy.Prediction: The prediction result
+        """
+        return self.predictor({forward_kwargs})

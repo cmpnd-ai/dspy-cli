@@ -1,0 +1,138 @@
+"""FastAPI application factory."""
+
+import logging
+from pathlib import Path
+from typing import Dict, List
+
+import dspy
+from fastapi import FastAPI
+
+from dspy_cli.config import get_model_config, get_program_model
+from dspy_cli.discovery import DiscoveredModule, discover_modules
+from dspy_cli.server.logging import RequestLoggingMiddleware, setup_logging
+from dspy_cli.server.routes import create_program_routes
+
+logger = logging.getLogger(__name__)
+
+
+def create_app(
+    config: Dict,
+    package_path: Path,
+    package_name: str,
+    logs_dir: Path
+) -> FastAPI:
+    """Create and configure the FastAPI application.
+
+    Args:
+        config: Loaded configuration dictionary
+        package_path: Path to the modules package
+        package_name: Python package name for modules
+        logs_dir: Directory for log files
+
+    Returns:
+        Configured FastAPI application
+    """
+    # Setup logging
+    setup_logging()
+
+    # Create FastAPI app
+    app = FastAPI(
+        title="DSPy API",
+        description="Automatically generated API for DSPy programs",
+        version="0.1.0"
+    )
+
+    # Add request logging middleware
+    app.add_middleware(RequestLoggingMiddleware, logs_dir=logs_dir)
+
+    # Discover modules
+    logger.info(f"Discovering modules in {package_path}")
+    modules = discover_modules(package_path, package_name)
+
+    if not modules:
+        logger.warning("No DSPy modules discovered!")
+
+    # Configure default model
+    default_model_alias = config["models"]["default"]
+    default_model_config = get_model_config(config, default_model_alias)
+    _configure_dspy_model(default_model_config)
+
+    logger.info(f"Configured default model: {default_model_alias}")
+
+    # Create routes for each discovered module
+    for module in modules:
+        # Get model for this program (could be overridden)
+        model_alias = get_program_model(config, module.name)
+        model_config = get_model_config(config, model_alias)
+
+        create_program_routes(app, module, model_config, config)
+
+        logger.info(f"Registered program: {module.name} (model: {model_alias})")
+
+    # Add programs list endpoint
+    @app.get("/programs")
+    async def list_programs():
+        """List all discovered programs and their schemas."""
+        from dspy_cli.discovery.module_finder import get_signature_fields
+
+        programs = []
+        for module in modules:
+            model_alias = get_program_model(config, module.name)
+
+            program_info = {
+                "name": module.name,
+                "model": model_alias,
+                "endpoints": {
+                    "run": f"/{module.name}/run",
+                },
+            }
+
+            # Add signature information if available
+            if module.signature:
+                fields = get_signature_fields(module.signature)
+                program_info["schema"] = fields
+
+            programs.append(program_info)
+
+        return {"programs": programs}
+
+    # Store modules in app state for access by routes
+    app.state.modules = modules
+    app.state.config = config
+
+    return app
+
+
+def _configure_dspy_model(model_config: Dict):
+    """Configure DSPy with a language model.
+
+    Args:
+        model_config: Model configuration dictionary
+    """
+    # Extract configuration
+    model = model_config.get("model")
+    model_type = model_config.get("model_type", "chat")
+    temperature = model_config.get("temperature")
+    max_tokens = model_config.get("max_tokens")
+    api_key = model_config.get("api_key")
+
+    # Build kwargs
+    kwargs = {}
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+    if max_tokens is not None:
+        kwargs["max_tokens"] = max_tokens
+    if api_key is not None:
+        kwargs["api_key"] = api_key
+
+    # Create LM instance
+    lm = dspy.LM(
+        model=model,
+        model_type=model_type,
+        **kwargs
+    )
+
+    # Configure DSPy
+    dspy.settings.configure(lm=lm)
+
+    logger.info(f"Configured DSPy with model: {model} (type: {model_type})")

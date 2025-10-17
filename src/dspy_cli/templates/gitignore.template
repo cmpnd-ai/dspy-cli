@@ -1,6 +1,3 @@
-# DSPy repository (cloned for reference)
-dspy/
-
 # Python
 __pycache__/
 *.py[cod]
@@ -40,9 +37,10 @@ ENV/
 *.swo
 *~
 
-# Logs
+# DSPy
 logs/
 *.log
+data/cache/
 
 # OS
 .DS_Store

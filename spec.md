@@ -88,7 +88,7 @@ A single file at the repo root governs language model definitions (using DSPy's 
 models:
   default: openai:gpt-5-mini
   registry:
-    openai:gpt-4o-mini:
+    openai:gpt-5-mini:
       model: openai/gpt-5-mini
       env: OPENAI_API_KEY
       max_tokens: 16000
