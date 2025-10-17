@@ -1,1 +1,1 @@
-
+- Logs aren't being captured correctly. They are just the web requests, not the actual inputs and inference.
