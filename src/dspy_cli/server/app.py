@@ -9,7 +9,7 @@ from fastapi import FastAPI
 
 from dspy_cli.config import get_model_config, get_program_model
 from dspy_cli.discovery import DiscoveredModule, discover_modules
-from dspy_cli.server.logging import RequestLoggingMiddleware, setup_logging
+from dspy_cli.server.logging import setup_logging
 from dspy_cli.server.routes import create_program_routes
 
 logger = logging.getLogger(__name__)
@@ -42,8 +42,8 @@ def create_app(
         version="0.1.0"
     )
 
-    # Add request logging middleware
-    app.add_middleware(RequestLoggingMiddleware, logs_dir=logs_dir)
+    # Store logs directory in app state
+    app.state.logs_dir = logs_dir
 
     # Discover modules
     logger.info(f"Discovering modules in {package_path}")
@@ -115,6 +115,7 @@ def _configure_dspy_model(model_config: Dict):
     temperature = model_config.get("temperature")
     max_tokens = model_config.get("max_tokens")
     api_key = model_config.get("api_key")
+    api_base = model_config.get("api_base")
 
     # Build kwargs
     kwargs = {}
@@ -124,6 +125,8 @@ def _configure_dspy_model(model_config: Dict):
         kwargs["max_tokens"] = max_tokens
     if api_key is not None:
         kwargs["api_key"] = api_key
+    if api_base is not None:
+        kwargs["api_base"] = api_base
 
     # Create LM instance
     lm = dspy.LM(
@@ -135,4 +138,5 @@ def _configure_dspy_model(model_config: Dict):
     # Configure DSPy
     dspy.settings.configure(lm=lm)
 
-    logger.info(f"Configured DSPy with model: {model} (type: {model_type})")
+    base_info = f" (base: {api_base})" if api_base else ""
+    logger.info(f"Configured DSPy with model: {model} (type: {model_type}){base_info}")

@@ -2,94 +2,61 @@
 
 import json
 import logging
-import time
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
+from typing import Any, Dict, Optional
 
-from fastapi import Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
+logger = logging.getLogger(__name__)
 
 
-class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """Middleware to log API requests to per-module log files."""
+def log_inference(
+    logs_dir: Path,
+    program_name: str,
+    model: str,
+    inputs: Dict[str, Any],
+    outputs: Dict[str, Any],
+    duration_ms: float,
+    error: Optional[str] = None
+):
+    """Log a DSPy inference trace to a per-program log file.
 
-    def __init__(self, app, logs_dir: Path):
-        super().__init__(app)
-        self.logs_dir = logs_dir
-        self.logs_dir.mkdir(exist_ok=True, parents=True)
+    This creates a structured log entry suitable for use as training data,
+    capturing the full inference trace including inputs, outputs, and metadata.
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """Process request and log it."""
-        start_time = time.time()
+    Args:
+        logs_dir: Directory to write log files
+        program_name: Name of the DSPy program
+        model: Model identifier (e.g., 'anthropic/claude-sonnet-4-5')
+        inputs: Input fields passed to the program
+        outputs: Output fields from the program
+        duration_ms: Execution duration in milliseconds
+        error: Optional error message if inference failed
+    """
+    # Create log entry with inference trace
+    log_entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "program": program_name,
+        "model": model,
+        "duration_ms": round(duration_ms, 2),
+        "inputs": inputs,
+        "outputs": outputs,
+    }
 
-        # Extract program name from path
-        path_parts = request.url.path.strip("/").split("/")
-        program_name = path_parts[0] if path_parts else "unknown"
+    if error:
+        log_entry["error"] = error
+        log_entry["success"] = False
+    else:
+        log_entry["success"] = True
 
-        # Call the endpoint
-        try:
-            response = await call_next(request)
-            duration = time.time() - start_time
+    # Write to per-program log file
+    log_file = logs_dir / f"{program_name}.log"
 
-            # Log the request
-            await self._log_request(
-                program_name=program_name,
-                method=request.method,
-                path=request.url.path,
-                status_code=response.status_code,
-                duration=duration,
-                request=request
-            )
-
-            return response
-
-        except Exception as e:
-            duration = time.time() - start_time
-
-            # Log the error
-            await self._log_request(
-                program_name=program_name,
-                method=request.method,
-                path=request.url.path,
-                status_code=500,
-                duration=duration,
-                request=request,
-                error=str(e)
-            )
-
-            raise
-
-    async def _log_request(
-        self,
-        program_name: str,
-        method: str,
-        path: str,
-        status_code: int,
-        duration: float,
-        request: Request,
-        error: str = None
-    ):
-        """Write request log entry to file."""
-        log_entry = {
-            "timestamp": datetime.utcnow().isoformat(),
-            "method": method,
-            "path": path,
-            "status_code": status_code,
-            "duration_ms": round(duration * 1000, 2),
-        }
-
-        if error:
-            log_entry["error"] = error
-
-        # Write to per-program log file
-        log_file = self.logs_dir / f"{program_name}.log"
-
-        try:
-            with open(log_file, "a") as f:
-                f.write(json.dumps(log_entry) + "\n")
-        except Exception as e:
-            logging.error(f"Failed to write log: {e}")
+    try:
+        logs_dir.mkdir(exist_ok=True, parents=True)
+        with open(log_file, "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
+    except Exception as e:
+        logger.error(f"Failed to write inference log: {e}")
 
 
 def setup_logging(log_level: str = "INFO"):

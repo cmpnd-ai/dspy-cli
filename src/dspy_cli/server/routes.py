@@ -1,6 +1,7 @@
 """Dynamic route generation for DSPy programs."""
 
 import logging
+import time
 from typing import Any, Dict
 
 import dspy
@@ -8,6 +9,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, create_model
 
 from dspy_cli.discovery import DiscoveredModule
+from dspy_cli.server.logging import log_inference
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,7 @@ def create_program_routes(
         config: Full configuration dictionary
     """
     program_name = module.name
+    model_name = model_config.get("model", "unknown")
 
     # Create request/response models based on signature if available
     if module.signature:
@@ -46,6 +49,8 @@ def create_program_routes(
     @app.post(f"/{program_name}/run", response_model=response_model)
     async def run_program(request: request_model):
         """Execute the DSPy program with given inputs."""
+        start_time = time.time()
+
         try:
             # Instantiate the module
             instance = module.instantiate()
@@ -68,10 +73,36 @@ def create_program_routes(
             else:
                 output = {"result": str(result)}
 
+            # Calculate duration
+            duration_ms = (time.time() - start_time) * 1000
+
+            # Log the inference trace
+            log_inference(
+                logs_dir=app.state.logs_dir,
+                program_name=program_name,
+                model=model_name,
+                inputs=inputs,
+                outputs=output,
+                duration_ms=duration_ms
+            )
+
             logger.info(f"Program {program_name} completed successfully. Response: {output}")
             return output
 
         except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+
+            # Log the failed inference
+            log_inference(
+                logs_dir=app.state.logs_dir,
+                program_name=program_name,
+                model=model_name,
+                inputs=inputs if 'inputs' in locals() else {},
+                outputs={},
+                duration_ms=duration_ms,
+                error=str(e)
+            )
+
             logger.error(f"Error executing {program_name}: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
 
