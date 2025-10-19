@@ -23,7 +23,13 @@ from dspy_cli.server.app import create_app
     default="0.0.0.0",
     help="Host to bind to (default: 0.0.0.0)",
 )
-def serve(port, host):
+@click.option(
+    "--logs-dir",
+    default=None,
+    type=click.Path(),
+    help="Directory for logs (default: ./logs)",
+)
+def serve(port, host, logs_dir):
     """Start an HTTP API server that exposes your DSPy programs.
 
     This command:
@@ -70,8 +76,11 @@ def serve(port, host):
     click.echo(click.style("✓ Configuration loaded", fg="green"))
 
     # Create logs directory
-    logs_dir = Path.cwd() / "logs"
-    logs_dir.mkdir(exist_ok=True)
+    if logs_dir:
+        logs_path = Path(logs_dir)
+    else:
+        logs_path = Path.cwd() / "logs"
+    logs_path.mkdir(exist_ok=True)
 
     # Create FastAPI app
     try:
@@ -79,7 +88,7 @@ def serve(port, host):
             config=config,
             package_path=modules_path,
             package_name=f"{package_name}.modules",
-            logs_dir=logs_dir
+            logs_dir=logs_path
         )
     except Exception as e:
         click.echo(click.style(f"Error creating application: {e}", fg="red"))

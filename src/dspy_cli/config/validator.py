@@ -48,9 +48,11 @@ def find_package_directory(base_path: Optional[Path] = None) -> Optional[Path]:
         return None
 
     # Look for directories in src/ (should be exactly one package)
-    packages = [d for d in src_path.iterdir() if d.is_dir() and not d.name.startswith(".")]
+    packages = [d for d in src_path.iterdir() if d.is_dir() and not d.name.startswith(".") and not d.name.startswith("__")]
 
     if len(packages) == 1:
         return packages[0]
+    else:
+        print("packages:", packages)
 
     return None

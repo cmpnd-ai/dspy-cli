@@ -2,6 +2,7 @@
 
 import click
 
+from dspy_cli.commands.deploy import deploy
 from dspy_cli.commands.new import new
 from dspy_cli.commands.serve import serve
 
@@ -18,6 +19,7 @@ def main():
 
 
 # Register commands
+main.add_command(deploy)
 main.add_command(new)
 main.add_command(serve)
 
