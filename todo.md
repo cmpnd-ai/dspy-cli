@@ -7,6 +7,7 @@
 - New command: `dspy-cli generate signature [SignatureName]`
 - New command: `dspy-cli generate scaffold [ProgramName]` 
 - New command: `dspy-cli run -m predict "question -> answer"`
+- Add the `destroy` command.
 - UI: When starting a server, there's also a webpage
     - Root views all the programs
     - Click a program to use it
@@ -21,3 +22,4 @@ To try:
 - [x] Create a new program
 - [x] Create a new module for an existing signature
 - [x] Change a program to not use the default
+- Test all the different modules with scaffold and running them

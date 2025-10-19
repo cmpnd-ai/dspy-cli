@@ -4,6 +4,7 @@ import click
 
 from dspy_cli.commands.new import new
 from dspy_cli.commands.serve import serve
+from dspy_cli.commands.generate import generate
 
 
 @click.group()
@@ -20,6 +21,8 @@ def main():
 # Register commands
 main.add_command(new)
 main.add_command(serve)
+main.add_command(generate)
+main.add_command(generate, name='g')  # Alias for generate
 
 
 if __name__ == "__main__":

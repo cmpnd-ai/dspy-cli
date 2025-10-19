@@ -1,0 +1,16 @@
+"""Example DSPy module using MultiChainComparison."""
+
+import dspy
+from {package_name}.signatures.{program_name} import {signature_class}
+
+
+class {class_name}(dspy.Module):
+    """
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.predictor = dspy.MultiChainComparison({signature_class})
+
+    def forward(self, {forward_args}):
+        return self.predictor({forward_kwargs})

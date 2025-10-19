@@ -47,6 +47,7 @@ dspy-cli serve --port 8000 --host 0.0.0.0
 ## Features
 
 - **Project scaffolding**: Generate a complete DSPy project structure with boilerplate code
+- **Code generation**: Quickly scaffold new DSPy programs with signatures and modules using Rails-style generators
 - **Convention over configuration**: Organized directory structure for modules, signatures, optimizers, and metrics
 - **HTTP API server**: Automatically serve your DSPy programs as REST endpoints
 - **Flexible configuration**: YAML-based model configuration with environment variable support
@@ -87,6 +88,36 @@ dspy-cli new [PROJECT_NAME] [OPTIONS]
 
 **Options:**
 - `-p, --program-name TEXT`: Name of the initial program (default: converts project name)
+
+### `generate` (alias: `g`)
+
+Generate new components in an existing DSPy project.
+
+```bash
+dspy-cli generate scaffold PROGRAM_NAME [OPTIONS]
+dspy-cli g scaffold PROGRAM_NAME [OPTIONS]
+```
+
+**Options:**
+- `-m, --module TEXT`: DSPy module type to use (default: Predict)
+  - Available: `Predict`, `ChainOfThought` (or `CoT`), `ProgramOfThought` (or `PoT`), `ReAct`, `MultiChainComparison`, `Refine`
+- `-s, --signature TEXT`: Inline signature string (e.g., `"question -> answer"`)
+
+**Examples:**
+
+```bash
+# Basic scaffold with default Predict module
+dspy-cli g scaffold categorizer
+
+# Scaffold with ChainOfThought
+dspy-cli g scaffold categorizer -m CoT
+
+# Scaffold with custom signature
+dspy-cli g scaffold qa -m CoT -s "question -> answer"
+
+# Complex signature with types
+dspy-cli g scaffold search -s "query, context: list[str] -> answer, confidence: float"
+```
 
 ### `serve`
 

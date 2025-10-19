@@ -1,0 +1,18 @@
+"""Example DSPy module using ReAct."""
+
+import dspy
+from {package_name}.signatures.{program_name} import {signature_class}
+
+
+class {class_name}(dspy.Module):
+    """
+    """
+
+    def __init__(self, tools=None):
+        super().__init__()
+        # ReAct requires tools to be provided
+        # You can pass tools as a list of dspy.Tool instances
+        self.predictor = dspy.ReAct({signature_class}, tools=tools or [])
+
+    def forward(self, {forward_args}):
+        return self.predictor({forward_kwargs})
