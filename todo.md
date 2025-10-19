@@ -5,13 +5,15 @@
 - [x] Edit all the template comments
 - New command: `dspy-cli generate module [ModuleName] -s [signature]`
 - New command: `dspy-cli generate signature [SignatureName]`
-- New command: `dspy-cli generate scaffold [ProgramName]` 
-- New command: `dspy-cli run -m predict "question -> answer"`
+- [x] New command: `dspy-cli generate scaffold [ProgramName]` 
+- New command: `dspy-cli demo -m predict "question -> answer"`
 - Add the `destroy` command.
 - UI: When starting a server, there's also a webpage
     - Root views all the programs
     - Click a program to use it
 - [x] Remove /run from the program endpoints
+- Load local API keys if they exist and aren't in the env
+- Handle camel case, snake case, etc and normalize all based on how they're entered in the CLI.
 
 To try:
 
