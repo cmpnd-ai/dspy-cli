@@ -40,15 +40,14 @@ dspy-cli serve --port 8080 --host 127.0.0.1
 ### Available Endpoints
 
 - `GET /programs` - List all available programs
-- `POST /{{program}}/run` - Execute a program with JSON input
-- `POST /{{program}}/optimize` - Run optimizer for a program (if configured)
+- `POST /{{program}}` - Execute a program with JSON input
 
 ### Example Request
 
 ```bash
-curl -X POST http://localhost:8000/{program_name}/run \\
+curl -X POST http://localhost:8000/{program_name} \\
   -H "Content-Type: application/json" \\
-  -d '{{"input_field": "your input here"}}'
+  -d '{{"question": "your question here"}}'
 ```
 
 ## Testing

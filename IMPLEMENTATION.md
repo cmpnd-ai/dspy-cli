@@ -171,9 +171,45 @@ To use the CLI tool:
    dspy-cli serve
    ```
 
+## Changes from Original Plan
+
+### Module Discovery
+- **Changed from package imports to direct file imports**: Uses `importlib.util.spec_from_file_location` to load modules directly from files
+- **No pip install required**: Generated projects don't need `pip install -e .` to work
+- **Simpler workflow**: Just configure API keys and run `dspy-cli serve`
+
+### Logging System
+- **Focus on inference traces, not HTTP requests**: Logs capture the DSPy program execution, not web calls
+- **Training data format**: Each log entry includes:
+  - Timestamp
+  - Program name
+  - Model identifier (e.g., `anthropic/claude-sonnet-4-5`)
+  - Duration in milliseconds
+  - All input fields
+  - All output fields (including reasoning from ChainOfThought)
+  - Success status
+  - Error details if failed
+- **Per-program log files**: `logs/{program_name}.log` with JSON lines format
+- **Suitable for optimization**: Log format can be directly used as training/optimization data
+
+### Configuration
+- **Added `api_base` parameter**: Optional parameter in model config for custom API endpoints
+- **Use cases**: Local models (Ollama), proxies, self-hosted models, custom endpoints
+- **Example**:
+  ```yaml
+  local:llama:
+    model: ollama/llama3
+    api_base: http://localhost:11434
+    max_tokens: 4096
+    temperature: 0.7
+    model_type: chat
+  ```
+
 ## Notes
 
 - Optimizer templates were intentionally omitted per requirements
 - Metric templates were intentionally omitted per requirements
 - Documentation link points to https://dspy.ai
 - Example configuration uses gpt-5-mini with responses API
+- Direct file imports make the tool more Rails-like (no installation needed)
+- Inference-focused logs provide immediate value for training data collection

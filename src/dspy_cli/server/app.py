@@ -82,9 +82,7 @@ def create_app(
             program_info = {
                 "name": module.name,
                 "model": model_alias,
-                "endpoints": {
-                    "run": f"/{module.name}/run",
-                },
+                "endpoint": f"/{module.name}",
             }
 
             # Add signature information if available

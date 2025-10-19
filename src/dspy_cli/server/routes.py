@@ -45,8 +45,8 @@ def create_program_routes(
         request_model = Dict[str, Any]
         response_model = Dict[str, Any]
 
-    # Create POST /{program}/run endpoint
-    @app.post(f"/{program_name}/run", response_model=response_model)
+    # Create POST /{program} endpoint
+    @app.post(f"/{program_name}", response_model=response_model)
     async def run_program(request: request_model):
         """Execute the DSPy program with given inputs."""
         start_time = time.time()

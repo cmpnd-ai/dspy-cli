@@ -93,7 +93,7 @@ def serve(port, host):
     if hasattr(app.state, 'modules') and app.state.modules:
         for module in app.state.modules:
             click.echo(f"  • {module.name}")
-            click.echo(f"    POST /{module.name}/run")
+            click.echo(f"    POST /{module.name}")
     else:
         click.echo(click.style("  No programs discovered", fg="yellow"))
         click.echo()

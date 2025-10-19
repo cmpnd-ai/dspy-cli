@@ -2,16 +2,9 @@
 
 import dspy
 
-
 class {class_name}(dspy.Signature):
-    """Example signature for {program_name}.
-
-    Define your input and output fields here. The docstring serves
-    as instructions to the language model.
+    """
     """
 
-    # Input fields
-    question: str = dspy.InputField(desc="The input question or prompt")
-
-    # Output fields
-    answer: str = dspy.OutputField(desc="The generated answer or response")
+    question: str = dspy.InputField(desc="")
+    answer: str = dspy.OutputField(desc="")

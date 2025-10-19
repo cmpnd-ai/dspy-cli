@@ -160,7 +160,7 @@ def _create_code_files(project_path, package_name, program_name):
     (project_path / "src" / package_name / "utils" / "__init__.py").write_text("")
 
     # Create signature file
-    signature_class = _to_class_name(program_name)
+    signature_class = _to_class_name(program_name) + "Signature"
     signature_template = (templates_dir / "signature.py.template").read_text()
     signature_content = signature_template.format(
         program_name=program_name,
@@ -169,7 +169,7 @@ def _create_code_files(project_path, package_name, program_name):
     (project_path / "src" / package_name / "signatures" / f"{program_name}.py").write_text(signature_content)
 
     # Create module file
-    module_class = f"{signature_class}Predict"
+    module_class = f"{_to_class_name(program_name)}Predict"
     module_file = f"{program_name}_predict"
     module_template = (templates_dir / "module_predict.py.template").read_text()
     module_content = module_template.format(

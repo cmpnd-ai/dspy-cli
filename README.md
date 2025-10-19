@@ -102,8 +102,7 @@ dspy-cli serve [OPTIONS]
 
 **Endpoints:**
 - `GET /programs`: List all discovered programs with their schemas
-- `POST /{program}/run`: Execute a program with JSON payload
-- `POST /{program}/optimize`: Run the optimizer for a program (if configured)
+- `POST /{program}`: Execute a program with JSON payload
 
 ## Configuration
 
