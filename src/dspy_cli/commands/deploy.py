@@ -113,7 +113,9 @@ def deploy(
 
     zip_path = None
     try:
-        zip_path = zip_code_dir(final_code_dir)
+        # Zip the entire project directory (parent of code_dir) to include dspy.config.yaml
+        project_root = Path.cwd()
+        zip_path = zip_code_dir(project_root)
         
         zip_size_mb = zip_path.stat().st_size / (1024 * 1024)
         if zip_size_mb > 150:
@@ -358,9 +360,16 @@ def print_deploy_result(response: dict[str, Any]):
     click.echo(f"App ID: {response.get('app_id', 'N/A')}")
     click.echo(f"Version: {response.get('version', 'N/A')}")
     click.echo(f"Route: {response.get('route', 'N/A')}")
-    click.echo(f"Predict URL: {response.get('predict_url', 'N/A')}")
+    
+    if response.get("programs"):
+        click.echo()
+        click.echo(click.style("Programs:", fg="cyan", bold=True))
+        for prog in response["programs"]:
+            click.echo(f"  • {prog.get('name', 'N/A')}")
+            click.echo(f"    {prog.get('url', 'N/A')}")
     
     if response.get("runtime_api_key"):
+        click.echo()
         click.echo(f"Key: {response['runtime_api_key']}")
         click.echo()
         click.echo(click.style("Runtime API key saved to ~/.dspy/keys/", fg="cyan"))

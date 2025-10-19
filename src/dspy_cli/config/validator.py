@@ -52,7 +52,5 @@ def find_package_directory(base_path: Optional[Path] = None) -> Optional[Path]:
 
     if len(packages) == 1:
         return packages[0]
-    else:
-        print("packages:", packages)
 
     return None
