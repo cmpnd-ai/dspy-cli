@@ -118,7 +118,8 @@ def _create_config_files(project_path, project_name, program_name):
 
     # Read and write dspy.config.yaml
     config_template = (templates_dir / "dspy.config.yaml.template").read_text()
-    (project_path / "dspy.config.yaml").write_text(config_template)
+    config_content = config_template.format(app_id=project_name)
+    (project_path / "dspy.config.yaml").write_text(config_content)
 
     # Read and write .env
     env_template = (templates_dir / "env.template").read_text()

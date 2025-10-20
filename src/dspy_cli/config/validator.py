@@ -48,7 +48,8 @@ def find_package_directory(base_path: Optional[Path] = None) -> Optional[Path]:
         return None
 
     # Look for directories in src/ (should be exactly one package)
-    packages = [d for d in src_path.iterdir() if d.is_dir() and not d.name.startswith(".") and not d.name.startswith("__")]
+    packages = [d for d in src_path.iterdir() 
+            if d.is_dir() and (d / "__init__.py").exists()]
 
     if len(packages) == 1:
         return packages[0]

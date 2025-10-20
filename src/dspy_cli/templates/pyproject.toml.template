@@ -7,9 +7,9 @@ name = "{project_name}"
 version = "0.1.0"
 description = "A DSPy project"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
-    "dspy-ai>=3.0.4b1",
+    "dspy-ai>=3.0.3",
 ]
 
 [project.optional-dependencies]
