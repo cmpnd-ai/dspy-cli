@@ -117,7 +117,7 @@ def deploy(
         click.echo()
         click.echo(click.style(f"Error: Could not connect to control plane at {final_control_url}", fg="red"))
         click.echo()
-        click.echo("Make sure the control plane is running:")
+        click.echo("Make sure the control plane is running if running locally. If deploying to prod, GG:")
         click.echo("  make run-control")
         sys.exit(1)
     except requests.exceptions.HTTPError as e:
@@ -190,9 +190,13 @@ def resolve_control_url(cli_url: Optional[str], cfg_host: Optional[str]) -> str:
     if cfg_host:
         if cfg_host.startswith(("http://", "https://")):
             return cfg_host.rstrip("/")
-        return f"http://{cfg_host}:9000"
+        # Local development uses direct port 9000, production uses Traefik on port 80
+        if cfg_host in ("localhost", "127.0.0.1"):
+            return f"http://{cfg_host}:9000"
+        return f"http://{cfg_host}"
     
-    return "http://ec2-18-234-101-29.compute-1.amazonaws.com:9000"
+    # Production default: use Traefik on port 80 (not direct :9000)
+    return "http://ec2-18-234-101-29.compute-1.amazonaws.com"
 
 
 def resolve_api_key(cli_key: Optional[str], key_file: Optional[Path]) -> Optional[str]:
