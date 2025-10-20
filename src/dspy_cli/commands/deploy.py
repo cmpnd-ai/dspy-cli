@@ -63,25 +63,13 @@ def deploy(
         click.echo(click.style(f"Error loading configuration: {e}", fg="red"))
         click.echo()
         click.echo("Expected format (dspy.config.yaml or dspy.yaml):")
-        # click.echo("  app_id: myapp")
-        # click.echo("  module_path: app.main:MyModule")
-        # click.echo("  code_dir: app")
-        # click.echo("  host: localhost  # optional")
         raise click.Abort()
 
-    # final_app_id = app_id or config.get("app_id")
-    # final_module_path = module_path or config.get("module_path")
-    # final_code_dir = code_dir or config.get("code_dir")
+    final_app_id = app_id or config.get("app_id")
 
-    # if not final_app_id:
-    #     click.echo(click.style("Error: app_id not found in config or --app-id", fg="red"))
-    #     raise click.Abort()
-    # if not final_module_path:
-    #     click.echo(click.style("Error: module_path not found in config or --module-path", fg="red"))
-    #     raise click.Abort()
-    # if not final_code_dir:
-    #     click.echo(click.style("Error: code_dir not found in config or --code-dir", fg="red"))
-    #     raise click.Abort()
+    if not final_app_id:
+        click.echo(click.style("Error: app_id not found in config or --app-id", fg="red"))
+        raise click.Abort()
 
     final_control_url = resolve_control_url(control_url, config.get("host"))
 
