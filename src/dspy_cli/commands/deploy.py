@@ -1,7 +1,6 @@
 """Command to deploy DSPy applications to the control plane."""
 
 import os
-import subprocess
 import sys
 import tempfile
 import zipfile
@@ -34,31 +33,16 @@ import yaml
     help="Override app_id from dspy.yaml",
 )
 @click.option(
-    "--module-path",
-    help="Override module_path from dspy.yaml (e.g., app.main:QA)",
-)
-@click.option(
     "--code-dir",
     type=click.Path(exists=True, file_okay=False, path_type=Path),
     help="Override code_dir from dspy.yaml",
-)
-@click.option(
-    "--commit-sha",
-    help="Git commit SHA (auto-detected if not provided)",
-)
-@click.option(
-    "--source-ref",
-    help="Git source reference/branch (auto-detected if not provided)",
 )
 def deploy(
     control_url: Optional[str],
     api_key: Optional[str],
     api_key_file: Optional[Path],
     app_id: Optional[str],
-    module_path: Optional[str],
     code_dir: Optional[Path],
-    commit_sha: Optional[str],
-    source_ref: Optional[str],
 ):
     """Deploy a DSPy application to the control plane.
 
@@ -79,36 +63,19 @@ def deploy(
         click.echo(click.style(f"Error loading configuration: {e}", fg="red"))
         click.echo()
         click.echo("Expected format (dspy.config.yaml or dspy.yaml):")
-        click.echo("  app_id: myapp")
-        click.echo("  module_path: app.main:MyModule")
-        click.echo("  code_dir: app")
-        click.echo("  host: localhost  # optional")
         raise click.Abort()
 
     final_app_id = app_id or config.get("app_id")
-    final_module_path = module_path or config.get("module_path")
-    final_code_dir = code_dir or config.get("code_dir")
 
     if not final_app_id:
         click.echo(click.style("Error: app_id not found in config or --app-id", fg="red"))
-        raise click.Abort()
-    if not final_module_path:
-        click.echo(click.style("Error: module_path not found in config or --module-path", fg="red"))
-        raise click.Abort()
-    if not final_code_dir:
-        click.echo(click.style("Error: code_dir not found in config or --code-dir", fg="red"))
         raise click.Abort()
 
     final_control_url = resolve_control_url(control_url, config.get("host"))
 
     final_api_key = resolve_api_key(api_key, api_key_file)
 
-    if not commit_sha or not source_ref:
-        detected_sha, detected_ref = detect_git_metadata()
-        final_commit_sha = commit_sha or detected_sha
-        final_source_ref = source_ref or detected_ref
-
-    click.echo(f"Deploying {final_app_id} to {final_control_url}...")
+    click.echo(f"Deploying to {final_control_url}...")
     click.echo()
 
     zip_path = None
@@ -125,16 +92,12 @@ def deploy(
         
         response = post_deploy(
             control_url=final_control_url,
-            app_id=final_app_id,
-            module_path=final_module_path,
             zip_path=zip_path,
-            commit_sha=final_commit_sha,
-            source_ref=final_source_ref,
             headers=headers,
         )
 
-        if response.get("runtime_api_key"):
-            save_runtime_key(final_app_id, response["runtime_api_key"])
+        if response.get("runtime_api_key") and response.get("app_id"):
+            save_runtime_key(response["app_id"], response["runtime_api_key"])
 
         print_deploy_result(response)
 
@@ -142,7 +105,7 @@ def deploy(
         click.echo()
         click.echo(click.style(f"Error: Could not connect to control plane at {final_control_url}", fg="red"))
         click.echo()
-        click.echo("Make sure the control plane is running:")
+        click.echo("Make sure the control plane is running if running locally. If deploying to prod, GG:")
         click.echo("  make run-control")
         sys.exit(1)
     except requests.exceptions.HTTPError as e:
@@ -207,38 +170,6 @@ def load_deploy_config(path: Optional[str] = None) -> dict[str, Any]:
     return config
 
 
-def detect_git_metadata() -> tuple[Optional[str], Optional[str]]:
-    """Detect git commit SHA and branch/ref."""
-    commit_sha = None
-    source_ref = None
-    
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=2,
-        )
-        commit_sha = result.stdout.strip()
-    except Exception:
-        pass
-    
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=2,
-        )
-        source_ref = result.stdout.strip()
-    except Exception:
-        pass
-    
-    return commit_sha, source_ref
-
-
 def resolve_control_url(cli_url: Optional[str], cfg_host: Optional[str]) -> str:
     """Resolve control plane URL from various sources."""
     if cli_url:
@@ -247,9 +178,13 @@ def resolve_control_url(cli_url: Optional[str], cfg_host: Optional[str]) -> str:
     if cfg_host:
         if cfg_host.startswith(("http://", "https://")):
             return cfg_host.rstrip("/")
-        return f"http://{cfg_host}:9000"
+        # Local development uses direct port 9000, production uses Traefik on HTTPS
+        if cfg_host in ("localhost", "127.0.0.1"):
+            return f"http://{cfg_host}:9000"
+        return f"https://{cfg_host}"
     
-    return "http://localhost:9000"
+    # Production default: use HTTPS domain
+    return "https://platform.cmpnd.ai"
 
 
 def resolve_api_key(cli_key: Optional[str], key_file: Optional[Path]) -> Optional[str]:
@@ -303,32 +238,17 @@ def get_auth_header(api_key: Optional[str]) -> dict[str, str]:
 
 def post_deploy(
     control_url: str,
-    app_id: str,
-    module_path: str,
     zip_path: Path,
-    commit_sha: Optional[str] = None,
-    source_ref: Optional[str] = None,
     headers: Optional[dict[str, str]] = None,
 ) -> dict[str, Any]:
     """POST deployment to control plane."""
     url = f"{control_url}/deploy"
-    
-    data = {
-        "app_id": app_id,
-        "module_path": module_path,
-    }
-    
-    if commit_sha:
-        data["commit_sha"] = commit_sha
-    if source_ref:
-        data["source_ref"] = source_ref
     
     with open(zip_path, "rb") as f:
         files = {"code": ("code.zip", f, "application/zip")}
         
         response = requests.post(
             url,
-            data=data,
             files=files,
             headers=headers or {},
             timeout=120,
@@ -366,7 +286,9 @@ def print_deploy_result(response: dict[str, Any]):
         click.echo(click.style("Programs:", fg="cyan", bold=True))
         for prog in response["programs"]:
             click.echo(f"  • {prog.get('name', 'N/A')}")
-            click.echo(f"    {prog.get('url', 'N/A')}")
+            if prog.get("stable_url"):
+                click.echo(f"    Stable:  {prog['stable_url']}")
+            click.echo(f"    Version: {prog.get('url', 'N/A')}")
     
     if response.get("runtime_api_key"):
         click.echo()
