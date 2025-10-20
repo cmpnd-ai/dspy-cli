@@ -184,7 +184,7 @@ def resolve_control_url(cli_url: Optional[str], cfg_host: Optional[str]) -> str:
         return f"https://{cfg_host}"
     
     # Production default: use HTTPS domain
-    return "http://platform.cmpnd.ai"
+    return "https://platform.cmpnd.ai"
 
 
 def resolve_api_key(cli_key: Optional[str], key_file: Optional[Path]) -> Optional[str]:
