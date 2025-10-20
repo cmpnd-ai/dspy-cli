@@ -38,6 +38,12 @@ cd my-project
 dspy-cli new my-project -p custom_program
 ```
 
+### Create a project with a custom signature
+
+```bash
+dspy-cli new blog-tagger -s "post -> tags: list[str]"
+```
+
 ### Serve your DSPy programs as an API
 
 ```bash
@@ -88,6 +94,23 @@ dspy-cli new [PROJECT_NAME] [OPTIONS]
 
 **Options:**
 - `-p, --program-name TEXT`: Name of the initial program (default: converts project name)
+- `-s, --signature TEXT`: Inline signature string (e.g., `"question -> answer"` or `"post -> tags: list[str]"`)
+
+**Examples:**
+
+```bash
+# Basic project
+dspy-cli new my-project
+
+# With custom program name
+dspy-cli new my-project -p custom_program
+
+# With custom signature
+dspy-cli new blog-tagger -s "post -> tags: list[str]"
+
+# With both program name and signature
+dspy-cli new analyzer -p text_analyzer -s "text, context: list[str] -> summary, sentiment: bool"
+```
 
 ### `generate` (alias: `g`)
 

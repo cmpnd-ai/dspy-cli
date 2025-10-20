@@ -5,6 +5,7 @@ from pathlib import Path
 import click
 
 from dspy_cli.config.validator import find_package_directory, validate_project_structure
+from dspy_cli.utils.signature_utils import parse_signature_string, type_to_string, to_class_name
 
 
 # Map of module type aliases to their canonical names and template files
@@ -101,7 +102,7 @@ def scaffold(program_name, module, signature):
     # Parse signature if provided
     signature_fields = None
     if signature:
-        signature_fields = _parse_signature_string(signature)
+        signature_fields = parse_signature_string(signature)
         click.echo(f"  Signature: {signature}")
 
     click.echo(f"  Module type: {module}")
@@ -127,55 +128,6 @@ def scaffold(program_name, module, signature):
         raise click.Abort()
 
 
-def _parse_signature_string(signature_str):
-    """Parse a signature string to extract field information.
-
-    Args:
-        signature_str: String like "question -> answer" or "context: list[str], question -> answer"
-
-    Returns:
-        Dictionary with 'inputs' and 'outputs' lists of field info dicts
-    """
-    try:
-        # Use DSPy's make_signature to parse the string
-        import dspy
-        sig = dspy.Signature(signature_str)
-
-        inputs = []
-        for field_name, field_info in sig.input_fields.items():
-            field_type = field_info.annotation if hasattr(field_info, 'annotation') else str
-            type_str = _type_to_string(field_type)
-            inputs.append({
-                'name': field_name,
-                'type': type_str,
-                'type_annotation': field_type
-            })
-
-        outputs = []
-        for field_name, field_info in sig.output_fields.items():
-            field_type = field_info.annotation if hasattr(field_info, 'annotation') else str
-            type_str = _type_to_string(field_type)
-            outputs.append({
-                'name': field_name,
-                'type': type_str,
-                'type_annotation': field_type
-            })
-
-        return {'inputs': inputs, 'outputs': outputs}
-    except Exception as e:
-        click.echo(click.style(f"Error parsing signature string: {e}", fg="red"))
-        raise click.Abort()
-
-
-def _type_to_string(type_obj):
-    """Convert a type object to a string representation."""
-    if hasattr(type_obj, '__name__'):
-        return type_obj.__name__
-    else:
-        # Handle generic types like list[str], dict[str, int], etc.
-        return str(type_obj).replace('typing.', '')
-
-
 def _create_signature_file(package_dir, program_name, signature_str, signature_fields):
     """Create a signature file for the program."""
     from dspy_cli.templates import code_templates
@@ -192,7 +144,7 @@ def _create_signature_file(package_dir, program_name, signature_str, signature_f
             raise click.Abort()
 
     # Generate signature content
-    signature_class = _to_class_name(program_name) + "Signature"
+    signature_class = to_class_name(program_name) + "Signature"
 
     if signature_fields:
         # Generate from parsed signature
@@ -237,7 +189,7 @@ def _create_module_file(package_dir, package_name, program_name, module_type, si
             raise click.Abort()
 
     # Generate class name
-    signature_class = _to_class_name(program_name) + "Signature"
+    signature_class = to_class_name(program_name) + "Signature"
 
     # Determine module class name based on module type
     if module_type in ["CoT", "ChainOfThought"]:
@@ -253,7 +205,7 @@ def _create_module_file(package_dir, package_name, program_name, module_type, si
     else:
         class_suffix = "Predict"
 
-    module_class = f"{_to_class_name(program_name)}{class_suffix}"
+    module_class = f"{to_class_name(program_name)}{class_suffix}"
 
     # Generate forward method arguments
     if signature_fields:
@@ -281,11 +233,6 @@ def _create_module_file(package_dir, package_name, program_name, module_type, si
 
     module_file_path.write_text(content)
     click.echo(f"  Created: modules/{module_file}.py")
-
-
-def _to_class_name(snake_case_name):
-    """Convert snake_case to PascalCase for class names."""
-    return "".join(word.capitalize() for word in snake_case_name.split("_"))
 
 
 # Create alias for the group

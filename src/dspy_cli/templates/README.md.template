@@ -16,11 +16,11 @@ OPENAI_API_KEY=your-key-here
 
 ### Project Structure
 
-- `src/dspy_project/modules/` - DSPy program implementations
-- `src/dspy_project/signatures/` - Reusable signatures
-- `src/dspy_project/optimizers/` - Optimizer configurations
-- `src/dspy_project/metrics/` - Evaluation metrics
-- `src/dspy_project/utils/` - Shared helper functions
+- `src/{package_name}/modules/` - DSPy program implementations
+- `src/{package_name}/signatures/` - Reusable signatures
+- `src/{package_name}/optimizers/` - Optimizer configurations
+- `src/{package_name}/metrics/` - Evaluation metrics
+- `src/{package_name}/utils/` - Shared helper functions
 - `data/` - Training and evaluation data
 - `logs/` - API request logs
 - `tests/` - Test files

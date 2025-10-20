@@ -6,6 +6,8 @@ from pathlib import Path
 
 import click
 
+from dspy_cli.utils.signature_utils import parse_signature_string, to_class_name
+
 
 @click.command()
 @click.argument("project_name")
@@ -15,7 +17,13 @@ import click
     default=None,
     help="Name of the initial program (default: derived from project name)",
 )
-def new(project_name, program_name):
+@click.option(
+    "--signature",
+    "-s",
+    default=None,
+    help='Inline signature string (e.g., "question -> answer" or "post -> tags: list[str]")',
+)
+def new(project_name, program_name, signature):
     """Create a new DSPy project with boilerplate structure.
 
     Creates a directory with PROJECT_NAME and sets up a complete
@@ -25,6 +33,8 @@ def new(project_name, program_name):
     Example:
         dspy-cli new my-project
         dspy-cli new my-project -p custom_program
+        dspy-cli new my-project -s "post -> tags: list[str]"
+        dspy-cli new my-project -p analyzer -s "text, context: list[str] -> summary"
     """
     # Validate project name
     if not project_name or not project_name.strip():
@@ -38,8 +48,8 @@ def new(project_name, program_name):
         click.echo(click.style(f"Error: Directory '{project_name}' already exists", fg="red"))
         raise click.Abort()
 
-    # Convert project name to Python package name (replace - with _)
-    package_name = "dspy_project"  # Always use dspy_project as per spec
+    # Convert project name to Python package name (replace - with _, lowercase)
+    package_name = project_name.replace("-", "_").lower()
 
     # Determine program name
     if program_name is None:
@@ -51,9 +61,16 @@ def new(project_name, program_name):
         click.echo(click.style(f"Error: Program name '{program_name}' is not a valid Python identifier", fg="red"))
         raise click.Abort()
 
+    # Parse signature if provided
+    signature_fields = None
+    if signature:
+        signature_fields = parse_signature_string(signature)
+
     click.echo(f"Creating new DSPy project: {project_name}")
     click.echo(f"  Package name: {package_name}")
     click.echo(f"  Initial program: {program_name}")
+    if signature:
+        click.echo(f"  Signature: {signature}")
     click.echo()
 
     try:
@@ -61,10 +78,10 @@ def new(project_name, program_name):
         _create_directory_structure(project_path, package_name, program_name)
 
         # Create configuration files
-        _create_config_files(project_path, project_name, program_name)
+        _create_config_files(project_path, project_name, program_name, package_name)
 
         # Create Python code files
-        _create_code_files(project_path, package_name, program_name)
+        _create_code_files(project_path, package_name, program_name, signature, signature_fields)
 
         # Initialize git repository
         _initialize_git(project_path)
@@ -105,7 +122,7 @@ def _create_directory_structure(project_path, package_name, program_name):
         click.echo(f"  Created: {directory.relative_to(project_path.parent)}")
 
 
-def _create_config_files(project_path, project_name, program_name):
+def _create_config_files(project_path, project_name, program_name, package_name):
     """Create configuration files from templates."""
     from dspy_cli.templates import code_templates
 
@@ -129,7 +146,8 @@ def _create_config_files(project_path, project_name, program_name):
     readme_template = (templates_dir / "README.md.template").read_text()
     readme_content = readme_template.format(
         project_name=project_name,
-        program_name=program_name
+        program_name=program_name,
+        package_name=package_name
     )
     (project_path / "README.md").write_text(readme_content)
 
@@ -144,7 +162,7 @@ def _create_config_files(project_path, project_name, program_name):
     click.echo(f"  Created: {project_name}/.gitignore")
 
 
-def _create_code_files(project_path, package_name, program_name):
+def _create_code_files(project_path, package_name, program_name, signature, signature_fields):
     """Create Python code files from templates."""
     from dspy_cli.templates import code_templates
 
@@ -161,25 +179,55 @@ def _create_code_files(project_path, package_name, program_name):
     (project_path / "src" / package_name / "utils" / "__init__.py").write_text("")
 
     # Create signature file
-    signature_class = _to_class_name(program_name) + "Signature"
-    signature_template = (templates_dir / "signature.py.template").read_text()
-    signature_content = signature_template.format(
-        program_name=program_name,
-        class_name=signature_class
-    )
-    (project_path / "src" / package_name / "signatures" / f"{program_name}.py").write_text(signature_content)
+    signature_class = to_class_name(program_name) + "Signature"
+    file_name = program_name.lower()
+
+    if signature_fields:
+        # Generate from parsed signature
+        signature_content = f'"""Signature definitions for {file_name}."""\n\nimport dspy\n\n'
+        signature_content += f"class {signature_class}(dspy.Signature):\n"
+        signature_content += '    """\n    """\n\n'
+
+        # Add input fields
+        for field in signature_fields['inputs']:
+            signature_content += f"    {field['name']}: {field['type']} = dspy.InputField(desc=\"\")\n"
+
+        # Add output fields
+        for field in signature_fields['outputs']:
+            signature_content += f"    {field['name']}: {field['type']} = dspy.OutputField(desc=\"\")\n"
+    else:
+        # Use default template
+        signature_template = (templates_dir / "signature.py.template").read_text()
+        signature_content = signature_template.format(
+            program_name=file_name,
+            class_name=signature_class
+        )
+
+    (project_path / "src" / package_name / "signatures" / f"{file_name}.py").write_text(signature_content)
 
     # Create module file
-    module_class = f"{_to_class_name(program_name)}Predict"
-    module_file = f"{program_name}_predict"
+    module_class = f"{to_class_name(program_name)}Predict"
+    module_file = f"{file_name}_predict"
+
+    # Generate forward method arguments
+    if signature_fields:
+        # Extract input field names
+        input_names = [field['name'] for field in signature_fields['inputs']]
+        forward_args = ", ".join(input_names)
+        forward_kwargs = ", ".join([f"{name}={name}" for name in input_names])
+    else:
+        # Use default
+        forward_args = "question"
+        forward_kwargs = "question=question"
+
     module_template = (templates_dir / "module_predict.py.template").read_text()
     module_content = module_template.format(
         package_name=package_name,
-        program_name=program_name,
+        program_name=file_name,
         signature_class=signature_class,
         class_name=module_class,
-        forward_args="question",
-        forward_kwargs="question=question"
+        forward_args=forward_args,
+        forward_kwargs=forward_kwargs
     )
     (project_path / "src" / package_name / "modules" / f"{module_file}.py").write_text(module_content)
 
@@ -193,7 +241,7 @@ def _create_code_files(project_path, package_name, program_name):
     (project_path / "tests" / "test_modules.py").write_text(test_content)
 
     click.echo(f"  Created: {package_name}/modules/{module_file}.py")
-    click.echo(f"  Created: {package_name}/signatures/{program_name}.py")
+    click.echo(f"  Created: {package_name}/signatures/{file_name}.py")
     click.echo(f"  Created: tests/test_modules.py")
 
 
@@ -211,8 +259,3 @@ def _initialize_git(project_path):
         click.echo(click.style(f"  Warning: Could not initialize git: {e}", fg="yellow"))
     except FileNotFoundError:
         click.echo(click.style("  Warning: git not found, skipping repository initialization", fg="yellow"))
-
-
-def _to_class_name(snake_case_name):
-    """Convert snake_case to PascalCase for class names."""
-    return "".join(word.capitalize() for word in snake_case_name.split("_"))
