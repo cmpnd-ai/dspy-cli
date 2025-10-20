@@ -294,7 +294,9 @@ def print_deploy_result(response: dict[str, Any]):
         click.echo(click.style("Programs:", fg="cyan", bold=True))
         for prog in response["programs"]:
             click.echo(f"  • {prog.get('name', 'N/A')}")
-            click.echo(f"    {prog.get('url', 'N/A')}")
+            if prog.get("stable_url"):
+                click.echo(f"    Stable:  {prog['stable_url']}")
+            click.echo(f"    Version: {prog.get('url', 'N/A')}")
     
     if response.get("runtime_api_key"):
         click.echo()
