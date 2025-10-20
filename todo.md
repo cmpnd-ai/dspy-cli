@@ -1,7 +1,7 @@
 - [x] Logs aren't being captured correctly. They are just the web requests, not the actual inputs and inference.
 - [x] Change the boilerplate docstring for signatures
 - [x] Change signature template class format "Categorizer" -> "CategorizerSignature"
-- Boilerplate for modules also sucks. Especially `self.predictor` pattern
+- [x] Boilerplate for modules also sucks. Especially `self.predictor` pattern
 - [x] Edit all the template comments
 - New command: `dspy-cli generate module [ModuleName] -s [signature]`
 - New command: `dspy-cli generate signature [SignatureName]`
@@ -14,8 +14,8 @@
 - [x] Remove /run from the program endpoints
 - Load local API keys if they exist and aren't in the env
 - Handle camel case, snake case, etc and normalize all based on how they're entered in the CLI.
-- [ ] Change default project folder name
-- [ ] Change help banner
+- [x] Change default project folder name
+- [x] Change help banner
 - [ ] If there are two programs/modules with the same name abort and throw an error
 
 To try:

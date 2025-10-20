@@ -13,8 +13,8 @@ from dspy_cli.commands.generate import generate
 def main():
     """dspy-cli: A CLI tool for creating and serving DSPy projects.
 
-    Inspired by Ruby on Rails, dspy-cli provides convention-based
-    scaffolding and serving for DSPy applications.
+    dspy-cli provides convention-based scaffolding and serving for 
+    DSPy applications.
     """
     pass
 
