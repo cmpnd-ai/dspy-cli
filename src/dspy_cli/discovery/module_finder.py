@@ -145,16 +145,48 @@ def _extract_signature(module_class: Type[dspy.Module]) -> Optional[Type[dspy.Si
         # Create a temporary instance to inspect
         instance = module_class()
 
-        # Look for predictors
+        # Look for predictors - check for various predictor types
         for name, value in instance.__dict__.items():
-            if isinstance(value, dspy.Predict):
-                if hasattr(value, 'signature'):
-                    return value.signature
+            # Direct signature attribute (works for Predict and similar)
+            if hasattr(value, 'signature') and hasattr(value.signature, 'input_fields'):
+                return value.signature
+
+            # ChainOfThought and similar wrap a Predict object in a .predict attribute
+            if hasattr(value, 'predict') and hasattr(value.predict, 'signature'):
+                predict_obj = value.predict
+                if hasattr(predict_obj.signature, 'input_fields'):
+                    return predict_obj.signature
 
     except Exception as e:
         logger.debug(f"Could not extract signature from {module_class.__name__}: {e}")
 
     return None
+
+
+def _format_type_name(annotation: Any) -> str:
+    """Format a type annotation into a readable string.
+
+    Args:
+        annotation: Type annotation object
+
+    Returns:
+        Formatted type string (e.g., "str", "list[str]", "int")
+    """
+    if annotation is None:
+        return "str"
+
+    # Handle basic types
+    if hasattr(annotation, '__name__'):
+        return annotation.__name__
+
+    # Handle typing generics like list[str]
+    type_str = str(annotation)
+
+    # Clean up common patterns
+    type_str = type_str.replace("<class '", "").replace("'>", "")
+    type_str = type_str.replace("typing.", "")
+
+    return type_str
 
 
 def get_signature_fields(signature: Optional[Type[dspy.Signature]]) -> Dict[str, Any]:
@@ -175,15 +207,17 @@ def get_signature_fields(signature: Optional[Type[dspy.Signature]]) -> Dict[str,
 
         # Get input fields
         for field_name, field_info in signature.input_fields.items():
+            type_annotation = field_info.annotation if hasattr(field_info, 'annotation') else str
             inputs[field_name] = {
-                "type": str(field_info.annotation) if hasattr(field_info, 'annotation') else "str",
+                "type": _format_type_name(type_annotation),
                 "description": field_info.json_schema_extra.get("desc", "") if field_info.json_schema_extra else ""
             }
 
         # Get output fields
         for field_name, field_info in signature.output_fields.items():
+            type_annotation = field_info.annotation if hasattr(field_info, 'annotation') else str
             outputs[field_name] = {
-                "type": str(field_info.annotation) if hasattr(field_info, 'annotation') else "str",
+                "type": _format_type_name(type_annotation),
                 "description": field_info.json_schema_extra.get("desc", "") if field_info.json_schema_extra else ""
             }
 

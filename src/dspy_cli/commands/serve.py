@@ -29,7 +29,13 @@ from dspy_cli.server.app import create_app
     type=click.Path(),
     help="Directory for logs (default: ./logs)",
 )
-def serve(port, host, logs_dir):
+@click.option(
+    "--ui",
+    "-u",
+    is_flag=True,
+    help="Enable web UI for interactive testing",
+)
+def serve(port, host, logs_dir, ui):
     """Start an HTTP API server that exposes your DSPy programs.
 
     This command:
@@ -88,7 +94,8 @@ def serve(port, host, logs_dir):
             config=config,
             package_path=modules_path,
             package_name=f"{package_name}.modules",
-            logs_dir=logs_path
+            logs_dir=logs_path,
+            enable_ui=ui
         )
     except Exception as e:
         click.echo(click.style(f"Error creating application: {e}", fg="red"))
@@ -115,6 +122,8 @@ def serve(port, host, logs_dir):
     click.echo(click.style("Additional Endpoints:", fg="cyan", bold=True))
     click.echo()
     click.echo("  GET /programs - List all programs and their schemas")
+    if ui:
+        click.echo("  GET / - Web UI for interactive testing")
     click.echo()
 
     # Print server information

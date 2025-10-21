@@ -17,6 +17,15 @@
 - [x] Change default project folder name
 - [x] Change help banner
 - [ ] If there are two programs/modules with the same name abort and throw an error
+- [ ] UI: When I have multiple modules referencing one signature, the signature data isn't loaded.
+- [ ] UI: Have custom typed fields and validation
+
+Examples to Build as Dogfood:
+
+- Researcher
+- POI conflater
+- Summarizer
+- Image alt-text description
 
 To try:
 

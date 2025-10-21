@@ -19,7 +19,8 @@ def create_app(
     config: Dict,
     package_path: Path,
     package_name: str,
-    logs_dir: Path
+    logs_dir: Path,
+    enable_ui: bool = False
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -28,6 +29,7 @@ def create_app(
         package_path: Path to the modules package
         package_name: Python package name for modules
         logs_dir: Directory for log files
+        enable_ui: Whether to enable the web UI
 
     Returns:
         Configured FastAPI application
@@ -97,6 +99,23 @@ def create_app(
     # Store modules in app state for access by routes
     app.state.modules = modules
     app.state.config = config
+
+    # Register UI routes if enabled
+    if enable_ui:
+        from fastapi.staticfiles import StaticFiles
+        from dspy_cli.server.ui import create_ui_routes
+
+        # Mount static files
+        static_dir = Path(__file__).parent.parent / "templates" / "ui" / "static"
+        if static_dir.exists():
+            app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+            logger.info("Mounted static files for UI")
+        else:
+            logger.warning(f"Static directory not found: {static_dir}")
+
+        # Create UI routes
+        create_ui_routes(app, modules, config, logs_dir)
+        logger.info("UI routes registered")
 
     return app
 
