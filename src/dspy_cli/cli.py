@@ -25,6 +25,7 @@ main.add_command(new)
 main.add_command(serve)
 main.add_command(generate)
 main.add_command(generate, name='g')  # Alias for generate
+main.add_command(serve, name='s')  # Alias for serve
 
 
 if __name__ == "__main__":
