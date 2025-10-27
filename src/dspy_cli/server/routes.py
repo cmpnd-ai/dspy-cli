@@ -14,6 +14,42 @@ from dspy_cli.server.logging import log_inference
 logger = logging.getLogger(__name__)
 
 
+def _configure_program_model(model_config: Dict):
+    """Configure DSPy with the model for a specific program.
+
+    Args:
+        model_config: Model configuration dictionary
+    """
+    # Extract configuration
+    model = model_config.get("model")
+    model_type = model_config.get("model_type", "chat")
+    temperature = model_config.get("temperature")
+    max_tokens = model_config.get("max_tokens")
+    api_key = model_config.get("api_key")
+    api_base = model_config.get("api_base")
+
+    # Build kwargs
+    kwargs = {}
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+    if max_tokens is not None:
+        kwargs["max_tokens"] = max_tokens
+    if api_key is not None:
+        kwargs["api_key"] = api_key
+    if api_base is not None:
+        kwargs["api_base"] = api_base
+
+    # Create LM instance
+    lm = dspy.LM(
+        model=model,
+        model_type=model_type,
+        **kwargs
+    )
+
+    # Configure DSPy
+    dspy.settings.configure(lm=lm)
+
+
 def create_program_routes(
     app: FastAPI,
     module: DiscoveredModule,
@@ -52,6 +88,9 @@ def create_program_routes(
         start_time = time.time()
 
         try:
+            # Configure DSPy with the model for this specific program
+            _configure_program_model(model_config)
+
             # Instantiate the module
             instance = module.instantiate()
 
