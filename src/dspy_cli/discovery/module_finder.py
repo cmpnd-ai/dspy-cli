@@ -22,7 +22,7 @@ class DiscoveredModule:
     module_path: str  # Python module path (e.g., "dspy_project.modules.categorizer_predict")
     signature: Optional[Type[dspy.Signature]] = None  # Signature if discoverable
 
-    def instantiate(self) -> dspy.Module:
+    def instantiate(self, lm: dspy.LM | None = None) -> dspy.Module:
         """Create an instance of this module."""
         return self.class_obj()
 
@@ -170,19 +170,28 @@ def _format_type_name(annotation: Any) -> str:
         annotation: Type annotation object
 
     Returns:
-        Formatted type string (e.g., "str", "list[str]", "int")
+        Formatted type string (e.g., "str", "list[str]", "int", "dspy.Image")
     """
     if annotation is None:
         return "str"
 
-    # Handle basic types
+    # Check if it's a generic type (e.g., List[str], Dict[str, int])
+    if hasattr(annotation, '__origin__'):
+        # Handle typing generics like list[str]
+        type_str = str(annotation)
+        type_str = type_str.replace("<class '", "").replace("'>", "")
+        type_str = type_str.replace("typing.", "")
+        return type_str
+
+    # Handle basic types with __name__
     if hasattr(annotation, '__name__'):
+        # Check if this is a dspy type (preserve dspy. prefix)
+        if hasattr(annotation, '__module__') and annotation.__module__.startswith('dspy'):
+            return f"dspy.{annotation.__name__}"
         return annotation.__name__
 
-    # Handle typing generics like list[str]
+    # Fallback to string representation
     type_str = str(annotation)
-
-    # Clean up common patterns
     type_str = type_str.replace("<class '", "").replace("'>", "")
     type_str = type_str.replace("typing.", "")
 

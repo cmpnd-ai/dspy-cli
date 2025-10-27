@@ -1,16 +1,16 @@
 """Example DSPy module using Predict."""
 
 import dspy
-from {package_name}.signatures.{program_name} import {signature_class}
+from blog_tools.signatures.tagger import TaggerSignature
 
 
-class {class_name}(dspy.Module):
+class TaggerPredict(dspy.Module):
     """
     """
 
     def __init__(self):
         super().__init__()
-        self.predictor = dspy.Predict({signature_class})
+        self.predictor = dspy.Predict(TaggerSignature)
 
     def forward(self, **kwargs):
         return self.predictor(**kwargs)

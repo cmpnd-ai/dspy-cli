@@ -94,14 +94,14 @@ models:
       max_tokens: 16000
       temperature: 1.0
       model_type: responses
-    anthropic:sonnet-3.5:
-      provider: anthropic/claude-3-5-sonnet
+    anthropic:sonnet-4-5:
+      provider: anthropic/claude-sonnet-4-5
       env: ANTHROPIC_API_KEY
       model_type: chat
 
 # Optional: per-program model overrides (by program/class name)
 program_models:
-  CategorizerCoT: anthropic:sonnet-3.5
+  CategorizerCoT: anthropic:sonnet-4-5
 ```
 
 We then use these configurations to set up the LM using DSPy. Here is how the default model would be set up:

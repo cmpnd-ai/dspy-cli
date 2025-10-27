@@ -14,5 +14,5 @@ class {class_name}(dspy.Module):
         # You can pass tools as a list of dspy.Tool instances
         self.predictor = dspy.ReAct({signature_class}, tools=tools or [])
 
-    def forward(self, {forward_args}):
-        return self.predictor({forward_kwargs})
+    def forward(self, **kwargs):
+        return self.predictor(**kwargs)

@@ -14,6 +14,52 @@ from dspy_cli.server.logging import log_inference
 logger = logging.getLogger(__name__)
 
 
+def _convert_dspy_types(inputs: Dict[str, Any], signature) -> Dict[str, Any]:
+    """Convert string inputs to DSPy types based on signature.
+
+    For fields with dspy types (Image, Audio, etc.), converts string values
+    (URLs or data URIs) to proper dspy objects.
+
+    Args:
+        inputs: Dictionary of input values from the request
+        signature: DSPy signature with type information
+
+    Returns:
+        Dictionary with converted values
+    """
+    if not signature:
+        return inputs
+
+    converted = {}
+    for field_name, value in inputs.items():
+        if field_name not in signature.input_fields:
+            # Pass through unknown fields
+            converted[field_name] = value
+            continue
+
+        field_info = signature.input_fields[field_name]
+        field_type = field_info.annotation if hasattr(field_info, 'annotation') else None
+
+        # Check if field type is a dspy type (from dspy module)
+        if field_type and hasattr(field_type, '__module__') and field_type.__module__.startswith('dspy'):
+            # Convert string/dict to dspy type
+            try:
+                if isinstance(value, str) or isinstance(value, dict):
+                    converted[field_name] = field_type(value)
+                else:
+                    # Already the right type or not convertible
+                    converted[field_name] = value
+            except Exception as e:
+                logger.warning(f"Failed to convert {field_name} to {field_type.__name__}: {e}")
+                # Pass through unconverted on error
+                converted[field_name] = value
+        else:
+            # Not a dspy type, pass through
+            converted[field_name] = value
+
+    return converted
+
+
 def create_program_routes(
     app: FastAPI,
     module: DiscoveredModule,
@@ -62,6 +108,9 @@ def create_program_routes(
                 inputs = request.model_dump()
             else:
                 inputs = request
+
+            # Convert dspy types (Image, Audio, etc.) from strings to objects
+            inputs = _convert_dspy_types(inputs, module.signature)
 
             # Execute the program with the program-specific LM via context
             logger.info(f"Executing {program_name} with inputs: {inputs}")
@@ -127,6 +176,11 @@ def _create_request_model(module: DiscoveredModule) -> type:
     for field_name, field_info in module.signature.input_fields.items():
         # Get the type annotation
         field_type = field_info.annotation if hasattr(field_info, 'annotation') else str
+
+        # For dspy types (Image, Audio, etc.), accept strings in the API
+        # They'll be converted to proper dspy objects before execution
+        if hasattr(field_type, '__module__') and field_type.__module__.startswith('dspy'):
+            field_type = str
 
         # Get description
         description = ""

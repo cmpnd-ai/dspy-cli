@@ -174,14 +174,14 @@ models:
       max_tokens: 16000
       temperature: 1.0
       model_type: chat
-    anthropic:sonnet-3.5:
-      model: anthropic/claude-3-5-sonnet
+    anthropic:sonnet-4-5:
+      model: anthropic/claude-sonnet-4-5
       env: ANTHROPIC_API_KEY
       model_type: chat
 
 # Optional: per-program model overrides
 program_models:
-  MySpecialProgram: anthropic:sonnet-3.5
+  MySpecialProgram: anthropic:sonnet-4-5
 ```
 
 ### .env

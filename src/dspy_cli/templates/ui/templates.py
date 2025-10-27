@@ -91,7 +91,36 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
             description = field_info.get("description", "")
 
             # Determine input type
-            if "list" in field_type.lower():
+            if field_type == "dspy.Image":
+                # Special image input widget with URL, upload, and drag-drop
+                input_html = f'''
+                <div class="image-input-container" id="{field_name}_container">
+                    <div class="image-input-tabs">
+                        <button type="button" class="tab-btn active" data-tab="url" data-field="{field_name}">URL</button>
+                        <button type="button" class="tab-btn" data-tab="upload" data-field="{field_name}">Upload</button>
+                    </div>
+                    <div class="image-input-tab-content">
+                        <div class="tab-pane active" id="{field_name}_url_pane">
+                            <input type="text" id="{field_name}" name="{field_name}" placeholder="Paste image URL here" class="image-url-input">
+                        </div>
+                        <div class="tab-pane" id="{field_name}_upload_pane">
+                            <div class="image-dropzone" id="{field_name}_dropzone" data-field="{field_name}">
+                                <input type="file" id="{field_name}_file" accept="image/*" style="display: none;">
+                                <div class="dropzone-content">
+                                    <p class="dropzone-text">Drag and drop an image here</p>
+                                    <p class="dropzone-or">or</p>
+                                    <button type="button" class="file-btn" data-field="{field_name}">Choose File</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="image-preview" id="{field_name}_preview" style="display: none;">
+                        <img id="{field_name}_preview_img" alt="Preview">
+                        <button type="button" class="clear-btn" data-field="{field_name}">×</button>
+                    </div>
+                </div>
+                '''
+            elif "list" in field_type.lower():
                 input_html = f'<textarea id="{field_name}" name="{field_name}" rows="4" placeholder="Enter JSON array, e.g., [\\"item1\\", \\"item2\\"]"></textarea>'
             elif "bool" in field_type.lower():
                 input_html = f'''

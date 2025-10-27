@@ -49,3 +49,8 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Ignore lg folders in examples subdirectories
+examples/*/log/
+examples/*/.env
+examples/*/__pycache__/

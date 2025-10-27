@@ -31,6 +31,9 @@ function initProgramPage(programName) {
             loadLogs(programName);
         });
     }
+
+    // Initialize image input handlers
+    initImageInputs();
 }
 
 /**
@@ -202,4 +205,134 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * Initialize image input handlers (tabs, drag-drop, file upload)
+ */
+function initImageInputs() {
+    // Set up tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const fieldName = this.dataset.field;
+            const tab = this.dataset.tab;
+
+            // Update active tab button
+            this.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+
+            // Show corresponding pane
+            document.querySelectorAll(`[id^="${fieldName}_"][id$="_pane"]`).forEach(pane => {
+                pane.classList.remove('active');
+            });
+            document.getElementById(`${fieldName}_${tab}_pane`).classList.add('active');
+        });
+    });
+
+    // Set up file upload buttons
+    document.querySelectorAll('.file-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const fieldName = this.dataset.field;
+            document.getElementById(`${fieldName}_file`).click();
+        });
+    });
+
+    // Set up file input change handlers
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const fieldName = this.id.replace('_file', '');
+            if (this.files && this.files[0]) {
+                handleImageFile(fieldName, this.files[0]);
+            }
+        });
+    });
+
+    // Set up drag and drop
+    document.querySelectorAll('.image-dropzone').forEach(dropzone => {
+        const fieldName = dropzone.dataset.field;
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                handleImageFile(fieldName, e.dataTransfer.files[0]);
+            }
+        });
+    });
+
+    // Set up clear buttons
+    document.querySelectorAll('.clear-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const fieldName = this.dataset.field;
+            clearImage(fieldName);
+        });
+    });
+}
+
+/**
+ * Handle image file selection (upload or drag-drop)
+ */
+function handleImageFile(fieldName, file) {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+    }
+
+    // Read file as data URI
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const dataUri = e.target.result;
+
+        // Set the data URI as the field value
+        const input = document.getElementById(fieldName);
+        input.value = dataUri;
+
+        // Show preview
+        const preview = document.getElementById(`${fieldName}_preview`);
+        const previewImg = document.getElementById(`${fieldName}_preview_img`);
+        previewImg.src = dataUri;
+        preview.style.display = 'block';
+
+        // Hide dropzone content
+        const dropzone = document.getElementById(`${fieldName}_dropzone`);
+        dropzone.querySelector('.dropzone-content').style.display = 'none';
+    };
+
+    reader.readAsDataURL(file);
+}
+
+/**
+ * Clear image selection
+ */
+function clearImage(fieldName) {
+    // Clear input value
+    const input = document.getElementById(fieldName);
+    input.value = '';
+
+    // Clear file input
+    const fileInput = document.getElementById(`${fieldName}_file`);
+    if (fileInput) {
+        fileInput.value = '';
+    }
+
+    // Hide preview
+    const preview = document.getElementById(`${fieldName}_preview`);
+    preview.style.display = 'none';
+
+    // Show dropzone content
+    const dropzone = document.getElementById(`${fieldName}_dropzone`);
+    if (dropzone) {
+        dropzone.querySelector('.dropzone-content').style.display = 'block';
+    }
 }

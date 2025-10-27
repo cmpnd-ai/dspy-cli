@@ -16,8 +16,8 @@ models:
       model_type: responses
 
     # Example: Add more models as needed
-    # anthropic:sonnet-3.5:
-    #   model: anthropic/claude-3-5-sonnet-20241022
+    # anthropic:sonnet-4-5:
+    #   model: anthropic/claude-sonnet-4-5
     #   env: ANTHROPIC_API_KEY
     #   max_tokens: 8192
     #   temperature: 0.7
@@ -33,4 +33,4 @@ models:
 
 # Optional: Override the model for specific programs
 # program_models:
-#   MySpecialProgram: anthropic:sonnet-3.5
+#   MySpecialProgram: anthropic:claude-sonnet-4-5
