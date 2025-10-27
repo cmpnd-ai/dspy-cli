@@ -55,6 +55,12 @@ def new(project_name, program_name, signature):
     if program_name is None:
         # Convert project-name to program_name
         program_name = project_name.replace("-", "_")
+    else:
+        # Convert dashes to underscores in user-provided program name
+        original_program_name = program_name
+        program_name = program_name.replace("-", "_")
+        if original_program_name != program_name:
+            click.echo(f"Note: Converted program name '{original_program_name}' to '{program_name}' for Python compatibility")
 
     # Validate program name is a valid Python identifier
     if not program_name.replace("_", "").isalnum() or program_name[0].isdigit():
@@ -209,25 +215,12 @@ def _create_code_files(project_path, package_name, program_name, signature, sign
     module_class = f"{to_class_name(program_name)}Predict"
     module_file = f"{file_name}_predict"
 
-    # Generate forward method arguments
-    if signature_fields:
-        # Extract input field names
-        input_names = [field['name'] for field in signature_fields['inputs']]
-        forward_args = ", ".join(input_names)
-        forward_kwargs = ", ".join([f"{name}={name}" for name in input_names])
-    else:
-        # Use default
-        forward_args = "question"
-        forward_kwargs = "question=question"
-
     module_template = (templates_dir / "module_predict.py.template").read_text()
     module_content = module_template.format(
         package_name=package_name,
         program_name=file_name,
         signature_class=signature_class,
-        class_name=module_class,
-        forward_args=forward_args,
-        forward_kwargs=forward_kwargs
+        class_name=module_class
     )
     (project_path / "src" / package_name / "modules" / f"{module_file}.py").write_text(module_content)
 

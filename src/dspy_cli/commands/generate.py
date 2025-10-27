@@ -94,6 +94,13 @@ def scaffold(program_name, module, signature):
 
     package_name = package_dir.name
 
+    # Convert dashes to underscores for valid Python identifier
+    original_program_name = program_name
+    program_name = program_name.replace("-", "_")
+
+    if original_program_name != program_name:
+        click.echo(f"  Note: Converted '{original_program_name}' to '{program_name}' for Python compatibility")
+
     # Validate program name is valid Python identifier
     if not program_name.replace("_", "").isalnum() or program_name[0].isdigit():
         click.echo(click.style(f"Error: Program name '{program_name}' is not a valid Python identifier", fg="red"))
@@ -207,17 +214,6 @@ def _create_module_file(package_dir, package_name, program_name, module_type, si
 
     module_class = f"{to_class_name(program_name)}{class_suffix}"
 
-    # Generate forward method arguments
-    if signature_fields:
-        # Extract input field names
-        input_names = [field['name'] for field in signature_fields['inputs']]
-        forward_args = ", ".join(input_names)
-        forward_kwargs = ", ".join([f"{name}={name}" for name in input_names])
-    else:
-        # Use default
-        forward_args = "question"
-        forward_kwargs = "question=question"
-
     # Load and format template
     module_template = (templates_dir / module_info['template']).read_text()
     # Use lowercase filename for import
@@ -226,9 +222,7 @@ def _create_module_file(package_dir, package_name, program_name, module_type, si
         package_name=package_name,
         program_name=signature_file_name,  # Use lowercase for import path
         signature_class=signature_class,
-        class_name=module_class,
-        forward_args=forward_args,
-        forward_kwargs=forward_kwargs
+        class_name=module_class
     )
 
     module_file_path.write_text(content)
