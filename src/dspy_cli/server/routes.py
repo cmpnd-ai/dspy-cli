@@ -14,45 +14,10 @@ from dspy_cli.server.logging import log_inference
 logger = logging.getLogger(__name__)
 
 
-def _configure_program_model(model_config: Dict):
-    """Configure DSPy with the model for a specific program.
-
-    Args:
-        model_config: Model configuration dictionary
-    """
-    # Extract configuration
-    model = model_config.get("model")
-    model_type = model_config.get("model_type", "chat")
-    temperature = model_config.get("temperature")
-    max_tokens = model_config.get("max_tokens")
-    api_key = model_config.get("api_key")
-    api_base = model_config.get("api_base")
-
-    # Build kwargs
-    kwargs = {}
-    if temperature is not None:
-        kwargs["temperature"] = temperature
-    if max_tokens is not None:
-        kwargs["max_tokens"] = max_tokens
-    if api_key is not None:
-        kwargs["api_key"] = api_key
-    if api_base is not None:
-        kwargs["api_base"] = api_base
-
-    # Create LM instance
-    lm = dspy.LM(
-        model=model,
-        model_type=model_type,
-        **kwargs
-    )
-
-    # Configure DSPy
-    dspy.settings.configure(lm=lm)
-
-
 def create_program_routes(
     app: FastAPI,
     module: DiscoveredModule,
+    lm: dspy.LM,
     model_config: Dict,
     config: Dict
 ):
@@ -61,11 +26,15 @@ def create_program_routes(
     Args:
         app: FastAPI application
         module: Discovered module information
+        lm: Language model instance for this program
         model_config: Model configuration for this program
         config: Full configuration dictionary
     """
     program_name = module.name
     model_name = model_config.get("model", "unknown")
+
+    # Instantiate the module once during route creation
+    instance = module.instantiate()
 
     # Create request/response models based on signature if available
     if module.signature:
@@ -88,21 +57,16 @@ def create_program_routes(
         start_time = time.time()
 
         try:
-            # Configure DSPy with the model for this specific program
-            _configure_program_model(model_config)
-
-            # Instantiate the module
-            instance = module.instantiate()
-
             # Convert request to dict if it's a Pydantic model
             if isinstance(request, BaseModel):
-                inputs = request.dict()
+                inputs = request.model_dump()
             else:
                 inputs = request
 
-            # Execute the program
+            # Execute the program with the program-specific LM via context
             logger.info(f"Executing {program_name} with inputs: {inputs}")
-            result = instance(**inputs)
+            with dspy.context(lm=lm):
+                result = instance(**inputs)
 
             # Convert result to dict
             if isinstance(result, dspy.Prediction):

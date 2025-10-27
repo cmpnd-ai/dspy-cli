@@ -61,13 +61,27 @@ def create_app(
 
     logger.info(f"Configured default model: {default_model_alias}")
 
-    # Create routes for each discovered module
+    # Create LM instances for each program and store them
+    app.state.program_lms = {}
     for module in modules:
         # Get model for this program (could be overridden)
         model_alias = get_program_model(config, module.name)
         model_config = get_model_config(config, model_alias)
 
-        create_program_routes(app, module, model_config, config)
+        # Create LM instance for this program
+        lm = _create_lm_instance(model_config)
+        app.state.program_lms[module.name] = lm
+
+        logger.info(f"Created LM for program: {module.name} (model: {model_alias})")
+
+    # Create routes for each discovered module
+    for module in modules:
+        # Get the LM instance for this program
+        lm = app.state.program_lms[module.name]
+        model_alias = get_program_model(config, module.name)
+        model_config = get_model_config(config, model_alias)
+
+        create_program_routes(app, module, lm, model_config, config)
 
         logger.info(f"Registered program: {module.name} (model: {model_alias})")
 
@@ -120,11 +134,14 @@ def create_app(
     return app
 
 
-def _configure_dspy_model(model_config: Dict):
-    """Configure DSPy with a language model.
+def _create_lm_instance(model_config: Dict) -> dspy.LM:
+    """Create a DSPy LM instance from configuration.
 
     Args:
         model_config: Model configuration dictionary
+
+    Returns:
+        Configured LM instance
     """
     # Extract configuration
     model = model_config.get("model")
@@ -145,15 +162,28 @@ def _configure_dspy_model(model_config: Dict):
     if api_base is not None:
         kwargs["api_base"] = api_base
 
-    # Create LM instance
-    lm = dspy.LM(
+    # Create and return LM instance
+    return dspy.LM(
         model=model,
         model_type=model_type,
         **kwargs
     )
 
+
+def _configure_dspy_model(model_config: Dict):
+    """Configure DSPy with a language model.
+
+    Args:
+        model_config: Model configuration dictionary
+    """
+    # Create LM instance
+    lm = _create_lm_instance(model_config)
+
     # Configure DSPy
     dspy.settings.configure(lm=lm)
 
+    model = model_config.get("model")
+    model_type = model_config.get("model_type", "chat")
+    api_base = model_config.get("api_base")
     base_info = f" (base: {api_base})" if api_base else ""
     logger.info(f"Configured DSPy with model: {model} (type: {model_type}){base_info}")
