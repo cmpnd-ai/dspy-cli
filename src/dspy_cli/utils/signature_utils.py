@@ -44,11 +44,21 @@ def parse_signature_string(signature_str):
 
 
 def type_to_string(type_obj):
-    """Convert a type object to a string representation."""
-    if hasattr(type_obj, '__name__'):
+    """Convert a type object to a string representation.
+
+    Preserves the dspy. prefix for DSPy types like dspy.Image, dspy.Audio, etc.
+    """
+    # Check if it's a generic type (e.g., List[str], Dict[str, int])
+    if hasattr(type_obj, '__origin__'):
+        # Handle generic types like list[str], dict[str, int], etc.
+        return str(type_obj).replace('typing.', '')
+    elif hasattr(type_obj, '__name__'):
+        # Check if this is a dspy type (module starts with 'dspy')
+        if hasattr(type_obj, '__module__') and type_obj.__module__.startswith('dspy'):
+            return f"dspy.{type_obj.__name__}"
         return type_obj.__name__
     else:
-        # Handle generic types like list[str], dict[str, int], etc.
+        # Fallback to string representation
         return str(type_obj).replace('typing.', '')
 
 
