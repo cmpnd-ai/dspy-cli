@@ -13,7 +13,7 @@ models:
       env: OPENAI_API_KEY
       max_tokens: 16000
       temperature: 1.0
-      model_type: responses
+      model_type: chat  # 'responses' is available for OpenAI
 
     # Example: Add more models as needed
     # anthropic:sonnet-4-5:

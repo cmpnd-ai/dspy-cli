@@ -11,14 +11,14 @@ models:
       env: OPENAI_API_KEY
       max_tokens: 16000
       temperature: 1.0
-      model_type: responses
+      model_type: chat
 
     openai:gpt-5-nano:
       model: openai/gpt-5-nano
       env: OPENAI_API_KEY
       max_tokens: 16000
       temperature: 1.0
-      model_type: responses
+      model_type: chat
 
     anthropic:sonnet-4.5:
       model: anthropic/claude-sonnet-4-5
@@ -41,5 +41,5 @@ program_models:
    TaggerCoT: openai:gpt-5-nano
    SummarizerPredict: qwen:qwen-3-4b
    TweetExtractorPredict: anthropic:sonnet-4.5
-   ImageDescriptionGeneratorPredict: anthropic:sonnet-4.5
+   ImageDescriptionGeneratorPredict: openai:gpt-5-mini
 

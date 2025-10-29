@@ -25,7 +25,7 @@
 - [x] Add 's' shortcut to 'serve' command
 - [ ] If there's no description for the field, just don't show anything in UI, not "${summary_length}"
 - [x] There's a context error with dspy.LM if you run the same program twice: "dspy.settings.configure(...) can only be called from the same async task that called it first. Please use `dspy.context(...)` in other async tasks instead."
-- [ ] Investigate image and OpenAI issue
+- [x] Investigate image and OpenAI issue
 
 Examples to Build as Dogfood:
 
