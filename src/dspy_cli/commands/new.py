@@ -144,6 +144,14 @@ def _create_config_files(project_path, project_name, program_name, package_name)
     config_content = config_template.format(app_id=project_name)
     (project_path / "dspy.config.yaml").write_text(config_content)
 
+    # Read and write Dockerfile
+    dockerfile_template = (templates_dir / "Dockerfile.template").read_text()
+    (project_path / "Dockerfile").write_text(dockerfile_template)
+
+    # Read and write .dockerignore
+    dockerignore_template = (templates_dir / ".dockerignore.template").read_text()
+    (project_path / ".dockerignore").write_text(dockerignore_template)
+
     # Read and write .env
     env_template = (templates_dir / "env.template").read_text()
     (project_path / ".env").write_text(env_template)
@@ -163,6 +171,7 @@ def _create_config_files(project_path, project_name, program_name, package_name)
 
     click.echo(f"  Created: {project_name}/pyproject.toml")
     click.echo(f"  Created: {project_name}/dspy.config.yaml")
+    click.echo(f"  Created: {project_name}/Dockerfile")
     click.echo(f"  Created: {project_name}/.env")
     click.echo(f"  Created: {project_name}/README.md")
     click.echo(f"  Created: {project_name}/.gitignore")
