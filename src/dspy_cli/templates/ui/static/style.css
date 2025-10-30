@@ -1,5 +1,21 @@
 /* DSPy UI Styles */
 
+:root {
+    /* Adapter color variables - easily customizable */
+    --adapter-openai: #0066cc;
+    --adapter-openai-border: #b3d4f0;
+    --adapter-anthropic: #e74c3c;
+    --adapter-anthropic-border: #f5bdb4;
+    --adapter-ollama: #27ae60;
+    --adapter-ollama-border: #b3e0c9;
+    --adapter-qwen: #f39c12;
+    --adapter-qwen-border: #fce3b8;
+    --adapter-local: #9b59b6;
+    --adapter-local-border: #dfc9ea;
+    --adapter-default: #999;
+    --adapter-default-border: #d9d9d9;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -14,27 +30,21 @@ body {
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 900px;
     margin: 0 auto;
-    padding: 40px 20px;
+    padding: 40px max(20px, 5vw);
 }
 
 /* Header */
 header {
     padding: 0 0 2rem 0;
     margin-bottom: 0.4rem;
-    border-bottom: 1px solid #ccc;
 }
 
 header h1 {
-    font-size: 2rem;
+    font-size: 2em;
     color: #000;
-    margin-bottom: .1em;
-}
-
-.subtitle {
-    color: #666;
-    font-size: 1.1rem;
+    margin-bottom: 0;
 }
 
 nav {
@@ -52,45 +62,84 @@ nav {
     color: #0052a3;
 }
 
-.program-meta {
-    margin-top: 10px;
-}
-
 .model-badge {
     display: inline-block;
-    background: #e8e8e8;
-    color: #333;
-    padding: 4px 12px;
-    font-size: 0.85rem;
+    background: #fafafa;
+    color: #666;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid #ccc;
+    font-size: 0.7rem;
     font-weight: 500;
     font-family: "Courier New", monospace;
+    margin-left: 10px;
+}
+
+/* Adapter-specific colors */
+.model-badge[data-adapter="openai"] {
+    border-color: var(--adapter-openai-border);
+    color: var(--adapter-openai);
+}
+
+.model-badge[data-adapter="anthropic"] {
+    border-color: var(--adapter-anthropic-border);
+    color: var(--adapter-anthropic);
+}
+
+.model-badge[data-adapter="ollama"] {
+    border-color: var(--adapter-ollama-border);
+    color: var(--adapter-ollama);
+}
+
+.model-badge[data-adapter="qwen"] {
+    border-color: var(--adapter-qwen-border);
+    color: var(--adapter-qwen);
+}
+
+.model-badge[data-adapter="local"] {
+    border-color: var(--adapter-local-border);
+    color: var(--adapter-local);
+}
+
+.model-badge[data-adapter="default"] {
+    border-color: var(--adapter-default-border);
+    color: var(--adapter-default);
 }
 
 .field-info {
-    margin-left: 15px;
     color: #555;
     font-size: 0.9rem;
+    font-family: "Courier New", monospace;
+    cursor: default;
 }
 
 /* Programs List */
 .programs-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     margin-bottom: 30px;
 }
 
 .program-card {
-    padding: 20px 0;
-    border-bottom: 1px solid #ccc;
-    transition: background 0.2s;
+    padding: 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    transition: all 0.2s;
+    cursor: pointer;
 }
 
 .program-card:hover {
-    background: #f5f5f5;
+    background: #daeef671;
+    border-color: #72CEF2;
+    /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); */
 }
 
 .program-card h3 {
-    font-size: 1.3rem;
-    margin-bottom: 8px;
-    font-weight: 600;
+    font-size: 1.2rem;
+    margin: 0 0 2px 0;
+    font-weight: 500;
 }
 
 .program-card h3 a {
@@ -100,6 +149,21 @@ nav {
 
 .program-card h3 a:hover {
     color: #0066cc;
+}
+
+.program-description {
+    color: #555;
+    font-size: 0.95rem;
+    margin: 0 0 8px 0;
+    line-height: 1.5;
+}
+
+.program-meta {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: default;
 }
 
 .no-programs {
@@ -389,8 +453,6 @@ footer {
     padding: 40px 20px 20px;
     color: #999;
     font-size: 0.85rem;
-    border-top: 1px solid #ccc;
-    margin-top: 40px;
 }
 
 footer code {
@@ -554,15 +616,33 @@ footer code {
 /* Responsive */
 @media (max-width: 768px) {
     .container {
-        padding: 20px 15px;
+        padding: 20px max(15px, 3vw);
     }
 
     header h1 {
-        font-size: 2rem;
+        font-size: 1.75rem;
     }
 
     section {
         padding: 20px 0;
+    }
+
+    .program-card {
+        padding: 12px;
+    }
+
+    .program-card h3 {
+        font-size: 1.2rem;
+    }
+
+    .program-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .model-badge {
+        margin-left: 0;
     }
 
     .image-dropzone {

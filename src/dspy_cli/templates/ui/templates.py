@@ -18,37 +18,63 @@ def render_index(modules: List[Any], config: Dict) -> str:
     if modules:
         for module in modules:
             from dspy_cli.config import get_program_model
+            from dspy_cli.discovery.module_finder import get_signature_fields
+
             model_alias = get_program_model(config, module.name)
 
-            # Get input/output field counts
-            input_count = len(module.signature.input_fields) if module.signature else 0
-            output_count = len(module.signature.output_fields) if module.signature else 0
+            # Extract adapter type from model alias (e.g., "openai" from "openai:gpt-5-mini")
+            adapter = model_alias.split(':')[0] if ':' in model_alias else 'default'
+
+            # Get field information
+            if module.signature:
+                fields = get_signature_fields(module.signature)
+                input_names = list(fields["inputs"].keys())
+                output_names = list(fields["outputs"].keys())
+
+                # Build field description
+                input_str = ", ".join(input_names) if input_names else "no inputs"
+                output_str = ", ".join(output_names) if output_names else "no outputs"
+                field_description = f"{input_str} → {output_str}"
+
+                # Get signature docstring if available
+                signature_doc = module.signature.__doc__.strip() if module.signature.__doc__ else ""
+            else:
+                field_description = "No signature information"
+                signature_doc = ""
+
+            # Build description HTML
+            description_html = f'<p class="program-description">{signature_doc}</p>' if signature_doc else ''
 
             programs_html += f"""
-            <div class="program-card">
+            <div class="program-card" data-url="/ui/{module.name}">
                 <h3><a href="/ui/{module.name}">{module.name}</a></h3>
+                {description_html}
                 <p class="program-meta">
-                    <span class="model-badge">{model_alias}</span>
-                    <span class="field-info">{input_count} input(s) → {output_count} output(s)</span>
+                    <span class="field-info">{field_description}</span>
+                    <span class="model-badge" data-adapter="{adapter}">{model_alias}</span>
                 </p>
             </div>
             """
     else:
         programs_html = '<p class="no-programs">No programs discovered</p>'
 
+    # Get project name from config
+    project_name = config.get("app_id", "DSPy Project")
+    # Capitalize and format the project name nicely
+    display_name = project_name.replace("-", " ").replace("_", " ").title()
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DSPy Programs</title>
+    <title>{display_name}</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>DSPy Programs</h1>
-            <p class="subtitle">Interactive testing interface for your DSPy modules</p>
+            <h1>{display_name}</h1>
         </header>
 
         <main>
@@ -61,6 +87,22 @@ def render_index(modules: List[Any], config: Dict) -> str:
             <p>API endpoint: <code>GET /programs</code> for JSON schema</p>
         </footer>
     </div>
+
+    <script>
+        // Make program cards clickable
+        document.querySelectorAll('.program-card').forEach(card => {{
+            card.addEventListener('click', (e) => {{
+                // Don't navigate if clicking on the link itself (to avoid double navigation)
+                if (e.target.tagName === 'A' || e.target.closest('a')) {{
+                    return;
+                }}
+                const url = card.dataset.url;
+                if (url) {{
+                    window.location.href = url;
+                }}
+            }});
+        }});
+    </script>
 </body>
 </html>"""
 
@@ -80,6 +122,9 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
     from dspy_cli.discovery.module_finder import get_signature_fields
 
     model_alias = get_program_model(config, program_name)
+
+    # Extract adapter type from model alias
+    adapter = model_alias.split(':')[0] if ':' in model_alias else 'default'
 
     # Build form fields
     form_fields = ""
@@ -168,7 +213,7 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
             </nav>
             <h1>{program_name}</h1>
             <p class="program-meta">
-                <span class="model-badge">{model_alias}</span>
+                <span class="model-badge" data-adapter="{adapter}">{model_alias}</span>
             </p>
         </header>
 
