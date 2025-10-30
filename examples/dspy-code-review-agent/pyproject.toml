@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dspy-code-review-agent"
+version = "0.1.0"
+description = "A DSPy project"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dspy-ai>=3.0.3",
+    "mcp>=1.19.0",
+    "mlflow>=3.5.1",
+    "rich>=14.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv]
+dev-dependencies = [
+    "python-dotenv>=1.2.1",
+]
