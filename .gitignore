@@ -54,3 +54,7 @@ Thumbs.db
 examples/*/log/
 examples/*/.env
 examples/*/__pycache__/
+
+# MLFlow
+mlruns
+mlartifacts
