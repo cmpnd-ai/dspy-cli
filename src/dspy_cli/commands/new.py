@@ -138,23 +138,28 @@ def _create_config_files(project_path, project_name, program_name, package_name)
     pyproject_template = (templates_dir / "pyproject.toml.template").read_text()
     pyproject_content = pyproject_template.format(project_name=project_name)
     (project_path / "pyproject.toml").write_text(pyproject_content)
+    click.echo(f"  Created: {project_name}/pyproject.toml")
 
     # Read and write dspy.config.yaml
     config_template = (templates_dir / "dspy.config.yaml.template").read_text()
     config_content = config_template.format(app_id=project_name)
     (project_path / "dspy.config.yaml").write_text(config_content)
+    click.echo(f"  Created: {project_name}/dspy.config.yaml")
 
     # Read and write Dockerfile
     dockerfile_template = (templates_dir / "Dockerfile.template").read_text()
     (project_path / "Dockerfile").write_text(dockerfile_template)
+    click.echo(f"  Created: {project_name}/Dockerfile")
 
     # Read and write .dockerignore
     dockerignore_template = (templates_dir / ".dockerignore.template").read_text()
     (project_path / ".dockerignore").write_text(dockerignore_template)
+    click.echo(f"  Created: {project_name}/.dockerignore")
 
     # Read and write .env
     env_template = (templates_dir / "env.template").read_text()
     (project_path / ".env").write_text(env_template)
+    click.echo(f"  Created: {project_name}/.env")
 
     # Read and write README.md
     readme_template = (templates_dir / "README.md.template").read_text()
@@ -164,18 +169,12 @@ def _create_config_files(project_path, project_name, program_name, package_name)
         package_name=package_name
     )
     (project_path / "README.md").write_text(readme_content)
+    click.echo(f"  Created: {project_name}/README.md")
 
     # Read and write .gitignore
     gitignore_template = (templates_dir / "gitignore.template").read_text()
     (project_path / ".gitignore").write_text(gitignore_template)
-
-    click.echo(f"  Created: {project_name}/pyproject.toml")
-    click.echo(f"  Created: {project_name}/dspy.config.yaml")
-    click.echo(f"  Created: {project_name}/Dockerfile")
-    click.echo(f"  Created: {project_name}/.env")
-    click.echo(f"  Created: {project_name}/README.md")
     click.echo(f"  Created: {project_name}/.gitignore")
-
 
 def _create_code_files(project_path, package_name, program_name, signature, signature_fields):
     """Create Python code files from templates."""
