@@ -187,8 +187,21 @@ def _create_request_model(module: DiscoveredModule) -> type:
         if field_info.json_schema_extra:
             description = field_info.json_schema_extra.get("desc", "")
 
+        # Check if field is Optional by checking if it's a Union with None
+        import typing
+        is_optional = False
+        default_value = ...  # Required by default
+
+        # Check if type is Optional (Union with None)
+        origin = typing.get_origin(field_type)
+        if origin is typing.Union:
+            args = typing.get_args(field_type)
+            if type(None) in args:
+                is_optional = True
+                default_value = None
+
         # Add to fields dict
-        fields[field_name] = (field_type, ...)
+        fields[field_name] = (field_type, default_value)
 
     # Create dynamic Pydantic model
     model_name = f"{module.name}Request"
