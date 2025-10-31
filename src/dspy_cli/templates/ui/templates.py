@@ -70,11 +70,26 @@ def render_index(modules: List[Any], config: Dict) -> str:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{display_name}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script>
+        // Apply theme immediately to prevent flash
+        (function() {{
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {{
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            }} else {{
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+            }}
+        }})();
+    </script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>{display_name}</h1>
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+                <span id="themeIcon" class="theme-toggle-icon">🌙</span>
+            </button>
         </header>
 
         <main>
@@ -88,7 +103,11 @@ def render_index(modules: List[Any], config: Dict) -> str:
         </footer>
     </div>
 
+    <script src="/static/script.js"></script>
     <script>
+        // Update icon after page loads
+        updateThemeIcon();
+
         // Make program cards clickable
         document.querySelectorAll('.program-card').forEach(card => {{
             card.addEventListener('click', (e) => {{
@@ -244,10 +263,25 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{program_name} - DSPy Program</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script>
+        // Apply theme immediately to prevent flash
+        (function() {{
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {{
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            }} else {{
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+            }}
+        }})();
+    </script>
 </head>
 <body>
     <div class="container">
         <header>
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+                <span id="themeIcon" class="theme-toggle-icon">🌙</span>
+            </button>
             <nav>
                 <a href="/" class="back-link">← All Programs</a>
             </nav>
@@ -294,6 +328,9 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
 
     <script src="/static/script.js"></script>
     <script>
+        // Update icon after page loads
+        updateThemeIcon();
+
         // Initialize the program page
         const programName = "{program_name}";
         initProgramPage(programName);
