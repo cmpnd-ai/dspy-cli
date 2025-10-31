@@ -1,6 +1,57 @@
 // DSPy UI JavaScript
 
 /**
+ * Initialize theme on page load
+ * Reads theme preference from localStorage or falls back to system preference
+ */
+function initTheme() {
+    // Check localStorage for saved preference
+    const savedTheme = localStorage.getItem('theme');
+
+    if (savedTheme) {
+        // Use saved preference
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    } else {
+        // Use system preference if no saved preference
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = prefersDark ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+    }
+
+    // Update toggle button icon if it exists
+    updateThemeIcon();
+}
+
+/**
+ * Toggle between light and dark themes
+ */
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+    // Update theme
+    document.documentElement.setAttribute('data-theme', newTheme);
+
+    // Save preference
+    localStorage.setItem('theme', newTheme);
+
+    // Update icon
+    updateThemeIcon();
+}
+
+/**
+ * Update theme toggle button icon
+ */
+function updateThemeIcon() {
+    const themeIcon = document.getElementById('themeIcon');
+    if (!themeIcon) return;
+
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    // Show moon for light mode (click to go dark), sun for dark mode (click to go light)
+    themeIcon.textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+}
+
+/**
  * Initialize the program page with event handlers and log loading
  */
 function initProgramPage(programName) {
