@@ -1,7 +1,7 @@
 # DSPy Configuration
 # Define your language models and their settings here
 
-app_id: dspy-code-review-agent
+app_id: code-review-agent
 models:
   # The default model to use if no per-program override is specified
   default: openai:gpt-5-mini
