@@ -8,4 +8,5 @@ class TweetExtractorSignature(dspy.Signature):
     """
 
     post: str = dspy.InputField(desc="")
+    use_emojis: bool = dspy.InputField(desc="Whether or not to include emojis in the tweets.")
     tweet_candidates: list = dspy.OutputField(desc="")

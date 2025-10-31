@@ -18,12 +18,12 @@
 - [x] Change help banner
 - [ ] If there are two programs/modules with the same name abort and throw an error
 - [ ] UI: When I have multiple modules referencing one signature, the signature data isn't loaded.
-- [ ] UI: Have custom typed fields and validation
-    - [ ] If you use a Literal list for an input, make it a dropdown.
-    - [ ] Boolean should be a checkbox
-    - [ ] If a required input is missing, flag it when they hit submit and don't send.
+- [x] UI: Have custom typed fields and validation
+    - [x] If you use a Literal list for an input, make it a dropdown.
+    - [x] Boolean should be a checkbox
+    - [x] If a required input is missing, flag it when they hit submit and don't send.
 - [x] Add 's' shortcut to 'serve' command
-- [ ] If there's no description for the field, just don't show anything in UI, not "${summary_length}"
+- [x] If there's no description for the field, just don't show anything in UI, not "${summary_length}"
 - [x] There's a context error with dspy.LM if you run the same program twice: "dspy.settings.configure(...) can only be called from the same async task that called it first. Please use `dspy.context(...)` in other async tasks instead."
 - [x] Investigate image and OpenAI issue
 

@@ -34,6 +34,9 @@ function initProgramPage(programName) {
 
     // Initialize image input handlers
     initImageInputs();
+
+    // Initialize checkbox handlers
+    initCheckboxes();
 }
 
 /**
@@ -56,10 +59,43 @@ async function submitProgram(programName) {
     // Collect form data
     const formData = new FormData(form);
     const data = {};
+    const missingFields = [];
+
+    // Get all form inputs to check for required fields
+    const formInputs = form.querySelectorAll('input, textarea, select');
+
+    // Handle checkboxes explicitly (they don't appear in FormData when unchecked)
+    const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+    const checkboxNames = new Set();
+    checkboxes.forEach(checkbox => {
+        checkboxNames.add(checkbox.name);
+        data[checkbox.name] = checkbox.checked;
+    });
 
     for (const [key, value] of formData.entries()) {
+        // Skip checkboxes (already handled above)
+        if (checkboxNames.has(key)) {
+            continue;
+        }
+
+        // Check if value is empty (but allow false for booleans)
+        const trimmedValue = typeof value === 'string' ? value.trim() : value;
+
+        // Check if field is optional
+        const inputElement = form.querySelector(`[name="${key}"]`);
+        const isOptional = inputElement && inputElement.hasAttribute('data-optional');
+
+        if (!trimmedValue && trimmedValue !== false) {
+            // Only flag as missing if not optional
+            if (!isOptional) {
+                missingFields.push(key);
+            }
+            // Skip adding to data if empty (don't send empty optional fields)
+            continue;
+        }
+
         // Try to parse as JSON for arrays/objects
-        if (value.trim().startsWith('[') || value.trim().startsWith('{')) {
+        if (typeof value === 'string' && (value.trim().startsWith('[') || value.trim().startsWith('{'))) {
             try {
                 data[key] = JSON.parse(value);
             } catch (e) {
@@ -74,6 +110,20 @@ async function submitProgram(programName) {
         }
     }
 
+    // Check for missing required fields
+    if (missingFields.length > 0) {
+        const fieldList = missingFields.join(', ');
+        document.getElementById('errorContent').textContent =
+            `Missing required input${missingFields.length > 1 ? 's' : ''}: ${fieldList}\n\nPlease provide a value for ${missingFields.length > 1 ? 'these fields' : 'this field'} before running the program.`;
+        errorBox.style.display = 'block';
+        errorBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Run Program';
+        return;
+    }
+
     try {
         const response = await fetch(`/${programName}`, {
             method: 'POST',
@@ -84,8 +134,37 @@ async function submitProgram(programName) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Request failed');
+            let errorMessage = 'Request failed';
+            try {
+                const errorData = await response.json();
+
+                // Handle different error formats
+                if (typeof errorData.detail === 'string') {
+                    errorMessage = errorData.detail;
+                } else if (Array.isArray(errorData.detail)) {
+                    // Handle Pydantic validation errors (FastAPI format)
+                    const errors = errorData.detail.map(err => {
+                        const field = err.loc ? err.loc.slice(1).join('.') : 'unknown';
+                        const message = err.msg || 'Invalid value';
+                        return `  • ${field}: ${message}`;
+                    }).join('\n');
+                    errorMessage = `Validation Error:\n\n${errors}`;
+                } else if (typeof errorData.detail === 'object') {
+                    // If detail is an object, stringify it nicely
+                    errorMessage = JSON.stringify(errorData.detail, null, 2);
+                } else if (errorData.message) {
+                    errorMessage = errorData.message;
+                } else if (errorData.error) {
+                    errorMessage = errorData.error;
+                } else {
+                    // Show the whole error object if we can't find a specific message
+                    errorMessage = JSON.stringify(errorData, null, 2);
+                }
+            } catch (e) {
+                // If we can't parse the error response, use status text
+                errorMessage = `Request failed: ${response.statusText || response.status}`;
+            }
+            throw new Error(errorMessage);
         }
 
         const result = await response.json();
@@ -101,8 +180,20 @@ async function submitProgram(programName) {
         setTimeout(() => loadLogs(programName), 500);
 
     } catch (error) {
-        // Display error
-        document.getElementById('errorContent').textContent = error.message;
+        // Display error with better formatting
+        let errorText = error.message;
+
+        // If error message looks like JSON, try to format it nicely
+        if (errorText.startsWith('{') || errorText.startsWith('[')) {
+            try {
+                const parsed = JSON.parse(errorText);
+                errorText = JSON.stringify(parsed, null, 2);
+            } catch (e) {
+                // Keep original if parsing fails
+            }
+        }
+
+        document.getElementById('errorContent').textContent = errorText;
         errorBox.style.display = 'block';
 
         // Scroll to error
@@ -335,4 +426,25 @@ function clearImage(fieldName) {
     if (dropzone) {
         dropzone.querySelector('.dropzone-content').style.display = 'block';
     }
+}
+
+/**
+ * Initialize checkbox handlers to update labels
+ */
+function initCheckboxes() {
+    // Find all checkboxes and their corresponding labels
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+
+    checkboxes.forEach(checkbox => {
+        const label = document.querySelector(`.checkbox-label[data-checkbox="${checkbox.name}"]`);
+        if (!label) return;
+
+        // Update label based on initial state
+        label.textContent = checkbox.checked ? 'True' : 'False';
+
+        // Add change event listener
+        checkbox.addEventListener('change', function() {
+            label.textContent = this.checked ? 'True' : 'False';
+        });
+    });
 }
