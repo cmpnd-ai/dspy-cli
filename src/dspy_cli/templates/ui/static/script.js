@@ -37,6 +37,14 @@ function initProgramPage(programName) {
 
     // Initialize checkbox handlers
     initCheckboxes();
+
+    // Set up copy API call button
+    const copyBtn = document.getElementById('copyApiBtn');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+            copyApiCall(programName);
+        });
+    }
 }
 
 /**
@@ -202,6 +210,94 @@ async function submitProgram(programName) {
         // Re-enable submit button
         submitBtn.disabled = false;
         submitBtn.textContent = 'Run Program';
+    }
+}
+
+/**
+ * Copy API call as curl command
+ */
+async function copyApiCall(programName) {
+    const form = document.getElementById('programForm');
+    const copyBtn = document.getElementById('copyApiBtn');
+
+    // Collect form data (same logic as submitProgram)
+    const formData = new FormData(form);
+    const data = {};
+
+    // Handle checkboxes explicitly
+    const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+    const checkboxNames = new Set();
+    checkboxes.forEach(checkbox => {
+        checkboxNames.add(checkbox.name);
+        data[checkbox.name] = checkbox.checked;
+    });
+
+    for (const [key, value] of formData.entries()) {
+        // Skip checkboxes (already handled above)
+        if (checkboxNames.has(key)) {
+            continue;
+        }
+
+        // Check if value is empty
+        const trimmedValue = typeof value === 'string' ? value.trim() : value;
+
+        // Check if field is optional
+        const inputElement = form.querySelector(`[name="${key}"]`);
+        const isOptional = inputElement && inputElement.hasAttribute('data-optional');
+
+        if (!trimmedValue && trimmedValue !== false) {
+            // Skip adding to data if empty (don't send empty optional fields)
+            if (!isOptional) {
+                // For required fields, still add empty value to show what's missing
+                data[key] = "";
+            }
+            continue;
+        }
+
+        // Try to parse as JSON for arrays/objects
+        if (typeof value === 'string' && (value.trim().startsWith('[') || value.trim().startsWith('{'))) {
+            try {
+                data[key] = JSON.parse(value);
+            } catch (e) {
+                data[key] = value;
+            }
+        } else if (value === 'true') {
+            data[key] = true;
+        } else if (value === 'false') {
+            data[key] = false;
+        } else {
+            data[key] = value;
+        }
+    }
+
+    // Generate curl command
+    const url = `${window.location.protocol}//${window.location.host}/${programName}`;
+    const jsonData = JSON.stringify(data, null, 2);
+    const curlCommand = `curl -X POST ${url} \\\n  -H "Content-Type: application/json" \\\n  -d '${jsonData}'`;
+
+    // Copy to clipboard
+    try {
+        await navigator.clipboard.writeText(curlCommand);
+
+        // Show success feedback
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        copyBtn.style.background = '#27ae60';
+
+        // Reset button after 2 seconds
+        setTimeout(() => {
+            copyBtn.textContent = originalText;
+            copyBtn.style.background = '';
+        }, 2000);
+    } catch (error) {
+        console.error('Failed to copy to clipboard:', error);
+
+        // Show error feedback
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copy failed';
+        setTimeout(() => {
+            copyBtn.textContent = originalText;
+        }, 2000);
     }
 }
 

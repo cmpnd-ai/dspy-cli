@@ -325,6 +325,13 @@ section h3 {
     user-select: none;
 }
 
+.button-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
 .submit-btn {
     background: #000;
     color: white;
@@ -343,6 +350,21 @@ section h3 {
 .submit-btn:disabled {
     background: #ccc;
     cursor: not-allowed;
+}
+
+.copy-btn {
+    background: #b3b3b3;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.copy-btn:hover {
+    background: #999;
 }
 
 .refresh-btn {

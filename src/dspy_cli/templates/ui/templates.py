@@ -262,7 +262,10 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
                     <h2>Inputs</h2>
                     <form id="programForm">
                         {form_fields}
-                        <button type="submit" class="submit-btn">Run Program</button>
+                        <div class="button-row">
+                            <button type="submit" class="submit-btn">Run Program</button>
+                            <button type="button" class="copy-btn" id="copyApiBtn">Copy API Call</button>
+                        </div>
                     </form>
 
                     <div id="result" class="result-box" style="display: none;">
