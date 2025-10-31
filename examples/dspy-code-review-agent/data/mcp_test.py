@@ -53,8 +53,16 @@ async def review_pr_with_github_mcp(repo: str, pr_number: int):
     finally:
         await manager.stop()
 
+async def main():
+    tasks = [
+        review_pr_with_github_mcp("stanfordnlp/dspy", 8902),
+        review_pr_with_github_mcp("stanfordnlp/dspy", 9003),
+        # review_pr_with_github_mcp("stanfordnlp/dspy", 8936),
+    ]
+    completed_tasks = await asyncio.gather(*tasks)
+    rich.print(completed_tasks)
 
 # Usage
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(review_pr_with_github_mcp("stanfordnlp/dspy", 8902))
+    asyncio.run(main())
