@@ -1,4 +1,4 @@
-"""Signature definitions for dspy_code_review_agent."""
+"""Signature definitions for code_review_agent."""
 
 import dspy
 from typing import Dict, List, Union, Optional
@@ -132,5 +132,26 @@ class ReviewPR(dspy.Signature):
     """
     pr_metadata: PRMetadata = dspy.InputField(description="PR metadata")
     file_list: List[FilePatchInfo] = dspy.InputField(description="List of files and their patches")
+    pr_review: PRReview = dspy.OutputField(description="PR review output")
+
+
+class ReviewPRWithTools(dspy.Signature):
+    """You are a code review agent.Provide constructive and concise feedback for a Git Pull Request (PR).
+    You can read related files, search for similar patterns, check commit history, etc.
+    None of your tools have write access, but they should be used to investigate relevant code.
+    The review should focus on new code added in the PR code diff (lines starting with '+')
+
+    Notes:
+    - Code is in '__new hunk__' (updated) and '__old hunk__' (removed) sections
+    - Line numbers only appear in '__new hunk__' for reference
+    - Lines prefixed with '+' are new, '-' are removed, ' ' are unchanged
+    - When quoting variables/names/paths, use backticks (`) not quotes (')
+    - You only see changed code (diff hunks), not the entire codebase
+    - Don't question code elements that may be defined elsewhere
+    - If code ends at an opening brace/statement (if, for, try), don't treat as incomplete
+    """
+    
+    pr_metadata: dict = dspy.InputField(desc="PR title, description, branch info")
+    file_list: list = dspy.InputField(desc="List of files changed in the PR")
     pr_review: PRReview = dspy.OutputField(description="PR review output")
 

@@ -16,11 +16,11 @@ OPENAI_API_KEY=your-key-here
 
 ### Project Structure
 
-- `src/dspy_code_review_agent/modules/` - DSPy program implementations
-- `src/dspy_code_review_agent/signatures/` - Reusable signatures
-- `src/dspy_code_review_agent/optimizers/` - Optimizer configurations
-- `src/dspy_code_review_agent/metrics/` - Evaluation metrics
-- `src/dspy_code_review_agent/utils/` - Shared helper functions
+- `src/code_review_agent/modules/` - DSPy program implementations
+- `src/code_review_agent/signatures/` - Reusable signatures
+- `src/code_review_agent/optimizers/` - Optimizer configurations
+- `src/code_review_agent/metrics/` - Evaluation metrics
+- `src/code_review_agent/utils/` - Shared helper functions
 - `data/` - Training and evaluation data
 - `logs/` - API request logs
 - `tests/` - Test files
@@ -45,7 +45,7 @@ dspy-cli serve --port 8080 --host 127.0.0.1
 ### Example Request
 
 ```bash
-curl -X POST http://localhost:8000/dspy_code_review_agent \\
+curl -X POST http://localhost:8000/code_review_agent \\
   -H "Content-Type: application/json" \\
   -d '{"question": "your question here"}'
 ```

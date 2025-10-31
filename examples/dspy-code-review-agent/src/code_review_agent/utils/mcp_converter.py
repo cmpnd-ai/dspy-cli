@@ -1,17 +1,13 @@
-"""Scalable MCP tool result converter for DSPy.
+"""Custom MCP tool result converter for DSPy ReAct."""
 
-This module converts MCP (Model Context Protocol) tool results into a format
-optimized for DSPy's ReAct module, handling mixed content types while keeping
-observations compact and JSON-serializable.
-"""
-
-from typing import Any, TYPE_CHECKING
 import hashlib
 import base64
+from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     import mcp
     import mcp.client.session
+import dspy
 
 
 def _truncate_text(text: str, max_chars: int = 500) -> dict[str, Any]:
@@ -50,29 +46,20 @@ def _build_compact_observation(
     text_files = [t for t in texts if t.get("name")]
     if text_files:
         for t in text_files:
-            lines.append(f"\n📄 File: {t['name']} ({t['preview']['total_chars']} chars)")
+            lines.append(f"\nFile: {t['name']} ({t['preview']['total_chars']} chars)")
             lines.append(f"Content:\n{t.get('full_text', t['preview']['text'])}")
     
     # Images
     if images:
-        lines.append(f"\n🖼️  Images ({len(images)}):")
-        for img in images:
-            size_kb = len(img.get("base64", "")) * 3 // 4 // 1024
-            lines.append(f"  - {img['name']} ({img['mime']}, ~{size_kb}KB)")
+        raise NotImplementedError("Images are not supported yet.")
     
     # Audio
     if audio:
-        lines.append(f"\n🔊 Audio ({len(audio)}):")
-        for a in audio:
-            size_kb = len(a.get("base64", "")) * 3 // 4 // 1024
-            lines.append(f"  - {a['name']} ({a['mime']}, ~{size_kb}KB)")
+        raise NotImplementedError("Audio is not supported yet.")
     
     # Binary blobs
     if blobs:
-        lines.append(f"\n📦 Binary files ({len(blobs)}):")
-        for b in blobs:
-            size_kb = b.get("size", 0) // 1024
-            lines.append(f"  - {b['name']} ({b['mime']}, {size_kb}KB) [content omitted]")
+        raise NotImplementedError("Binary blobs are not supported yet.")
     
     return "\n".join(lines) if lines else "[No content]"
 
@@ -86,8 +73,6 @@ def _convert_mcp_tool_result(call_tool_result: "mcp.types.CallToolResult") -> di
     - images: List of images (base64 or data URLs)
     - audio: List of audio (base64 + format)
     - blobs: List of binary files (metadata only, content omitted)
-    
-    The observation is kept small (<2KB) while full content is preserved in attachments.
     """
     from mcp.types import (
         EmbeddedResource,
@@ -110,6 +95,7 @@ def _convert_mcp_tool_result(call_tool_result: "mcp.types.CallToolResult") -> di
                 "name": None,
                 "mime": "text/plain",
                 "preview": preview,
+                "full_text": content.text,
             })
         
         elif isinstance(content, EmbeddedResource):
@@ -123,53 +109,28 @@ def _convert_mcp_tool_result(call_tool_result: "mcp.types.CallToolResult") -> di
                     "mime": resource.mimeType or "text/plain",
                     "uri": str(resource.uri),
                     "preview": preview,
-                    "full_text": resource.text,  # Keep full text for app use
+                    "full_text": resource.text,
                 })
             
             elif isinstance(resource, BlobResourceContents):
                 mime = resource.mimeType or "application/octet-stream"
                 name = str(resource.uri).split("/")[-1]
                 
-                if mime.startswith("image/"):
-                    # Image content
-                    raise NotImplementedError("Image content not yet supported")
-                
-                elif mime.startswith("audio/"):
-                    # Audio content
-                    raise NotImplementedError("Audio content not yet supported")
-                
-                else:
-                    # Other binary content - don't include large blobs
-                    blob_bytes = base64.b64decode(resource.blob)
-                    blob_hash = hashlib.sha256(blob_bytes).hexdigest()
-                    blobs.append({
-                        "name": name,
-                        "mime": mime,
-                        "uri": str(resource.uri),
-                        "size": len(blob_bytes),
-                        "sha256": blob_hash[:16] + "...",
-                        "note": "content omitted from observation",
-                    })
+                raise NotImplementedError("Image, Audio, orBinary content not yet supported")
         
         elif isinstance(content, ImageContent):
-            # Direct image content
             raise NotImplementedError("Image content not yet supported")
-        
         else:
-            # Unknown content type
             raise NotImplementedError(
                 f"Content type {type(content).__name__} not yet supported. "
                 f"Supported: TextContent, EmbeddedResource (text/blob), ImageContent"
             )
     
-    # Build compact observation for the LM
     observation = _build_compact_observation(texts, images, audio, blobs)
     
-    # Check for errors
     if call_tool_result.isError:
         raise RuntimeError(f"MCP tool failed: {observation}")
     
-    # Return structured bundle
     return {
         "ok": True,
         "observation": observation,
@@ -186,16 +147,7 @@ def convert_mcp_tool(
 ) -> "dspy.Tool":
     """Build a DSPy tool from an MCP tool with proper content handling.
     
-    The returned tool function will:
-    1. Call the MCP tool via the session
-    2. Convert the result to a structured bundle (see _convert_mcp_tool_result)
-    3. Return either:
-       - The bundle dict (if multiple content types)
-       - Just the text (if only one text file with no status message)
-       - The observation string (if mixed content with no substantial data)
-    
-    This ensures ReAct gets clean, compact observations while preserving
-    full content for application use.
+    Returns a tool that converts MCP results to structured bundles or simple text.
     """
     import dspy
     from dspy.adapters.types.tool import convert_input_schema_to_tool_args
@@ -206,20 +158,15 @@ def convert_mcp_tool(
         result = await session.call_tool(tool.name, arguments=kwargs)
         bundle = _convert_mcp_tool_result(result)
         
-        # Simplify return value when possible:
-        # If there's exactly one text file and no other content, return just the text
         if (len(bundle["texts"]) == 1 and 
             not bundle["images"] and 
             not bundle["audio"] and 
             not bundle["blobs"]):
             text_item = bundle["texts"][0]
-            # If it has a name (is a file), return full text
             if text_item.get("name") and text_item.get("full_text"):
                 return text_item["full_text"]
-            # Otherwise return the preview text (status message)
             return text_item["preview"]["text"]
         
-        # Return full bundle for mixed content
         return bundle
     
     return dspy.Tool(
@@ -230,3 +177,9 @@ def convert_mcp_tool(
         arg_types=arg_types,
         arg_desc=arg_desc
     )
+
+
+async def build_dspy_tools(session: "mcp.client.session.ClientSession") -> list["dspy.Tool"]:
+    """Build DSPy tools from an MCP session."""
+    tools = await session.list_tools()
+    return [convert_mcp_tool(session, tool) for tool in tools.tools]

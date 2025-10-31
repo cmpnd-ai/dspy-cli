@@ -1,13 +1,12 @@
-"""Data utilities - re-exports from utils for backward compatibility."""
+"""Utility functions for dspy-code-review-agent."""
 
-from code_review_agent.utils import (
+from .pr_loader import (
     fetch_pr_data,
     format_pr_for_review,
     load_demo_pr,
-    convert_mcp_tool,
-    build_dspy_tools,
-    MCPManager,
 )
+from .mcp_converter import convert_mcp_tool, build_dspy_tools
+from .mcp_runtime import MCPManager
 
 __all__ = [
     "fetch_pr_data",
@@ -17,4 +16,3 @@ __all__ = [
     "build_dspy_tools",
     "MCPManager",
 ]
-

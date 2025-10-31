@@ -3,13 +3,13 @@
 import pytest
 import dspy
 
-from dspy_code_review_agent.modules.dspy_code_review_agent_predict import DspyCodeReviewAgentPredict
+from code_review_agent.modules.pr_reviewer import PRReviewer
 
 
 @pytest.fixture
 def module():
     """Create a module instance for testing."""
-    return DspyCodeReviewAgentPredict()
+    return PRReviewer()
 
 
 def test_module_instantiation(module):
