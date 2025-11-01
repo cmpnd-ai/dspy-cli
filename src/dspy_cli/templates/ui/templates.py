@@ -16,7 +16,9 @@ def render_index(modules: List[Any], config: Dict) -> str:
     programs_html = ""
 
     if modules:
-        for module in modules:
+        # Sort modules alphabetically by name
+        sorted_modules = sorted(modules, key=lambda m: m.name)
+        for module in sorted_modules:
             from dspy_cli.config import get_program_model
             from dspy_cli.discovery.module_finder import get_signature_fields
 
@@ -63,6 +65,10 @@ def render_index(modules: List[Any], config: Dict) -> str:
     # Capitalize and format the project name nicely
     display_name = project_name.replace("-", " ").replace("_", " ").title()
 
+    # Get optional description from config
+    description = config.get("description", "")
+    description_html = f'<p class="project-description">{description}</p>' if description else ''
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -87,6 +93,7 @@ def render_index(modules: List[Any], config: Dict) -> str:
     <div class="container">
         <header>
             <h1>{display_name}</h1>
+            {description_html}
             <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
                 <span id="themeIcon" class="theme-toggle-icon">🌙</span>
             </button>

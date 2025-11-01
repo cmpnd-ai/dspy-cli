@@ -5,7 +5,7 @@ from typing import Literal, Optional
 
 class SummarizerSignature(dspy.Signature):
     """
-    Given a blog post, generate a short summary of 2-3 sentences.
+    Given a blog post, generate a summary.
     """
 
     blog_post: str = dspy.InputField(desc="The content of the blog post to summarize.")

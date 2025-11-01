@@ -4,6 +4,7 @@ import dspy
 
 class HeadlineGeneratorSignature(dspy.Signature):
     """
+    Given a blog post, generate candidate headlines for the post.
     """
 
     blog_post: str = dspy.InputField(desc="")
