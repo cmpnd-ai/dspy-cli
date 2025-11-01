@@ -5,8 +5,6 @@ from {package_name}.signatures.{program_name} import {signature_class}
 
 
 class {class_name}(dspy.Module):
-    """
-    """
 
     def __init__(self):
         super().__init__()
