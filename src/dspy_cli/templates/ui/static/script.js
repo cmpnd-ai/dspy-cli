@@ -321,14 +321,60 @@ async function copyApiCall(programName) {
         }
     }
 
+    // Check for data URIs (uploaded files) - these cannot be copied to curl commands
+    const hasDataUri = Object.values(data).some(value => {
+        if (typeof value === 'string' && value.startsWith('data:')) {
+            return true;
+        }
+        // Check nested arrays
+        if (Array.isArray(value)) {
+            return value.some(item => typeof item === 'string' && item.startsWith('data:'));
+        }
+        // Check nested objects
+        if (typeof value === 'object' && value !== null) {
+            return Object.values(value).some(item => typeof item === 'string' && item.startsWith('data:'));
+        }
+        return false;
+    });
+
+    if (hasDataUri) {
+        // Show error feedback for data URIs
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Use image URLs instead';
+        copyBtn.style.background = '#e74c3c';
+
+        setTimeout(() => {
+            copyBtn.textContent = originalText;
+            copyBtn.style.background = '';
+        }, 3000);
+        return;
+    }
+
     // Generate curl command
     const url = `${window.location.protocol}//${window.location.host}/${programName}`;
     const jsonData = JSON.stringify(data, null, 2);
     const curlCommand = `curl -X POST ${url} \\\n  -H "Content-Type: application/json" \\\n  -d '${jsonData}'`;
 
-    // Copy to clipboard
+    // Copy to clipboard with fallback
     try {
-        await navigator.clipboard.writeText(curlCommand);
+        // Try modern Clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(curlCommand);
+        } else {
+            // Fallback to old method
+            const textarea = document.createElement('textarea');
+            textarea.value = curlCommand;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            const success = document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            if (!success) {
+                throw new Error('execCommand copy failed');
+            }
+        }
 
         // Show success feedback
         const originalText = copyBtn.textContent;
