@@ -2,6 +2,10 @@
 
 This document describes how to release new versions of dspy-cli to PyPI.
 
+## Security
+
+Only designated release managers can push tags matching `v*.*.*` due to tag protection rules. This ensures all releases are authorized.
+
 ## Release Workflow
 
 ### 1. Prepare the Release
