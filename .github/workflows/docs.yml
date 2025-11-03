@@ -28,5 +28,8 @@ jobs:
         run: |
           pip install mkdocs>=1.6.0 mkdocs-material>=9.5.0 mkdocstrings[python]>=0.24.0 pymdown-extensions>=10.7.0
       
+      - name: Build documentation
+        run: mkdocs build --strict
+      
       - name: Deploy to GitHub Pages
         run: mkdocs gh-deploy --force
