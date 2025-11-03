@@ -51,6 +51,9 @@ dspy-cli = "dspy_cli.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+dspy_cli = ["templates/**/*", "templates/**/.*"]
+
 [tool.black]
 line-length = 120
 target-version = ["py39"]
