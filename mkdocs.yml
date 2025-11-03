@@ -1,9 +1,9 @@
 site_name: dspy-cli
 site_description: Deploy DSPy applications with ease
-site_url: https://cmpnd-ai.github.io  # TODO: Update with actual docs URL
-repo_url: https://github.com/cmpnd-ai/dspy-cli
-repo_name: cmpnd-ai/dspy-cli
-edit_uri: edit/main/dspy-cli/docs/
+site_url: https://cmpnd-ai.github.io/dspy-cli 
+repo_url: https://github.com/cmpnd-ai/dspy-cli-tool
+repo_name: cmpnd-ai/dspy-cli-tool
+edit_uri: edit/main/dspy-cli-tool/docs/
 
 theme:
   name: material
@@ -41,7 +41,7 @@ theme:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/cmpnd-ai/optimization-platform
+      link: https://github.com/cmpnd-ai/dspy-cli-tool
 
 plugins:
   - search
