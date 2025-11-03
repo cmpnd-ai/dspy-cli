@@ -110,7 +110,5 @@ jobs:
           name: dist-${{ github.ref_name }}
           path: dist
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.10.3
-        with:
-          print-hash: true
+      - name: Publish
+        run: uv publish
