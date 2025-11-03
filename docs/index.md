@@ -1,8 +1,8 @@
 # dspy-cli
 
-**Deploy DSPy applications with ease.**
+**Scaffold and serve DSPy applications with ease.**
 
-dspy-cli is a command-line tool for scaffolding, serving, and deploying [DSPy](https://github.com/stanfordnlp/dspy) applications. It provides convention-based project structure, local development servers, and seamless deployment to production.
+dspy-cli is a command-line tool for scaffolding and serving [DSPy](https://github.com/stanfordnlp/dspy) applications. It provides convention-based project structure and local development servers.
 
 ---
 
@@ -27,9 +27,6 @@ uv sync
 
 # Start local development server
 dspy-cli serve
-
-# Deploy to production
-dspy-cli deploy
 ```
 
 ## Features
@@ -37,7 +34,6 @@ dspy-cli deploy
 - **Project Scaffolding** - Generate complete DSPy projects with best-practice structure
 - **Local Development** - Test your DSPy modules locally with hot reload
 - **Component Generation** - Add new modules, signatures, and optimizers to existing projects
-- **Production Deployment** - Deploy to production with Docker and automatic routing
 - **Type-Safe** - Full type hints and signature validation
 
 ## Installation
@@ -87,7 +83,7 @@ qa-bot/
 │       └── metrics/        # Evaluation metrics
 ├── tests/
 ├── data/
-├── dspy.config.yaml        # Deployment config
+├── dspy.config.yaml        # Configuration
 ├── pyproject.toml
 └── .env                    # API keys (add yours here)
 ```
@@ -135,20 +131,9 @@ dspy-cli g scaffold analyzer -m CoT -s "text -> summary, sentiment"
 dspy-cli g scaffold agent -m ReAct -s "task -> result"
 ```
 
-### 7. Deploy to production
-
-```bash
-dspy-cli deploy
-```
-
-This packages your code and deploys to the control plane, returning:
-- Unique endpoint URL
-- Runtime API key (saved to `~/.dspy/keys/`)
-- Version information
-
 ## Project Configuration
 
-Edit `dspy.config.yaml` to configure your deployment:
+Edit `dspy.config.yaml` to configure your project:
 
 ```yaml
 # App identifier (used for routing)

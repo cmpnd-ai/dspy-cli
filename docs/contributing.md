@@ -133,7 +133,6 @@ dspy-cli/
 │       ├── commands/           # CLI commands
 │       │   ├── new.py
 │       │   ├── serve.py
-│       │   ├── deploy.py
 │       │   └── generate.py
 │       ├── server/             # FastAPI server
 │       ├── discovery/          # Module discovery
@@ -265,10 +264,6 @@ cd test-project
 uv sync
 dspy-cli serve
 ```
-
-### Test Deployment
-
-For local deployment testing, see the Makefile in the project root for local control plane setup.
 
 ## Common Development Tasks
 
