@@ -15,7 +15,7 @@ concurrency:
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
@@ -68,7 +68,7 @@ jobs:
 
   build:
     name: Build distributions
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [test]
     steps:
       - name: Checkout
@@ -94,7 +94,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [build]
     environment: 
       name: pypi
