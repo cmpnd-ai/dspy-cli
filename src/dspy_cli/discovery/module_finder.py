@@ -122,6 +122,17 @@ def discover_modules(
                     )
                 )
 
+        except ModuleNotFoundError as e:
+            logger.error(f"Error loading module {py_file}: {e}")
+            logger.warning(
+                f"\n⚠  Missing dependency detected while importing {py_file.name}\n"
+                f"   This might be because you are using a global dspy-cli install rather than a local one.\n\n"
+                f"   To fix this:\n"
+                f"   1. Install dependencies: uv sync (or pip install -e .)\n"
+                f"   2. Run from within the venv: source .venv/bin/activate && dspy-cli serve\n"
+                f"   3. Or use a task runner: uv run dspy-cli serve\n"
+            )
+            continue
         except Exception as e:
             logger.error(f"Error loading module {py_file}: {e}", exc_info=True)
             continue

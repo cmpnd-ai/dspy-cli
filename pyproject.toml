@@ -54,6 +54,9 @@ target-version = ["py39"]
 line-length = 120
 target-version = "py39"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [dependency-groups]
 dev = [
     "docker>=7.1.0",

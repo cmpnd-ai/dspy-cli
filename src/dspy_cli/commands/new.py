@@ -23,7 +23,13 @@ from dspy_cli.utils.signature_utils import parse_signature_string, to_class_name
     default=None,
     help='Inline signature string (e.g., "question -> answer" or "post -> tags: list[str]")',
 )
-def new(project_name, program_name, signature):
+@click.option(
+    "--link-dspy-cli",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    default=None,
+    help="Add a uv path override for local dspy-cli development",
+)
+def new(project_name, program_name, signature, link_dspy_cli):
     """Create a new DSPy project with boilerplate structure.
 
     Creates a directory with PROJECT_NAME and sets up a complete
@@ -86,6 +92,9 @@ def new(project_name, program_name, signature):
         # Create configuration files
         _create_config_files(project_path, project_name, program_name, package_name)
 
+        # Add uv path override if requested
+        _add_uv_override_if_requested(project_path, link_dspy_cli)
+
         # Create Python code files
         _create_code_files(project_path, package_name, program_name, signature, signature_fields)
 
@@ -97,7 +106,8 @@ def new(project_name, program_name, signature):
         click.echo("Next steps:")
         click.echo(f"  cd {project_name}")
         click.echo("  # Edit .env and add your API keys")
-        click.echo("  pip install -e .")
+        click.echo("  uv sync")
+        click.echo("  source .venv/bin/activate")
         click.echo("  dspy-cli serve")
 
     except Exception as e:
@@ -126,6 +136,31 @@ def _create_directory_structure(project_path, package_name, program_name):
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
         click.echo(f"  Created: {directory.relative_to(project_path.parent)}")
+
+
+def _add_uv_override_if_requested(project_path, link_dspy_cli):
+    """Add uv path override for dspy-cli if requested."""
+    # Check flag or environment variable
+    link = link_dspy_cli or os.getenv("DSPY_CLI_PATH")
+    if not link:
+        return
+    
+    # Convert to relative path
+    link_path = Path(link).resolve()
+    try:
+        rel_path = os.path.relpath(link_path, project_path)
+    except ValueError:
+        # Different drives on Windows, use absolute
+        rel_path = str(link_path)
+    
+    # Append uv.sources block
+    uv_block = f'\n[tool.uv.sources]\ndspy-cli = {{ path = "{rel_path}", editable = true }}\n'
+    pyproject_path = project_path / "pyproject.toml"
+    current_content = pyproject_path.read_text()
+    pyproject_path.write_text(current_content + uv_block)
+    
+    click.echo(click.style(f"  Added uv path override: dspy-cli -> {rel_path}", fg="cyan"))
+    click.echo(click.style("  Note: This is for local development only - do not commit this override", fg="yellow"))
 
 
 def _create_config_files(project_path, project_name, program_name, package_name):

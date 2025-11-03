@@ -1,21 +1,58 @@
 """Command to serve DSPy programs as an API."""
 
+import os
+import shlex
+import subprocess
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 import click
-import uvicorn
 
-from dspy_cli.config import ConfigError, load_config
-from dspy_cli.config.validator import find_package_directory, validate_project_structure
-from dspy_cli.server.app import create_app
+from dspy_cli.server.runner import main as runner_main
+from dspy_cli.utils.venv import (
+    detect_venv_python,
+    has_package,
+    is_in_project_venv,
+    sanitize_env_for_exec,
+    show_install_instructions,
+    show_venv_warning,
+    validate_python_version,
+)
+
+
+def _exec_clean(target_python: Path, args: list[str]) -> NoReturn:
+    """Execute the server using the target Python with a clean environment."""
+    env = sanitize_env_for_exec()
+    cmd = [str(target_python)] + args
+    
+    # On Windows, os.execvpe has issues (Python bug #19124), use subprocess
+    if sys.platform == "win32":
+        try:
+            result = subprocess.run(cmd, env=env)
+            sys.exit(result.returncode)
+        except FileNotFoundError:
+            click.echo(click.style(f"Error: Python interpreter not found: {target_python}", fg="red"), err=True)
+            sys.exit(1)
+        except PermissionError:
+            click.echo(click.style(f"Error: Permission denied executing: {target_python}", fg="red"), err=True)
+            sys.exit(1)
+        except KeyboardInterrupt:
+            sys.exit(130)
+    else:
+        # Unix: use exec for efficient process replacement
+        try:
+            os.execvpe(str(target_python), cmd, env)
+        except OSError as e:
+            click.echo(click.style(f"Error executing {target_python}: {e}", fg="red"), err=True)
+            sys.exit(1)
 
 
 @click.command()
 @click.option(
     "--port",
     default=8000,
-    type=int,
+    type=click.IntRange(1, 65535),
     help="Port to run the server on (default: 8000)",
 )
 @click.option(
@@ -35,7 +72,18 @@ from dspy_cli.server.app import create_app
     is_flag=True,
     help="Enable web UI for interactive testing",
 )
-def serve(port, host, logs_dir, ui):
+@click.option(
+    "--python",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Path to Python interpreter to use (default: auto-detect)",
+)
+@click.option(
+    "--system",
+    is_flag=True,
+    help="Use system Python environment instead of project venv",
+)
+def serve(port, host, logs_dir, ui, python, system):
     """Start an HTTP API server that exposes your DSPy programs.
 
     This command:
@@ -47,107 +95,68 @@ def serve(port, host, logs_dir, ui):
     Example:
         dspy-cli serve
         dspy-cli serve --port 8080 --host 127.0.0.1
+        dspy-cli serve --python /path/to/venv/bin/python
     """
-    click.echo("Starting DSPy API server...")
-    click.echo()
-
-    # Validate project structure
-    if not validate_project_structure():
-        click.echo(click.style("Error: Not a valid DSPy project directory", fg="red"))
-        click.echo()
-        click.echo("Make sure you're in a directory created with 'dspy-cli new'")
-        click.echo("Required files: dspy.config.yaml, src/")
-        raise click.Abort()
-
-    # Find package directory
-    package_dir = find_package_directory()
-    if not package_dir:
-        click.echo(click.style("Error: Could not find package in src/", fg="red"))
-        raise click.Abort()
-
-    package_name = package_dir.name
-    modules_path = package_dir / "modules"
-
-    if not modules_path.exists():
-        click.echo(click.style(f"Error: modules directory not found: {modules_path}", fg="red"))
-        raise click.Abort()
-
-    # Load configuration
-    try:
-        config = load_config()
-    except ConfigError as e:
-        click.echo(click.style(f"Configuration error: {e}", fg="red"))
-        raise click.Abort()
-
-    click.echo(click.style("✓ Configuration loaded", fg="green"))
-
-    # Create logs directory
-    if logs_dir:
-        logs_path = Path(logs_dir)
+    if system:
+        runner_main(port=port, host=host, logs_dir=logs_dir, ui=ui)
+        return
+    
+    target_python = None
+    if python:
+        target_python = Path(python)
+        
+        # Validate it's actually a Python interpreter
+        if not target_python.is_file():
+            click.echo(click.style(f"Error: Not a valid Python executable: {target_python}", fg="red"), err=True)
+            sys.exit(1)
+        
+        # On Unix, check if executable
+        if sys.platform != "win32" and not os.access(target_python, os.X_OK):
+            click.echo(click.style(f"Error: Python interpreter is not executable: {target_python}", fg="red"), err=True)
+            sys.exit(1)
+        
+        # Validate Python version
+        is_valid, version = validate_python_version(target_python, min_version=(3, 9))
+        if not is_valid:
+            if version:
+                click.echo(click.style(f"Error: Python {version} is too old. Minimum required: Python 3.9", fg="red"), err=True)
+            else:
+                click.echo(click.style(f"Error: Could not determine Python version for: {target_python}", fg="red"), err=True)
+            sys.exit(1)
+    elif not is_in_project_venv():
+        target_python = detect_venv_python()
+        if not target_python:
+            show_venv_warning()
+    
+    if target_python:
+        import dspy_cli
+        
+        has_cli, local_version = has_package(target_python, "dspy_cli")
+        
+        if not has_cli:
+            global_version = dspy_cli.__version__
+            show_install_instructions(target_python, global_version)
+            sys.exit(1)
+        
+        if local_version:
+            global_version = dspy_cli.__version__
+            local_major = local_version.split('.')[0]
+            global_major = global_version.split('.')[0]
+            
+            if local_major != global_major:
+                click.echo(click.style(
+                    f"⚠ Version mismatch: local dspy-cli {local_version} vs global {global_version}",
+                    fg="yellow"
+                ))
+                click.echo(f"Consider upgrading: {shlex.quote(str(target_python))} -m uv add 'dspy-cli=={global_version}'")
+                click.echo()
+        
+        args = ["-m", "dspy_cli.server.runner", "--port", str(port), "--host", host]
+        if logs_dir:
+            args.extend(["--logs-dir", logs_dir])
+        if ui:
+            args.append("--ui")
+        
+        _exec_clean(target_python, args)
     else:
-        logs_path = Path.cwd() / "logs"
-    logs_path.mkdir(exist_ok=True)
-
-    # Create FastAPI app
-    try:
-        app = create_app(
-            config=config,
-            package_path=modules_path,
-            package_name=f"{package_name}.modules",
-            logs_dir=logs_path,
-            enable_ui=ui
-        )
-    except Exception as e:
-        click.echo(click.style(f"Error creating application: {e}", fg="red"))
-        raise click.Abort()
-
-    # Print discovered programs
-    click.echo()
-    click.echo(click.style("Discovered Programs:", fg="cyan", bold=True))
-    click.echo()
-
-    if hasattr(app.state, 'modules') and app.state.modules:
-        for module in app.state.modules:
-            click.echo(f"  • {module.name}")
-            click.echo(f"    POST /{module.name}")
-    else:
-        click.echo(click.style("  No programs discovered", fg="yellow"))
-        click.echo()
-        click.echo("Make sure your DSPy modules:")
-        click.echo("  1. Are in src/<package>/modules/")
-        click.echo("  2. Subclass dspy.Module")
-        click.echo("  3. Are not named with a leading underscore")
-
-    click.echo()
-    click.echo(click.style("Additional Endpoints:", fg="cyan", bold=True))
-    click.echo()
-    click.echo("  GET /programs - List all programs and their schemas")
-    if ui:
-        click.echo("  GET / - Web UI for interactive testing")
-    click.echo()
-
-    # Print server information
-    click.echo(click.style("=" * 60, fg="cyan"))
-    click.echo(click.style(f"Server starting on http://{host}:{port}", fg="green", bold=True))
-    click.echo(click.style("=" * 60, fg="cyan"))
-    click.echo()
-    click.echo("Press Ctrl+C to stop the server")
-    click.echo()
-
-    # Start uvicorn server
-    try:
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_level="info",
-            access_log=True
-        )
-    except KeyboardInterrupt:
-        click.echo()
-        click.echo(click.style("Server stopped", fg="yellow"))
-        sys.exit(0)
-    except Exception as e:
-        click.echo()
-        click.echo(click.style(f"Server error: {e}", fg="red"))
-        sys.exit(1)
+        runner_main(port=port, host=host, logs_dir=logs_dir, ui=ui)
