@@ -5,7 +5,7 @@ A command-line interface tool for creating and serving DSPy projects, inspired b
 ## Installation
 
 ```bash
-pip install dspy-cli
+uv add dspy-cli
 ```
 
 ### Installing for Development/Testing
@@ -16,8 +16,8 @@ If you're testing or developing dspy-cli itself:
 # Clone or navigate to the dspy-cli repository
 cd /path/to/dspy-cli
 
-# Install in editable mode
-pip install -e .
+# Sync dependencies
+uv sync --extra dev
 
 # Now the dspy-cli command is available
 dspy-cli --help

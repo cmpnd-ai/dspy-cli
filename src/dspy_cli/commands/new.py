@@ -97,7 +97,8 @@ def new(project_name, program_name, signature):
         click.echo("Next steps:")
         click.echo(f"  cd {project_name}")
         click.echo("  # Edit .env and add your API keys")
-        click.echo("  pip install -e .")
+        click.echo("  uv sync")
+        click.echo("  source .venv/bin/activate")
         click.echo("  dspy-cli serve")
 
     except Exception as e:

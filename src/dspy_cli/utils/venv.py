@@ -165,15 +165,12 @@ def show_venv_warning():
 
 def show_install_instructions(target_python: Path, version: str):
     """Show instructions for installing dspy-cli locally."""
-    import shlex
-    
     click.echo(click.style("dspy-cli is not installed in your project virtual environment.", fg="yellow"))
     click.echo()
-    click.echo("Install it into your venv:")
-    click.echo(f"  {shlex.quote(str(target_python))} -m pip install 'dspy-cli=={version}'")
+    click.echo("Install it into your project:")
+    click.echo("  uv add dspy-cli")
     click.echo()
-    click.echo("Or use a task runner:")
-    click.echo("  uv run dspy-cli serve")
-    click.echo("  poetry run dspy-cli serve")
+    click.echo("Then run directly:")
+    click.echo("  dspy-cli serve")
     click.echo()
     click.echo("You can bypass this check with --system")
