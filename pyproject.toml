@@ -39,6 +39,12 @@ dev = [
     "black>=23.0",
     "ruff>=0.1.0",
 ]
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.24.0",
+    "pymdown-extensions>=10.7.0",
+]
 
 [project.scripts]
 dspy-cli = "dspy_cli.cli:main"
@@ -52,7 +58,7 @@ target-version = ["py39"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py311"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
