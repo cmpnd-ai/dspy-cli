@@ -1,0 +1,97 @@
+site_name: dspy-cli
+site_description: Deploy DSPy applications with ease
+site_url: https://cmpnd-ai.github.io  # TODO: Update with actual docs URL
+repo_url: https://github.com/cmpnd-ai/dspy-cli
+repo_name: cmpnd-ai/dspy-cli
+edit_uri: edit/main/dspy-cli/docs/
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant        # Instant loading
+    - navigation.sections       # Section navigation
+    - navigation.tabs           # Top-level tabs
+    - navigation.top            # Back to top button
+    - navigation.tracking       # URL tracking
+    - search.highlight          # Highlight search terms
+    - search.suggest            # Search suggestions
+    - content.code.copy         # Copy button on code blocks
+    - content.action.edit       # Edit button on pages
+    - toc.follow                # TOC follows scroll
+  icon:
+    repo: fontawesome/brands/github
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/cmpnd-ai/optimization-platform
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            heading_level: 2
+
+markdown_extensions:
+  # Code highlighting
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  
+  # Admonitions (notes, warnings, tips)
+  - admonition
+  - pymdownx.details
+  
+  # Tabbed content
+  - pymdownx.tabbed:
+      alternate_style: true
+  
+  # Better lists
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  
+  # Formatting
+  - pymdownx.betterem
+  - pymdownx.mark
+  - pymdownx.caret
+  - pymdownx.tilde
+  - pymdownx.keys
+  
+  # Other
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - CLI Reference: cli-reference.md
+  - Contributing: contributing.md
