@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "dspy-ai>=3.0.3",
+    "dspy-cli"
 ]
 
 [project.optional-dependencies]
@@ -17,6 +18,10 @@ dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
 ]
+
+# Uncomment to use a local editable install of dspy-cli for development:
+# [tool.uv.sources]
+# dspy-cli = {{ path = "../dspy-cli", editable = true }}
 
 [tool.setuptools.packages.find]
 where = ["src"]
