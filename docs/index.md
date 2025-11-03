@@ -250,6 +250,13 @@ Generate with:
 dspy-cli g scaffold agent -m ReAct -s "task, available_tools: list[str] -> steps: list[str], result"
 ```
 
+### Docker deployment
+
+```bash
+docker build -t qa-bot .
+docker run -p 8000:8000 qa-bot
+```
+
 ## Command Reference
 
 See [CLI Reference](cli-reference.md) for detailed command documentation.

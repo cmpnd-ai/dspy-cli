@@ -9,11 +9,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 COPY . .
 RUN uv sync --no-dev
 
-# TODO(Isaac): This will need to be updated once we have a pypi package
-COPY dspy-cli /tmp/dspy-cli
-RUN uv tool install /tmp/dspy-cli && rm -rf /tmp/dspy-cli
-
-ENV PATH="/root/.local/bin:$PATH"
+RUN uv tool install dspy-cli
 
 EXPOSE 8000
 
