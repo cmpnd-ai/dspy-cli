@@ -6,7 +6,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-import pytest
 
 from dspy_cli.utils.venv import sanitize_env_for_exec, validate_python_version
 
@@ -50,19 +49,21 @@ class TestUsesMinusS:
             env = os.environ.copy()
             env["PYTHONPATH"] = tmpdir
             
-            # Without -S, this would fail
+            # Without -S, sitecustomize loads and produces error in stderr
             result_without_s = subprocess.run(
                 [sys.executable, "-c", "import sys"],
                 env=env,
                 capture_output=True
             )
+            assert b"sitecustomize loaded!" in result_without_s.stderr
             
-            # With -S, this should work
+            # With -S, sitecustomize is skipped (no error in stderr)
             result_with_s = subprocess.run(
                 [sys.executable, "-S", "-c", "import sys"],
                 env=env,
                 capture_output=True
             )
+            assert b"sitecustomize loaded!" not in result_with_s.stderr
             
             # validate_python_version should work despite bad sitecustomize
             is_valid, version = validate_python_version(Path(sys.executable))

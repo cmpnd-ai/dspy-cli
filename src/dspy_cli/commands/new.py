@@ -278,7 +278,7 @@ def _create_code_files(project_path, package_name, program_name, signature, sign
 
     click.echo(f"  Created: {package_name}/modules/{module_file}.py")
     click.echo(f"  Created: {package_name}/signatures/{file_name}.py")
-    click.echo(f"  Created: tests/test_modules.py")
+    click.echo("  Created: tests/test_modules.py")
 
 
 def _initialize_git(project_path):

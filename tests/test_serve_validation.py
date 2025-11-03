@@ -1,7 +1,6 @@
 """Tests for serve command validation."""
 
 import subprocess
-import sys
 
 import pytest
 from click.testing import CliRunner

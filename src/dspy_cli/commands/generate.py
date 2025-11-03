@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from dspy_cli.config.validator import find_package_directory, validate_project_structure
-from dspy_cli.utils.signature_utils import parse_signature_string, type_to_string, to_class_name
+from dspy_cli.utils.signature_utils import parse_signature_string, to_class_name
 
 
 # Map of module type aliases to their canonical names and template files

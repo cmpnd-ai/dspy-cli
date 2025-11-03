@@ -1,7 +1,6 @@
 """Tests for configuration loading."""
 
 import pytest
-from pathlib import Path
 
 from dspy_cli.config import load_config, ConfigError
 

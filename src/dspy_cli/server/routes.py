@@ -318,14 +318,8 @@ def _create_request_model(module: DiscoveredModule) -> type:
         if hasattr(field_type, '__module__') and field_type.__module__.startswith('dspy'):
             field_type = str
 
-        # Get description
-        description = ""
-        if field_info.json_schema_extra:
-            description = field_info.json_schema_extra.get("desc", "")
-
         # Check if field is Optional by checking if it's a Union with None
         import typing
-        is_optional = False
         default_value = ...  # Required by default
 
         # Check if type is Optional (Union with None)
@@ -333,7 +327,6 @@ def _create_request_model(module: DiscoveredModule) -> type:
         if origin is typing.Union:
             args = typing.get_args(field_type)
             if type(None) in args:
-                is_optional = True
                 default_value = None
 
         # Add to fields dict
@@ -361,11 +354,6 @@ def _create_response_model(module: DiscoveredModule) -> type:
     for field_name, field_info in module.signature.output_fields.items():
         # Get the type annotation
         field_type = field_info.annotation if hasattr(field_info, 'annotation') else str
-
-        # Get description
-        description = ""
-        if field_info.json_schema_extra:
-            description = field_info.json_schema_extra.get("desc", "")
 
         # Add to fields dict
         fields[field_name] = (field_type, ...)

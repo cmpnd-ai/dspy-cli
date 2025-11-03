@@ -1,7 +1,6 @@
 """Virtual environment detection and management utilities."""
 
 import os
-import site
 import sys
 from pathlib import Path
 

@@ -2,13 +2,13 @@
 
 import logging
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 
 import dspy
 from fastapi import FastAPI
 
 from dspy_cli.config import get_model_config, get_program_model
-from dspy_cli.discovery import DiscoveredModule, discover_modules
+from dspy_cli.discovery import discover_modules
 from dspy_cli.server.logging import setup_logging
 from dspy_cli.server.routes import create_program_routes
 
