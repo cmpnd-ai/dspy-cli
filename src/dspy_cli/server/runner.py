@@ -83,6 +83,10 @@ def main(port: int, host: str, logs_dir: str | None, ui: bool):
         click.echo("  1. Are in src/<package>/modules/")
         click.echo("  2. Subclass dspy.Module")
         click.echo("  3. Are not named with a leading underscore")
+        click.echo("  4. If you are using external dependencies:")
+        click.echo("     - Ensure your venv is activated")
+        click.echo("     - Make sure you have dspy-cli as a local dependency")
+        click.echo("     - Install them using pip install -e .")
 
     click.echo()
     click.echo(click.style("Additional Endpoints:", fg="cyan", bold=True))
