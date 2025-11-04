@@ -29,14 +29,19 @@ def render_index(modules: List[Any], config: Dict) -> str:
 
             # Get field information
             if module.signature:
-                fields = get_signature_fields(module.signature)
-                input_names = list(fields["inputs"].keys())
-                output_names = list(fields["outputs"].keys())
+                # Use module's signature_string if available (for composite signatures)
+                if module.signature_string:
+                    field_description = module.signature_string.replace("->", "→")
+                else:
+                    # Fall back to extracting from signature
+                    fields = get_signature_fields(module.signature)
+                    input_names = list(fields["inputs"].keys())
+                    output_names = list(fields["outputs"].keys())
 
-                # Build field description
-                input_str = ", ".join(input_names) if input_names else "no inputs"
-                output_str = ", ".join(output_names) if output_names else "no outputs"
-                field_description = f"{input_str} → {output_str}"
+                    # Build field description
+                    input_str = ", ".join(input_names) if input_names else "no inputs"
+                    output_str = ", ".join(output_names) if output_names else "no outputs"
+                    field_description = f"{input_str} → {output_str}"
 
                 # Get signature docstring if available
                 signature_doc = module.signature.__doc__.strip() if module.signature.__doc__ else ""
@@ -160,17 +165,23 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
     # Build signature string
     signature_string = ""
     if module.signature:
-        fields = get_signature_fields(module.signature)
-        input_names = list(fields["inputs"].keys())
-        output_names = list(fields["outputs"].keys())
-        input_str = ", ".join(input_names) if input_names else "no inputs"
-        output_str = ", ".join(output_names) if output_names else "no outputs"
-        signature_string = f"{input_str} → {output_str}"
+        # Use module's signature_string if available (for composite signatures)
+        if module.signature_string:
+            signature_string = module.signature_string.replace("->", "→")
+        else:
+            # Fall back to extracting from signature
+            fields = get_signature_fields(module.signature)
+            input_names = list(fields["inputs"].keys())
+            output_names = list(fields["outputs"].keys())
+            input_str = ", ".join(input_names) if input_names else "no inputs"
+            output_str = ", ".join(output_names) if output_names else "no outputs"
+            signature_string = f"{input_str} → {output_str}"
 
     # Build form fields
     form_fields = ""
     if module.signature:
-        fields = get_signature_fields(module.signature)
+        # Pass the module to get_signature_fields to use metadata if available
+        fields = get_signature_fields(module)
 
         for field_name, field_info in fields["inputs"].items():
             field_type = field_info.get("type", "str")
