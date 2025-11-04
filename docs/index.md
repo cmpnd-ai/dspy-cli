@@ -12,9 +12,6 @@ dspy-cli is a command-line tool for scaffolding and serving [DSPy](https://githu
 # Install with uv (recommended)
 uv tool install dspy-cli
 
-# Or with pipx
-pipx install dspy-cli
-
 # Create a new DSPy project
 dspy-cli new my-project
 cd my-project
@@ -24,6 +21,9 @@ cd my-project
 
 # Install dependencies
 uv sync
+
+# Activate the virtual environment
+source .venv/bin/activate
 
 # Start local development server
 dspy-cli serve
