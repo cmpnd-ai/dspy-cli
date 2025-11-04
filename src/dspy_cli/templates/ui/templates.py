@@ -20,16 +20,21 @@ def render_index(modules: List[Any], config: Dict) -> str:
         sorted_modules = sorted(modules, key=lambda m: m.name)
         for module in sorted_modules:
             from dspy_cli.config import get_program_model
-            from dspy_cli.discovery.module_finder import get_signature_fields
+            from dspy_cli.discovery.module_finder import get_module_fields
 
             model_alias = get_program_model(config, module.name)
 
             # Extract adapter type from model alias (e.g., "openai" from "openai:gpt-5-mini")
             adapter = model_alias.split(':')[0] if ':' in model_alias else 'default'
 
-            # Get field information
-            if module.signature:
-                fields = get_signature_fields(module.signature)
+            # Check if forward is typed
+            if not module.is_forward_typed and not module.signature:
+                # Neither forward types nor signature available
+                field_description = '<span style="color: #e74c3c;">This module\'s forward function isn\'t typed</span>'
+                signature_doc = ""
+            else:
+                # Get field information
+                fields = get_module_fields(module)
                 input_names = list(fields["inputs"].keys())
                 output_names = list(fields["outputs"].keys())
 
@@ -39,10 +44,7 @@ def render_index(modules: List[Any], config: Dict) -> str:
                 field_description = f"{input_str} → {output_str}"
 
                 # Get signature docstring if available
-                signature_doc = module.signature.__doc__.strip() if module.signature.__doc__ else ""
-            else:
-                field_description = "No signature information"
-                signature_doc = ""
+                signature_doc = module.signature.__doc__.strip() if module.signature and module.signature.__doc__ else ""
 
             # Build description HTML
             description_html = f'<p class="program-description">{signature_doc}</p>' if signature_doc else ''
@@ -145,7 +147,7 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
         HTML string for the program page
     """
     from dspy_cli.config import get_program_model
-    from dspy_cli.discovery.module_finder import get_signature_fields
+    from dspy_cli.discovery.module_finder import get_module_fields
 
     model_alias = get_program_model(config, program_name)
 
@@ -157,21 +159,39 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
     if module.signature and module.signature.__doc__:
         program_docstring = module.signature.__doc__.strip()
 
-    # Build signature string
+    # Build signature string and form fields
     signature_string = ""
-    if module.signature:
-        fields = get_signature_fields(module.signature)
+    form_fields = ""
+
+    # Check if forward is typed or signature is available
+    if not module.is_forward_typed and not module.signature:
+        # Neither forward types nor signature available - show error
+        signature_string = '<span style="color: #e74c3c;">This module\'s forward function isn\'t typed</span>'
+        form_fields = '''
+        <div class="warning-box">
+            <h3>⚠️ Module Not Properly Typed</h3>
+            <p>This module's <code>forward()</code> method doesn't have proper type annotations.</p>
+            <p>To use this module via the API or web UI, please add type hints:</p>
+            <pre><code>def forward(self, input_field: str) -> YourOutputType:
+    # Your implementation
+    return result</code></pre>
+            <p>The forward method must have:</p>
+            <ul>
+                <li>Typed parameters (no **kwargs)</li>
+                <li>A typed return value (TypedDict, NamedTuple, or dataclass)</li>
+            </ul>
+        </div>
+        '''
+    else:
+        # Get field information
+        fields = get_module_fields(module)
         input_names = list(fields["inputs"].keys())
         output_names = list(fields["outputs"].keys())
         input_str = ", ".join(input_names) if input_names else "no inputs"
         output_str = ", ".join(output_names) if output_names else "no outputs"
         signature_string = f"{input_str} → {output_str}"
 
-    # Build form fields
-    form_fields = ""
-    if module.signature:
-        fields = get_signature_fields(module.signature)
-
+        # Build form fields
         for field_name, field_info in fields["inputs"].items():
             field_type = field_info.get("type", "str")
             description = field_info.get("description", "").strip()
@@ -260,8 +280,6 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
                 {input_html}
             </div>
             """
-    else:
-        form_fields = '<p class="warning">No signature information available</p>'
 
     return f"""<!DOCTYPE html>
 <html lang="en">

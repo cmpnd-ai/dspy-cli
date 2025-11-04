@@ -210,8 +210,17 @@ def create_program_routes(
     # Instantiate the module once during route creation
     instance = module.instantiate()
 
-    # Create request/response models based on signature if available
-    if module.signature:
+    # Create request/response models based on forward types or signature
+    # Prefer forward types if available
+    if module.is_forward_typed:
+        try:
+            request_model = _create_request_model_from_forward(module)
+            response_model = _create_response_model_from_forward(module)
+        except Exception as e:
+            logger.warning(f"Could not create models from forward types for {program_name}: {e}")
+            request_model = Dict[str, Any]
+            response_model = Dict[str, Any]
+    elif module.signature:
         try:
             request_model = _create_request_model(module)
             response_model = _create_response_model(module)
@@ -293,6 +302,62 @@ def create_program_routes(
 
             logger.error(f"Error executing {program_name}: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
+
+
+def _create_request_model_from_forward(module: DiscoveredModule) -> type:
+    """Create a Pydantic model for request validation based on forward() types.
+
+    Args:
+        module: Discovered module with forward type information
+
+    Returns:
+        Pydantic model class
+    """
+    if not module.forward_input_fields:
+        return Dict[str, Any]
+
+    # Get input fields from forward types
+    fields = {}
+    for field_name, field_info in module.forward_input_fields.items():
+        # Get the type annotation from the stored info
+        field_type = field_info.get("annotation", str)
+
+        # For dspy types (Image, Audio, etc.), accept strings in the API
+        if hasattr(field_type, '__module__') and field_type.__module__.startswith('dspy'):
+            field_type = str
+
+        # All forward parameters are required (no defaults)
+        fields[field_name] = (field_type, ...)
+
+    # Create dynamic Pydantic model
+    model_name = f"{module.name}Request"
+    return create_model(model_name, **fields)
+
+
+def _create_response_model_from_forward(module: DiscoveredModule) -> type:
+    """Create a Pydantic model for response based on forward() return type.
+
+    Args:
+        module: Discovered module with forward type information
+
+    Returns:
+        Pydantic model class
+    """
+    if not module.forward_output_fields:
+        return Dict[str, Any]
+
+    # Get output fields from forward return type
+    fields = {}
+    for field_name, field_info in module.forward_output_fields.items():
+        # Get the type annotation from the stored info
+        field_type = field_info.get("annotation", str)
+
+        # Add to fields dict
+        fields[field_name] = (field_type, ...)
+
+    # Create dynamic Pydantic model
+    model_name = f"{module.name}Response"
+    return create_model(model_name, **fields)
 
 
 def _create_request_model(module: DiscoveredModule) -> type:

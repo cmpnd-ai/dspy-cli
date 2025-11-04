@@ -630,6 +630,56 @@ section h3 {
     border-left: 3px solid var(--warning-color);
 }
 
+.warning-box {
+    background: var(--bg-warning);
+    border: 1px solid var(--warning-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.warning-box h3 {
+    color: var(--warning-color);
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.warning-box p {
+    margin: 10px 0;
+    line-height: 1.6;
+}
+
+.warning-box pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border-primary);
+    border-radius: 4px;
+    padding: 12px;
+    overflow-x: auto;
+    margin: 15px 0;
+}
+
+.warning-box code {
+    background: var(--bg-code);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: "Courier New", monospace;
+    font-size: 0.9em;
+}
+
+.warning-box pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.warning-box ul {
+    margin: 10px 0;
+    padding-left: 25px;
+}
+
+.warning-box li {
+    margin: 8px 0;
+}
+
 /* Footer */
 footer {
     text-align: center;
