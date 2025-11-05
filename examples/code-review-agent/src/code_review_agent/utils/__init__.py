@@ -3,16 +3,17 @@
 from .pr_loader import (
     fetch_pr_data,
     format_pr_for_review,
-    load_demo_pr,
+    download_and_format_pr,
 )
-from .mcp_converter import convert_mcp_tool, build_dspy_tools
-from .mcp_runtime import MCPManager
+from .github_tools import (
+    get_file_contents,
+    build_github_tools,
+)
 
 __all__ = [
     "fetch_pr_data",
     "format_pr_for_review",
-    "load_demo_pr",
-    "convert_mcp_tool",
-    "build_dspy_tools",
-    "MCPManager",
+    "download_and_format_pr",
+    "get_file_contents",
+    "build_github_tools",
 ]
