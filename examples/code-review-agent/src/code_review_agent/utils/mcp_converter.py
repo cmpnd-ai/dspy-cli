@@ -1,7 +1,5 @@
 """Custom MCP tool result converter for DSPy ReAct."""
 
-import hashlib
-import base64
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -113,10 +111,7 @@ def _convert_mcp_tool_result(call_tool_result: "mcp.types.CallToolResult") -> di
                 })
             
             elif isinstance(resource, BlobResourceContents):
-                mime = resource.mimeType or "application/octet-stream"
-                name = str(resource.uri).split("/")[-1]
-                
-                raise NotImplementedError("Image, Audio, orBinary content not yet supported")
+                raise NotImplementedError("Image, Audio, or Binary content not yet supported")
         
         elif isinstance(content, ImageContent):
             raise NotImplementedError("Image content not yet supported")

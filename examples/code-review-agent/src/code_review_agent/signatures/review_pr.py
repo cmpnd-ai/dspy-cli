@@ -1,7 +1,7 @@
 """Signature definitions for code_review_agent."""
 
 import dspy
-from typing import Dict, List, Union, Optional
+from typing import List, Optional
 
 from enum import Enum
 

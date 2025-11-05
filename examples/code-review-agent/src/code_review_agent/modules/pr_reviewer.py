@@ -7,7 +7,7 @@ import dspy
 import rich
 from dotenv import load_dotenv
 from mcp import StdioServerParameters
-from code_review_agent.signatures.review_pr import ReviewPR, ReviewPRWithTools
+from code_review_agent.signatures.review_pr import PRReview, ReviewPRWithTools
 from code_review_agent.utils import load_demo_pr, build_dspy_tools, MCPManager
 
 class PRReviewer(dspy.Module):
@@ -24,7 +24,7 @@ class PRReviewer(dspy.Module):
         else:
             self.predictor = None
 
-    async def aforward(self, repo: str, pr_number: int, github_token: Optional[str] = None):
+    async def aforward(self, repo: str, pr_number: int, github_token: Optional[str] = None) -> PRReview:
         """
         Review a PR from repository name and PR number.
         
@@ -46,11 +46,11 @@ class PRReviewer(dspy.Module):
         return await self.review_from_repo_and_number(repo, pr_number, github_token)
     
     async def review_from_repo_and_number(
-        self, 
+        self,
         repo: str, 
         pr_number: int, 
         github_token: Optional[str] = None
-    ):
+    ) -> PRReview:
         """
         Review a PR from repository name and PR number.
         
@@ -147,5 +147,5 @@ if __name__ == "__main__":
     mlflow.set_tracking_uri("http://127.0.0.1:5001")
     mlflow.dspy.autolog()
     load_dotenv()
-    
+
     asyncio.run(main())

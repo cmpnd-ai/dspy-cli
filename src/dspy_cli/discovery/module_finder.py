@@ -6,9 +6,10 @@ import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type, get_type_hints, TypedDict
+from typing import Any, Dict, List, Optional, Type, get_type_hints
 
 import dspy
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -168,7 +169,7 @@ def _extract_forward_types(module_class: Type[dspy.Module]) -> Dict[str, Any]:
     """
     try:
         # Get the forward method
-        forward_method = getattr(module_class, 'forward', None)
+        forward_method = getattr(module_class, 'forward', None) or getattr(module_class, 'aforward', None)
         if forward_method is None:
             logger.debug(f"No forward method found for {module_class.__name__}")
             return {"inputs": None, "outputs": None, "is_typed": False}
@@ -232,6 +233,7 @@ def _parse_return_type(return_type: Any, signature: Optional[Type[dspy.Signature
     Supports:
     - dspy.Prediction (accepted but returns empty dict - no field validation)
     - Dict[str, Any] or dict (no field info, returns None)
+    - Pydantic BaseModel subclasses (extracts field names and types)
     - TypedDict subclasses (extracts field names and types)
     - Custom dataclass/NamedTuple (extracts field names and types)
 
@@ -249,13 +251,28 @@ def _parse_return_type(return_type: Any, signature: Optional[Type[dspy.Signature
         return {}
 
     # Check for dict types - we can't infer fields from these either
-    if return_type == dict or return_type == Dict:
+    if return_type is dict or return_type is Dict:
         logger.debug("Return type is dict - cannot infer fields")
         return None
 
     if hasattr(return_type, '__origin__') and return_type.__origin__ in (dict, Dict):
         logger.debug("Return type is Dict[...] - cannot infer fields")
         return None
+
+    # Check for Pydantic BaseModel
+    try:
+        if inspect.isclass(return_type) and issubclass(return_type, BaseModel):
+            output_fields = {}
+            for field_name, field_info in return_type.model_fields.items():
+                output_fields[field_name] = {
+                    "type": _format_type_name(field_info.annotation),
+                    "annotation": field_info.annotation
+                }
+            logger.debug(f"Extracted {len(output_fields)} fields from Pydantic model")
+            logger.debug(f"Output fields: {output_fields}")
+            return output_fields
+    except (TypeError, AttributeError):
+        pass
 
     # Try TypedDict or dataclass
     if hasattr(return_type, '__annotations__'):
