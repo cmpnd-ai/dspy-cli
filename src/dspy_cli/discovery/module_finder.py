@@ -202,12 +202,16 @@ def _extract_forward_types(module_class: Type[dspy.Module]) -> Dict[str, Any]:
                 logger.debug(f"{module_class.__name__}.forward() uses **kwargs - not supported")
                 return {"inputs": None, "outputs": None, "is_typed": False}
 
+        # Extract signature (if available) to help with dspy.Prediction return types
+        signature = _extract_signature(module_class)
+
         # Extract return type
         return_type = type_hints['return']
-        output_params = _parse_return_type(return_type)
+        output_params = _parse_return_type(return_type, signature)
 
-        # Check if we have at least one input and one output
-        if not input_params or not output_params:
+        # Check if we have at least one input and a valid return type
+        # output_params can be empty dict (for dspy.Prediction) which is valid
+        if not input_params or output_params is None:
             logger.debug(f"{module_class.__name__}.forward() missing input or output types")
             return {"inputs": None, "outputs": None, "is_typed": False}
 
@@ -222,25 +226,27 @@ def _extract_forward_types(module_class: Type[dspy.Module]) -> Dict[str, Any]:
         return {"inputs": None, "outputs": None, "is_typed": False}
 
 
-def _parse_return_type(return_type: Any) -> Optional[Dict[str, Any]]:
+def _parse_return_type(return_type: Any, signature: Optional[Type[dspy.Signature]] = None) -> Optional[Dict[str, Any]]:
     """Parse a return type annotation to extract output fields.
 
     Supports:
-    - dspy.Prediction (no field info, returns None)
+    - dspy.Prediction (accepted but returns empty dict - no field validation)
     - Dict[str, Any] or dict (no field info, returns None)
     - TypedDict subclasses (extracts field names and types)
     - Custom dataclass/NamedTuple (extracts field names and types)
 
     Args:
         return_type: The return type annotation from forward()
+        signature: Optional signature (not used anymore, kept for compatibility)
 
     Returns:
-        Dictionary mapping field names to their type info, or None if fields can't be determined
+        Dictionary mapping field names to their type info, empty dict for dspy.Prediction, or None if invalid
     """
-    # Check for dspy.Prediction - we can't infer fields from this
+    # Check for dspy.Prediction - accept it but don't validate fields
     if return_type == dspy.Prediction or (hasattr(return_type, '__origin__') and return_type.__origin__ == dspy.Prediction):
-        logger.debug("Return type is dspy.Prediction - cannot infer fields")
-        return None
+        logger.debug("Return type is dspy.Prediction - no output field validation")
+        # Return empty dict to indicate "valid but no field validation"
+        return {}
 
     # Check for dict types - we can't infer fields from these either
     if return_type == dict or return_type == Dict:
@@ -251,7 +257,7 @@ def _parse_return_type(return_type: Any) -> Optional[Dict[str, Any]]:
         logger.debug("Return type is Dict[...] - cannot infer fields")
         return None
 
-    # Try TypedDict
+    # Try TypedDict or dataclass
     if hasattr(return_type, '__annotations__'):
         annotations = getattr(return_type, '__annotations__', {})
         if annotations:
@@ -263,8 +269,31 @@ def _parse_return_type(return_type: Any) -> Optional[Dict[str, Any]]:
                 }
             return output_fields
 
-    logger.debug(f"Could not parse return type: {return_type}")
-    return None
+    # Simple types (str, int, list[str], etc.)
+    # If we have a signature, use its field name; otherwise use "result"
+    if signature and hasattr(signature, 'output_fields'):
+        output_field_items = list(signature.output_fields.items())
+        if len(output_field_items) == 1:
+            # Use the signature's field name and the forward's return type
+            field_name, _ = output_field_items[0]
+            output_fields = {
+                field_name: {
+                    "type": _format_type_name(return_type),
+                    "annotation": return_type
+                }
+            }
+            logger.debug(f"Using simple return type with signature field name '{field_name}': {return_type}")
+            return output_fields
+
+    # No signature or multiple output fields - use default "result" name
+    output_fields = {
+        "result": {
+            "type": _format_type_name(return_type),
+            "annotation": return_type
+        }
+    }
+    logger.debug(f"Using simple return type with 'result' field: {return_type}")
+    return output_fields
 
 
 def _extract_signature(module_class: Type[dspy.Module]) -> Optional[Type[dspy.Signature]]:
@@ -339,7 +368,7 @@ def _format_type_name(annotation: Any) -> str:
 def get_module_fields(module: DiscoveredModule) -> Dict[str, Any]:
     """Extract input and output field information from a discovered module.
 
-    This function prioritizes forward() type annotations over signature inspection.
+    This function only uses forward() type annotations. Signatures are no longer used.
 
     Args:
         module: DiscoveredModule instance
@@ -347,8 +376,8 @@ def get_module_fields(module: DiscoveredModule) -> Dict[str, Any]:
     Returns:
         Dictionary with 'inputs' and 'outputs' field definitions
     """
-    # Prefer forward types if available
-    if module.is_forward_typed and module.forward_input_fields and module.forward_output_fields:
+    # Only use forward types - signatures are deprecated for API/UI generation
+    if module.is_forward_typed and module.forward_input_fields is not None:
         # Convert forward types to the format expected by callers
         inputs = {}
         outputs = {}
@@ -359,16 +388,18 @@ def get_module_fields(module: DiscoveredModule) -> Dict[str, Any]:
                 "description": ""  # No description from type hints
             }
 
-        for field_name, field_info in module.forward_output_fields.items():
-            outputs[field_name] = {
-                "type": field_info.get("type", "str"),
-                "description": ""  # No description from type hints
-            }
+        # forward_output_fields can be empty dict for dspy.Prediction (no validation)
+        if module.forward_output_fields:
+            for field_name, field_info in module.forward_output_fields.items():
+                outputs[field_name] = {
+                    "type": field_info.get("type", "str"),
+                    "description": ""  # No description from type hints
+                }
 
         return {"inputs": inputs, "outputs": outputs}
 
-    # Fall back to signature inspection
-    return get_signature_fields(module.signature)
+    # No typed forward method - return empty fields
+    return {"inputs": {}, "outputs": {}}
 
 
 def get_signature_fields(signature: Optional[Type[dspy.Signature]]) -> Dict[str, Any]:

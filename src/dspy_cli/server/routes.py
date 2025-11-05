@@ -17,31 +17,31 @@ from dspy_cli.server.logging import log_inference
 logger = logging.getLogger(__name__)
 
 
-def _convert_dspy_types(inputs: Dict[str, Any], signature) -> Dict[str, Any]:
-    """Convert string inputs to DSPy types based on signature.
+def _convert_dspy_types(inputs: Dict[str, Any], module: DiscoveredModule) -> Dict[str, Any]:
+    """Convert string inputs to DSPy types based on forward type annotations.
 
     For fields with dspy types (Image, Audio, etc.), converts string values
     (URLs or data URIs) to proper dspy objects.
 
     Args:
         inputs: Dictionary of input values from the request
-        signature: DSPy signature with type information
+        module: DiscoveredModule with forward type information
 
     Returns:
         Dictionary with converted values
     """
-    if not signature:
+    if not module.is_forward_typed or not module.forward_input_fields:
         return inputs
 
     converted = {}
     for field_name, value in inputs.items():
-        if field_name not in signature.input_fields:
+        if field_name not in module.forward_input_fields:
             # Pass through unknown fields
             converted[field_name] = value
             continue
 
-        field_info = signature.input_fields[field_name]
-        field_type = field_info.annotation if hasattr(field_info, 'annotation') else None
+        field_info = module.forward_input_fields[field_name]
+        field_type = field_info.get('annotation')
 
         # Check if field type is a dspy type (from dspy module)
         if field_type and hasattr(field_type, '__module__') and field_type.__module__.startswith('dspy'):
@@ -210,8 +210,8 @@ def create_program_routes(
     # Instantiate the module once during route creation
     instance = module.instantiate()
 
-    # Create request/response models based on forward types or signature
-    # Prefer forward types if available
+    # Create request/response models based on forward types
+    # Only use forward types - signatures are no longer used for API generation
     if module.is_forward_typed:
         try:
             request_model = _create_request_model_from_forward(module)
@@ -220,16 +220,9 @@ def create_program_routes(
             logger.warning(f"Could not create models from forward types for {program_name}: {e}")
             request_model = Dict[str, Any]
             response_model = Dict[str, Any]
-    elif module.signature:
-        try:
-            request_model = _create_request_model(module)
-            response_model = _create_response_model(module)
-        except Exception as e:
-            logger.warning(f"Could not create models for {program_name}: {e}")
-            request_model = Dict[str, Any]
-            response_model = Dict[str, Any]
     else:
-        # Fallback to generic dict models
+        # No typed forward method - use generic dict models (no validation)
+        logger.warning(f"Module {program_name} does not have typed forward() method - API will have no validation")
         request_model = Dict[str, Any]
         response_model = Dict[str, Any]
 
@@ -247,7 +240,8 @@ def create_program_routes(
                 inputs = request
 
             # Convert dspy types (Image, Audio, etc.) from strings to objects
-            inputs = _convert_dspy_types(inputs, module.signature)
+            # Note: This only works if forward types include proper dspy type annotations
+            inputs = _convert_dspy_types(inputs, module)
 
             # Execute the program with the program-specific LM via context
             logger.info(f"Executing {program_name} with inputs: {inputs}")
@@ -259,8 +253,22 @@ def create_program_routes(
                 output = result.toDict()
             elif hasattr(result, '__dict__'):
                 output = vars(result)
+            elif isinstance(result, dict):
+                output = result
             else:
-                output = {"result": str(result)}
+                # Simple return value (str, int, list, etc.)
+                # Check if module has forward output fields to determine the key name
+                if module.is_forward_typed and module.forward_output_fields:
+                    # Use the first (and typically only) output field name
+                    field_names = list(module.forward_output_fields.keys())
+                    if len(field_names) == 1:
+                        output = {field_names[0]: result}
+                    else:
+                        # Multiple fields expected but got single value - this shouldn't happen
+                        # Fall back to wrapping in "result"
+                        output = {"result": result}
+                else:
+                    output = {"result": result}
 
             # Calculate duration
             duration_ms = (time.time() - start_time) * 1000
@@ -317,6 +325,7 @@ def _create_request_model_from_forward(module: DiscoveredModule) -> type:
         return Dict[str, Any]
 
     # Get input fields from forward types
+    import typing
     fields = {}
     for field_name, field_info in module.forward_input_fields.items():
         # Get the type annotation from the stored info
@@ -326,8 +335,16 @@ def _create_request_model_from_forward(module: DiscoveredModule) -> type:
         if hasattr(field_type, '__module__') and field_type.__module__.startswith('dspy'):
             field_type = str
 
-        # All forward parameters are required (no defaults)
-        fields[field_name] = (field_type, ...)
+        # Check if field is Optional (Union with None)
+        default_value = ...  # Required by default
+        origin = typing.get_origin(field_type)
+        if origin is typing.Union:
+            args = typing.get_args(field_type)
+            if type(None) in args:
+                # It's Optional - make it not required
+                default_value = None
+
+        fields[field_name] = (field_type, default_value)
 
     # Create dynamic Pydantic model
     model_name = f"{module.name}Request"
@@ -341,12 +358,13 @@ def _create_response_model_from_forward(module: DiscoveredModule) -> type:
         module: Discovered module with forward type information
 
     Returns:
-        Pydantic model class
+        Pydantic model class or Dict[str, Any] for dspy.Prediction
     """
+    # If forward_output_fields is None or empty (e.g., dspy.Prediction), use generic dict
     if not module.forward_output_fields:
         return Dict[str, Any]
 
-    # Get output fields from forward return type
+    # Get output fields from forward return type (TypedDict, dataclass, etc.)
     fields = {}
     for field_name, field_info in module.forward_output_fields.items():
         # Get the type annotation from the stored info

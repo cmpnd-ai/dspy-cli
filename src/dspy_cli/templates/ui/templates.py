@@ -28,8 +28,8 @@ def render_index(modules: List[Any], config: Dict) -> str:
             adapter = model_alias.split(':')[0] if ':' in model_alias else 'default'
 
             # Check if forward is typed
-            if not module.is_forward_typed and not module.signature:
-                # Neither forward types nor signature available
+            if not module.is_forward_typed:
+                # Forward method is not properly typed
                 field_description = '<span style="color: #e74c3c;">This module\'s forward function isn\'t typed</span>'
                 signature_doc = ""
             else:
@@ -163,9 +163,9 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
     signature_string = ""
     form_fields = ""
 
-    # Check if forward is typed or signature is available
-    if not module.is_forward_typed and not module.signature:
-        # Neither forward types nor signature available - show error
+    # Check if forward is typed
+    if not module.is_forward_typed:
+        # Forward method is not properly typed - show error
         signature_string = '<span style="color: #e74c3c;">This module\'s forward function isn\'t typed</span>'
         form_fields = '''
         <div class="warning-box">
