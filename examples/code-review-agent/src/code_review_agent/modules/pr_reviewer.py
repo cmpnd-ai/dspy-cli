@@ -4,10 +4,11 @@ import os
 import re
 from typing import Optional
 import dspy
+import rich
+from dotenv import load_dotenv
 from mcp import StdioServerParameters
 from code_review_agent.signatures.review_pr import ReviewPR, ReviewPRWithTools
 from code_review_agent.utils import load_demo_pr, build_dspy_tools, MCPManager
-
 
 class PRReviewer(dspy.Module):
     def __init__(self, tools: list[dspy.Tool] | None = None, max_iters: int = 5):
@@ -37,24 +38,9 @@ class PRReviewer(dspy.Module):
         """
         return await self.review_from_repo_and_number(repo, pr_number, github_token)
     
-    async def aforward_with_data(self, pr_metadata, file_list):
-        """
-        Review a PR with pre-loaded metadata and files.
-        Use this when you already have the PR data loaded.
-        """
-        print("PRReviewer aforward_with_data")
-        return await self.predictor.acall(pr_metadata=pr_metadata, file_list=file_list)
-    
     async def review_from_link(self, pr_link: str, github_token: Optional[str] = None):
         """
         Review a PR from a GitHub link.
-        
-        Args:
-            pr_link: GitHub PR URL (e.g., https://github.com/owner/repo/pull/123)
-            github_token: Optional GitHub token (uses GITHUB_TOKEN env var if not provided)
-        
-        Returns:
-            PR review result
         """
         repo, pr_number = self._parse_pr_link(pr_link)
         return await self.review_from_repo_and_number(repo, pr_number, github_token)
@@ -139,3 +125,27 @@ class PRReviewer(dspy.Module):
         repo = match.group(1)
         pr_number = int(match.group(2))
         return repo, pr_number
+
+
+async def main():
+    pr_reviewer = PRReviewer()
+    dspy.configure(lm=dspy.LM("gpt-5-nano", temperature=1.0, max_tokens=16000))
+    tasks = [
+        pr_reviewer.aforward("stanfordnlp/dspy", 8902),
+        pr_reviewer.aforward("stanfordnlp/dspy", 9003)
+        # review_pr_with_github_mcp("stanfordnlp/dspy", 8936),
+    ]
+    completed_tasks = await asyncio.gather(*tasks)
+    rich.print(completed_tasks)
+
+# Usage
+if __name__ == "__main__":
+    import asyncio
+    import mlflow
+    import rich
+
+    mlflow.set_tracking_uri("http://127.0.0.1:5001")
+    mlflow.dspy.autolog()
+    load_dotenv()
+    
+    asyncio.run(main())

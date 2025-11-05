@@ -11,3 +11,5 @@ Tools might not work out of the box.
 Having to put everything into a module feels burdensome
 
 Where do I write my testing code?
+
+My instinct was to write my testing code inside data/mcp_test.py
