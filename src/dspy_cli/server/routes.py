@@ -211,7 +211,6 @@ def create_program_routes(
     instance = module.instantiate()
 
     # Create request/response models based on forward types
-    # Only use forward types - signatures are no longer used for API generation
     if module.is_forward_typed:
         try:
             request_model = _create_request_model_from_forward(module)
@@ -369,74 +368,6 @@ def _create_response_model_from_forward(module: DiscoveredModule) -> type:
     for field_name, field_info in module.forward_output_fields.items():
         # Get the type annotation from the stored info
         field_type = field_info.get("annotation", str)
-
-        # Add to fields dict
-        fields[field_name] = (field_type, ...)
-
-    # Create dynamic Pydantic model
-    model_name = f"{module.name}Response"
-    return create_model(model_name, **fields)
-
-
-def _create_request_model(module: DiscoveredModule) -> type:
-    """Create a Pydantic model for request validation based on signature.
-
-    Args:
-        module: Discovered module with signature
-
-    Returns:
-        Pydantic model class
-    """
-    if not module.signature:
-        return Dict[str, Any]
-
-    # Get input fields from signature
-    fields = {}
-    for field_name, field_info in module.signature.input_fields.items():
-        # Get the type annotation
-        field_type = field_info.annotation if hasattr(field_info, 'annotation') else str
-
-        # For dspy types (Image, Audio, etc.), accept strings in the API
-        # They'll be converted to proper dspy objects before execution
-        if hasattr(field_type, '__module__') and field_type.__module__.startswith('dspy'):
-            field_type = str
-
-        # Check if field is Optional by checking if it's a Union with None
-        import typing
-        default_value = ...  # Required by default
-
-        # Check if type is Optional (Union with None)
-        origin = typing.get_origin(field_type)
-        if origin is typing.Union:
-            args = typing.get_args(field_type)
-            if type(None) in args:
-                default_value = None
-
-        # Add to fields dict
-        fields[field_name] = (field_type, default_value)
-
-    # Create dynamic Pydantic model
-    model_name = f"{module.name}Request"
-    return create_model(model_name, **fields)
-
-
-def _create_response_model(module: DiscoveredModule) -> type:
-    """Create a Pydantic model for response based on signature.
-
-    Args:
-        module: Discovered module with signature
-
-    Returns:
-        Pydantic model class
-    """
-    if not module.signature:
-        return Dict[str, Any]
-
-    # Get output fields from signature
-    fields = {}
-    for field_name, field_info in module.signature.output_fields.items():
-        # Get the type annotation
-        field_type = field_info.annotation if hasattr(field_info, 'annotation') else str
 
         # Add to fields dict
         fields[field_name] = (field_type, ...)

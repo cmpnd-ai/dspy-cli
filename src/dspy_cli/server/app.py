@@ -99,8 +99,6 @@ def create_app(
     @app.get("/programs")
     async def list_programs():
         """List all discovered programs and their schemas."""
-        from dspy_cli.discovery.module_finder import get_signature_fields
-
         programs = []
         for module in modules:
             model_alias = get_program_model(config, module.name)
@@ -110,11 +108,6 @@ def create_app(
                 "model": model_alias,
                 "endpoint": f"/{module.name}",
             }
-
-            # Add signature information if available
-            if module.signature:
-                fields = get_signature_fields(module.signature)
-                program_info["schema"] = fields
 
             programs.append(program_info)
 
