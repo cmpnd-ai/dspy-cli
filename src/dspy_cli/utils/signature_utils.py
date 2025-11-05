@@ -65,3 +65,30 @@ def type_to_string(type_obj):
 def to_class_name(snake_case_name):
     """Convert snake_case to PascalCase for class names."""
     return "".join(word.capitalize() for word in snake_case_name.split("_"))
+
+
+def build_forward_components(signature_fields):
+    """Build forward method components from signature fields.
+
+    Args:
+        signature_fields: Dict with 'inputs' and 'outputs' lists from parse_signature_string()
+
+    Returns:
+        Dictionary with:
+        - 'forward_params': CSV of typed parameters (e.g., "post: str, question: str")
+        - 'forward_kwargs': CSV of keyword argument pairs (e.g., "post=post, question=question")
+    """
+    inputs = signature_fields.get('inputs', [])
+
+    # Build forward_params: "name: type, name2: type2"
+    params = [f"{field['name']}: {field['type']}" for field in inputs]
+    forward_params = ", ".join(params)
+
+    # Build forward_kwargs: "name=name, name2=name2"
+    kwargs = [f"{field['name']}={field['name']}" for field in inputs]
+    forward_kwargs = ", ".join(kwargs)
+
+    return {
+        'forward_params': forward_params,
+        'forward_kwargs': forward_kwargs
+    }

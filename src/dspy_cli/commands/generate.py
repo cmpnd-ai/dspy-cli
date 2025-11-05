@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from dspy_cli.config.validator import find_package_directory, validate_project_structure
-from dspy_cli.utils.signature_utils import parse_signature_string, to_class_name
+from dspy_cli.utils.signature_utils import parse_signature_string, to_class_name, build_forward_components
 
 
 # Map of module type aliases to their canonical names and template files
@@ -214,6 +214,14 @@ def _create_module_file(package_dir, package_name, program_name, module_type, si
 
     module_class = f"{to_class_name(program_name)}{class_suffix}"
 
+    # Build forward method components from signature fields
+    # If no signature was provided, use default fields (question: str -> answer: str)
+    fields_for_forward = signature_fields if signature_fields else {
+        'inputs': [{'name': 'question', 'type': 'str'}],
+        'outputs': [{'name': 'answer', 'type': 'str'}]
+    }
+    forward_components = build_forward_components(fields_for_forward)
+
     # Load and format template
     module_template = (templates_dir / module_info['template']).read_text()
     # Use lowercase filename for import
@@ -222,7 +230,9 @@ def _create_module_file(package_dir, package_name, program_name, module_type, si
         package_name=package_name,
         program_name=signature_file_name,  # Use lowercase for import path
         signature_class=signature_class,
-        class_name=module_class
+        class_name=module_class,
+        forward_params=forward_components['forward_params'],
+        forward_kwargs=forward_components['forward_kwargs']
     )
 
     module_file_path.write_text(content)

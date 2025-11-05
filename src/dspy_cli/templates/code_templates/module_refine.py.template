@@ -10,5 +10,5 @@ class {class_name}(dspy.Module):
         super().__init__()
         self.predictor = dspy.Refine({signature_class})
 
-    def forward(self, **kwargs):
-        return self.predictor(**kwargs)
+    def forward(self, {forward_params}) -> dspy.Prediction:
+        return self.predictor({forward_kwargs})
