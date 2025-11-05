@@ -228,7 +228,7 @@ def format_pr_for_review(pr_data: Dict) -> Dict:
     }
 
 
-def load_demo_pr(
+def download_and_format_pr(
     repo: str = "stanfordnlp/dspy",
     pr_number: int = 8902,
     github_token: Optional[str] = None
