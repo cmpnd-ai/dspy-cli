@@ -245,7 +245,10 @@ def create_program_routes(
             # Execute the program with the program-specific LM via context
             logger.info(f"Executing {program_name} with inputs: {inputs}")
             with dspy.context(lm=lm):
-                result = instance(**inputs)
+                if hasattr(instance, 'aforward'):
+                    result = await instance.acall(**inputs)
+                else:
+                    result = instance(**inputs)
 
             # Convert result to dict
             if isinstance(result, dspy.Prediction):

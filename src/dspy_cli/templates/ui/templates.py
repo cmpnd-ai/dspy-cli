@@ -1,6 +1,8 @@
 """HTML templates for the web UI."""
 
 from typing import List, Dict, Any
+from dspy_cli.config import get_program_model
+from dspy_cli.discovery.module_finder import get_module_fields
 
 
 def render_index(modules: List[Any], config: Dict) -> str:
@@ -19,8 +21,6 @@ def render_index(modules: List[Any], config: Dict) -> str:
         # Sort modules alphabetically by name
         sorted_modules = sorted(modules, key=lambda m: m.name)
         for module in sorted_modules:
-            from dspy_cli.config import get_program_model
-            from dspy_cli.discovery.module_finder import get_module_fields
 
             model_alias = get_program_model(config, module.name)
 
@@ -137,9 +137,6 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
     Returns:
         HTML string for the program page
     """
-    from dspy_cli.config import get_program_model
-    from dspy_cli.discovery.module_finder import get_module_fields
-
     model_alias = get_program_model(config, program_name)
 
     # Extract adapter type from model alias
