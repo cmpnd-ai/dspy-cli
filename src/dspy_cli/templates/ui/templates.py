@@ -20,46 +20,34 @@ def render_index(modules: List[Any], config: Dict) -> str:
         sorted_modules = sorted(modules, key=lambda m: m.name)
         for module in sorted_modules:
             from dspy_cli.config import get_program_model
-            from dspy_cli.discovery.module_finder import get_signature_fields
+            from dspy_cli.discovery.module_finder import get_module_fields
 
             model_alias = get_program_model(config, module.name)
 
             # Extract adapter type from model alias (e.g., "openai" from "openai:gpt-5-mini")
             adapter = model_alias.split(':')[0] if ':' in model_alias else 'default'
 
-            # Get field information
-            if module.signature:
-                # Use module's signature_string if available (for composite signatures)
-                if module.signature_string:
-                    field_description = module.signature_string.replace("->", "→")
-                else:
-                    # Fall back to extracting from signature
-                    fields = get_signature_fields(module.signature)
-                    input_names = list(fields["inputs"].keys())
-                    output_names = list(fields["outputs"].keys())
-
-                    # Build field description
-                    input_str = ", ".join(input_names) if input_names else "no inputs"
-                    output_str = ", ".join(output_names) if output_names else "no outputs"
-                    field_description = f"{input_str} → {output_str}"
-
-                # Get signature docstring if available
-                signature_doc = module.signature.__doc__.strip() if module.signature.__doc__ else ""
-            else:
-                field_description = "No signature information"
-                signature_doc = ""
+            # Get signature docstring if available
+            signature_doc = ""
+            if module.signature and module.signature.__doc__:
+                signature_doc = module.signature.__doc__.strip()
 
             # Build description HTML
             description_html = f'<p class="program-description">{signature_doc}</p>' if signature_doc else ''
 
+            # Build error message if not typed
+            error_html = ''
+            if not module.is_forward_typed:
+                error_html = '<p class="program-error" style="color: #e74c3c;">This module\'s forward function isn\'t typed</p>'
+
             programs_html += f"""
             <div class="program-card" data-url="/ui/{module.name}">
-                <h3><a href="/ui/{module.name}">{module.name}</a></h3>
-                {description_html}
-                <p class="program-meta">
-                    <span class="field-info">{field_description}</span>
+                <div class="program-header">
+                    <h3><a href="/ui/{module.name}">{module.name}</a></h3>
                     <span class="model-badge" data-adapter="{adapter}">{model_alias}</span>
-                </p>
+                </div>
+                {description_html}
+                {error_html}
             </div>
             """
     else:
@@ -150,7 +138,7 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
         HTML string for the program page
     """
     from dspy_cli.config import get_program_model
-    from dspy_cli.discovery.module_finder import get_signature_fields
+    from dspy_cli.discovery.module_finder import get_module_fields
 
     model_alias = get_program_model(config, program_name)
 
@@ -162,27 +150,39 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
     if module.signature and module.signature.__doc__:
         program_docstring = module.signature.__doc__.strip()
 
-    # Build signature string
+    # Build signature string and form fields
     signature_string = ""
-    if module.signature:
-        # Use module's signature_string if available (for composite signatures)
-        if module.signature_string:
-            signature_string = module.signature_string.replace("->", "→")
-        else:
-            # Fall back to extracting from signature
-            fields = get_signature_fields(module.signature)
-            input_names = list(fields["inputs"].keys())
-            output_names = list(fields["outputs"].keys())
-            input_str = ", ".join(input_names) if input_names else "no inputs"
-            output_str = ", ".join(output_names) if output_names else "no outputs"
-            signature_string = f"{input_str} → {output_str}"
-
-    # Build form fields
     form_fields = ""
-    if module.signature:
-        # Pass the module to get_signature_fields to use metadata if available
-        fields = get_signature_fields(module)
 
+    # Check if forward is typed
+    if not module.is_forward_typed:
+        # Forward method is not properly typed - show error
+        signature_string = '<span style="color: #e74c3c;">This module\'s forward function isn\'t typed</span>'
+        form_fields = '''
+        <div class="warning-box">
+            <h3>⚠️ Module Not Properly Typed</h3>
+            <p>This module's <code>forward()</code> method doesn't have proper type annotations.</p>
+            <p>To use this module via the API or web UI, please add type hints:</p>
+            <pre><code>def forward(self, input_field: str) -> YourOutputType:
+    # Your implementation
+    return result</code></pre>
+            <p>The forward method must have:</p>
+            <ul>
+                <li>Typed parameters (no **kwargs)</li>
+                <li>A typed return value (TypedDict, NamedTuple, or dataclass)</li>
+            </ul>
+        </div>
+        '''
+    else:
+        # Get field information
+        fields = get_module_fields(module)
+        input_names = list(fields["inputs"].keys())
+        output_names = list(fields["outputs"].keys())
+        input_str = ", ".join(input_names) if input_names else "no inputs"
+        output_str = ", ".join(output_names) if output_names else "no outputs"
+        signature_string = f"{input_str} → {output_str}"
+
+        # Build form fields
         for field_name, field_info in fields["inputs"].items():
             field_type = field_info.get("type", "str")
             description = field_info.get("description", "").strip()
@@ -271,8 +271,6 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
                 {input_html}
             </div>
             """
-    else:
-        form_fields = '<p class="warning">No signature information available</p>'
 
     return f"""<!DOCTYPE html>
 <html lang="en">

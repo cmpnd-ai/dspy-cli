@@ -54,6 +54,16 @@ def create_app(
     if not modules:
         logger.warning("No DSPy modules discovered!")
 
+    # Check for duplicate module names
+    module_names = [m.name for m in modules]
+    duplicates = [name for name in module_names if module_names.count(name) > 1]
+    if duplicates:
+        duplicate_set = set(duplicates)
+        error_msg = f"Error: Duplicate module names found: {', '.join(sorted(duplicate_set))}"
+        logger.error(error_msg)
+        logger.error("Each module must have a unique class name.")
+        raise ValueError(error_msg)
+
     # Configure default model
     default_model_alias = config["models"]["default"]
     default_model_config = get_model_config(config, default_model_alias)
