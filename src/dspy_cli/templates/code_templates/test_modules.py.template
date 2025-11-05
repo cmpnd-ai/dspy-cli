@@ -1,5 +1,3 @@
-"""Tests for DSPy modules."""
-
 import pytest
 import dspy
 

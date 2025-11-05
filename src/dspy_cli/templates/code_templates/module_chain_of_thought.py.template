@@ -1,5 +1,3 @@
-"""Example DSPy module using ChainOfThought."""
-
 import dspy
 from {package_name}.signatures.{program_name} import {signature_class}
 

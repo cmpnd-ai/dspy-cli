@@ -1,5 +1,3 @@
-"""Signature definitions for {program_name}."""
-
 import dspy
 
 class {class_name}(dspy.Signature):
