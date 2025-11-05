@@ -258,6 +258,22 @@ nav {
     color: var(--accent-primary);
 }
 
+.program-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.program-header h3 {
+    margin: 0;
+}
+
+.program-header .model-badge {
+    flex-shrink: 0;
+}
+
 .program-description {
     color: var(--text-secondary);
     font-size: 0.95rem;

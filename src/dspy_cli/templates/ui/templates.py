@@ -27,36 +27,27 @@ def render_index(modules: List[Any], config: Dict) -> str:
             # Extract adapter type from model alias (e.g., "openai" from "openai:gpt-5-mini")
             adapter = model_alias.split(':')[0] if ':' in model_alias else 'default'
 
-            # Check if forward is typed
-            if not module.is_forward_typed:
-                # Forward method is not properly typed
-                field_description = '<span style="color: #e74c3c;">This module\'s forward function isn\'t typed</span>'
-                signature_doc = ""
-            else:
-                # Get field information
-                fields = get_module_fields(module)
-                input_names = list(fields["inputs"].keys())
-                output_names = list(fields["outputs"].keys())
-
-                # Build field description
-                input_str = ", ".join(input_names) if input_names else "no inputs"
-                output_str = ", ".join(output_names) if output_names else "no outputs"
-                field_description = f"{input_str} → {output_str}"
-
-                # Get signature docstring if available
-                signature_doc = module.signature.__doc__.strip() if module.signature and module.signature.__doc__ else ""
+            # Get signature docstring if available
+            signature_doc = ""
+            if module.signature and module.signature.__doc__:
+                signature_doc = module.signature.__doc__.strip()
 
             # Build description HTML
             description_html = f'<p class="program-description">{signature_doc}</p>' if signature_doc else ''
 
+            # Build error message if not typed
+            error_html = ''
+            if not module.is_forward_typed:
+                error_html = '<p class="program-error" style="color: #e74c3c;">This module\'s forward function isn\'t typed</p>'
+
             programs_html += f"""
             <div class="program-card" data-url="/ui/{module.name}">
-                <h3><a href="/ui/{module.name}">{module.name}</a></h3>
-                {description_html}
-                <p class="program-meta">
-                    <span class="field-info">{field_description}</span>
+                <div class="program-header">
+                    <h3><a href="/ui/{module.name}">{module.name}</a></h3>
                     <span class="model-badge" data-adapter="{adapter}">{model_alias}</span>
-                </p>
+                </div>
+                {description_html}
+                {error_html}
             </div>
             """
     else:
