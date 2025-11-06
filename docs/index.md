@@ -85,8 +85,6 @@ Server starting on http://0.0.0.0:8000
 
 Discovered Programs:
   • MyAppPredict - POST /MyAppPredict
-
-✓ Ready at http://localhost:8000/docs
 ```
 
 
@@ -155,7 +153,7 @@ curl -X POST http://localhost:8000/QaBotPredict \
   -d '{"question": "What is DSPy?"}'
 ```
 
-Or open `http://localhost:8000/docs` for interactive testing.
+Or open `http://localhost:8000/` for interactive testing.
 
 ### Add More Programs
 
