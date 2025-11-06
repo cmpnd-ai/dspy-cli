@@ -1,5 +1,6 @@
 """Server runner module for executing DSPy API server."""
 
+import os
 import sys
 from pathlib import Path
 
@@ -11,14 +12,71 @@ from dspy_cli.config.validator import find_package_directory, validate_project_s
 from dspy_cli.server.app import create_app
 
 
-def main(port: int, host: str, logs_dir: str | None, ui: bool):
+# Global factory function for uvicorn reload mode
+def create_app_instance():
+    """Factory function for creating app instance in reload mode.
+
+    This function is called by uvicorn when using reload=True with an import string.
+    It reads configuration from environment variables set by main().
+
+    How reload works:
+    1. main() sets environment variables (DSPY_CLI_LOGS_DIR, DSPY_CLI_ENABLE_UI)
+    2. main() calls uvicorn.run() with import string and reload=True
+    3. Uvicorn watches files in reload_dirs matching reload_includes patterns
+    4. On file change, uvicorn restarts the process and calls this factory function
+    5. This function recreates the app from scratch with fresh module imports
+
+    Watched files:
+    - *.py files in src/ (modules, signatures, utils)
+    - dspy.config.yaml (model configuration)
+    - .env (API keys and environment variables)
+    """
+    # Get parameters from environment (set by main() before reload)
+    logs_dir = os.environ.get("DSPY_CLI_LOGS_DIR", "./logs")
+    enable_ui = os.environ.get("DSPY_CLI_ENABLE_UI", "false").lower() == "true"
+
+    # Validate project structure
+    if not validate_project_structure():
+        raise RuntimeError("Not a valid DSPy project directory")
+
+    package_dir = find_package_directory()
+    if not package_dir:
+        raise RuntimeError("Could not find package in src/")
+
+    package_name = package_dir.name
+    modules_path = package_dir / "modules"
+
+    if not modules_path.exists():
+        raise RuntimeError(f"modules directory not found: {modules_path}")
+
+    # Load config
+    try:
+        config = load_config()
+    except ConfigError as e:
+        raise RuntimeError(f"Configuration error: {e}")
+
+    logs_path = Path(logs_dir)
+    logs_path.mkdir(exist_ok=True)
+
+    # Create and return the app
+    return create_app(
+        config=config,
+        package_path=modules_path,
+        package_name=f"{package_name}.modules",
+        logs_dir=logs_path,
+        enable_ui=enable_ui
+    )
+
+
+def main(port: int, host: str, logs_dir: str | None, ui: bool, reload: bool = True):
     """Main server execution logic.
-    
+
     Args:
         port: Port to run the server on
         host: Host to bind to
         logs_dir: Directory for logs
         ui: Whether to enable web UI
+        reload: Whether to enable auto-reload on file changes
     """
     click.echo("Starting DSPy API server...")
     click.echo()
@@ -101,17 +159,47 @@ def main(port: int, host: str, logs_dir: str | None, ui: bool):
     click.echo(click.style(f"Server starting on http://{host_string}:{port}", fg="green", bold=True))
     click.echo(click.style("=" * 60, fg="cyan"))
     click.echo()
+    if reload:
+        click.echo(click.style("Hot reload: ENABLED", fg="green"))
+        click.echo("  Watching for changes in:")
+        click.echo(f"    • {modules_path}")
+        click.echo(f"    • {Path.cwd() / 'dspy.config.yaml'}")
+        click.echo(f"    • {Path.cwd() / '.env'}")
+        click.echo()
     click.echo("Press Ctrl+C to stop the server")
     click.echo()
 
     try:
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_level="info",
-            access_log=True
-        )
+        if reload:
+            # Set environment variables for create_app_instance()
+            os.environ["DSPY_CLI_LOGS_DIR"] = str(logs_path)
+            os.environ["DSPY_CLI_ENABLE_UI"] = str(ui).lower()
+
+            # Get project root and src directory for watching
+            project_root = Path.cwd()
+            src_dir = project_root / "src"
+
+            # Use import string for reload mode
+            uvicorn.run(
+                "dspy_cli.server.runner:create_app_instance",
+                host=host,
+                port=port,
+                log_level="info",
+                access_log=True,
+                reload=True,
+                reload_dirs=[str(src_dir), str(project_root)],
+                reload_includes=["*.py", "*.yaml", ".env"],
+                factory=True
+            )
+        else:
+            # Use app instance for non-reload mode
+            uvicorn.run(
+                app,
+                host=host,
+                port=port,
+                log_level="info",
+                access_log=True
+            )
     except KeyboardInterrupt:
         click.echo()
         click.echo(click.style("Server stopped", fg="yellow"))
@@ -129,6 +217,7 @@ if __name__ == "__main__":
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--logs-dir", default=None)
     parser.add_argument("--ui", action="store_true")
+    parser.add_argument("--reload", action="store_true", default=True)
     args = parser.parse_args()
-    
-    main(port=args.port, host=args.host, logs_dir=args.logs_dir, ui=args.ui)
+
+    main(port=args.port, host=args.host, logs_dir=args.logs_dir, ui=args.ui, reload=args.reload)

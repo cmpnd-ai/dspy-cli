@@ -73,6 +73,11 @@ def _exec_clean(target_python: Path, args: list[str]) -> NoReturn:
     help="Enable web UI for interactive testing",
 )
 @click.option(
+    "--reload/--no-reload",
+    default=True,
+    help="Enable auto-reload on file changes (default: enabled)",
+)
+@click.option(
     "--python",
     default=None,
     type=click.Path(exists=True, dir_okay=False),
@@ -83,7 +88,7 @@ def _exec_clean(target_python: Path, args: list[str]) -> NoReturn:
     is_flag=True,
     help="Use system Python environment instead of project venv",
 )
-def serve(port, host, logs_dir, ui, python, system):
+def serve(port, host, logs_dir, ui, reload, python, system):
     """Start an HTTP API server that exposes your DSPy programs.
 
     This command:
@@ -98,7 +103,7 @@ def serve(port, host, logs_dir, ui, python, system):
         dspy-cli serve --python /path/to/venv/bin/python
     """
     if system:
-        runner_main(port=port, host=host, logs_dir=logs_dir, ui=ui)
+        runner_main(port=port, host=host, logs_dir=logs_dir, ui=ui, reload=reload)
         return
     
     target_python = None
@@ -156,7 +161,9 @@ def serve(port, host, logs_dir, ui, python, system):
             args.extend(["--logs-dir", logs_dir])
         if ui:
             args.append("--ui")
-        
+        if reload:
+            args.append("--reload")
+
         _exec_clean(target_python, args)
     else:
-        runner_main(port=port, host=host, logs_dir=logs_dir, ui=ui)
+        runner_main(port=port, host=host, logs_dir=logs_dir, ui=ui, reload=reload)
