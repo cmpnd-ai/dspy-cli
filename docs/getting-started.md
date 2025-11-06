@@ -112,7 +112,7 @@ class QaBot(dspy.Module):
 **Before optimization:** Generic prompts. Inconsistent quality. Trial-and-error tuning.  
 **After optimization:** Prompts tailored to your task. Measurable improvements. Data-driven.
 
-See the [DSPy documentation](dspy.ai) for more on optimization strategies.
+See the [DSPy documentation](https://dspy.ai) for more on optimization strategies.
 
 ## Module Types
 
@@ -189,7 +189,7 @@ dspy-cli g scaffold extractor -s "document -> entities: list[str], metadata: dic
 - [Configuration Guide](configuration.md) - LLM providers, custom models
 
 **Deploy:**
-- [Deployment](deployment.md) - Ship to production
+- Coming Soon
 
 ## Troubleshooting
 
