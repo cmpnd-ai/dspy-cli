@@ -5,10 +5,10 @@ DSPy CLI helps you build LLM systems that iterate fast and scale without breakin
 ## Workflow
 
 ```
-dspy new      → Start with structure that scales
-dspy serve    → Iterate without breaking things
-dspy generate → Add complexity safely
-[Future: dspy optimize → Automatic improvement]
+dspy-cli new      → Start with structure that scales
+dspy-cli serve    → Iterate without breaking things
+dspy-cli generate → Add complexity safely
+[Future: dspy-cli optimize → run DSPy optimization]
 ```
 
 ## Available Commands
