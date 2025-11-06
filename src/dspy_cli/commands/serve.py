@@ -78,6 +78,17 @@ def _exec_clean(target_python: Path, args: list[str]) -> NoReturn:
     help="Enable auto-reload on file changes (default: enabled)",
 )
 @click.option(
+    "--save-openapi/--no-save-openapi",
+    default=True,
+    help="Save OpenAPI spec to file on server start (default: enabled)",
+)
+@click.option(
+    "--openapi-format",
+    type=click.Choice(["json", "yaml"], case_sensitive=False),
+    default="json",
+    help="Format for OpenAPI spec file (default: json)",
+)
+@click.option(
     "--python",
     default=None,
     type=click.Path(exists=True, dir_okay=False),
@@ -88,7 +99,7 @@ def _exec_clean(target_python: Path, args: list[str]) -> NoReturn:
     is_flag=True,
     help="Use system Python environment instead of project venv",
 )
-def serve(port, host, logs_dir, ui, reload, python, system):
+def serve(port, host, logs_dir, ui, reload, save_openapi, openapi_format, python, system):
     """Start an HTTP API server that exposes your DSPy programs.
 
     This command:
@@ -103,7 +114,15 @@ def serve(port, host, logs_dir, ui, reload, python, system):
         dspy-cli serve --python /path/to/venv/bin/python
     """
     if system:
-        runner_main(port=port, host=host, logs_dir=logs_dir, ui=ui, reload=reload)
+        runner_main(
+            port=port,
+            host=host,
+            logs_dir=logs_dir,
+            ui=ui,
+            reload=reload,
+            save_openapi=save_openapi,
+            openapi_format=openapi_format
+        )
         return
     
     target_python = None
@@ -163,7 +182,18 @@ def serve(port, host, logs_dir, ui, reload, python, system):
             args.append("--ui")
         if reload:
             args.append("--reload")
+        if save_openapi:
+            args.append("--save-openapi")
+        args.extend(["--openapi-format", openapi_format])
 
         _exec_clean(target_python, args)
     else:
-        runner_main(port=port, host=host, logs_dir=logs_dir, ui=ui, reload=reload)
+        runner_main(
+            port=port,
+            host=host,
+            logs_dir=logs_dir,
+            ui=ui,
+            reload=reload,
+            save_openapi=save_openapi,
+            openapi_format=openapi_format
+        )

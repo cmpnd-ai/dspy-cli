@@ -11,6 +11,7 @@ from dspy_cli.config import get_model_config, get_program_model
 from dspy_cli.discovery import discover_modules
 from dspy_cli.server.logging import setup_logging
 from dspy_cli.server.routes import create_program_routes
+from dspy_cli.utils.openapi import enhance_openapi_metadata, create_openapi_extensions
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,25 @@ def create_app(
     # Store modules in app state for access by routes
     app.state.modules = modules
     app.state.config = config
+
+    # Enhance OpenAPI metadata with DSPy-specific information
+    app_id = config.get("app_id", "DSPy API")
+    app_description = config.get("description", "Automatically generated API for DSPy programs")
+
+    # Create program-to-model mapping
+    program_models = {module.name: get_program_model(config, module.name) for module in modules}
+
+    # Create DSPy extensions
+    extensions = create_openapi_extensions(config, modules, program_models)
+
+    enhance_openapi_metadata(
+        app,
+        title=app_id,
+        description=app_description,
+        extensions=extensions
+    )
+
+    logger.info("Enhanced OpenAPI metadata with DSPy configuration")
 
     # Register UI routes if enabled
     if enable_ui:

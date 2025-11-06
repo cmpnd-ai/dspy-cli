@@ -10,6 +10,7 @@ import uvicorn
 from dspy_cli.config import ConfigError, load_config
 from dspy_cli.config.validator import find_package_directory, validate_project_structure
 from dspy_cli.server.app import create_app
+from dspy_cli.utils.openapi import generate_openapi_spec, save_openapi_spec
 
 
 # Global factory function for uvicorn reload mode
@@ -68,7 +69,15 @@ def create_app_instance():
     )
 
 
-def main(port: int, host: str, logs_dir: str | None, ui: bool, reload: bool = True):
+def main(
+    port: int,
+    host: str,
+    logs_dir: str | None,
+    ui: bool,
+    reload: bool = True,
+    save_openapi: bool = True,
+    openapi_format: str = "json"
+):
     """Main server execution logic.
 
     Args:
@@ -77,6 +86,8 @@ def main(port: int, host: str, logs_dir: str | None, ui: bool, reload: bool = Tr
         logs_dir: Directory for logs
         ui: Whether to enable web UI
         reload: Whether to enable auto-reload on file changes
+        save_openapi: Whether to save OpenAPI spec to file
+        openapi_format: Format for OpenAPI spec (json or yaml)
     """
     click.echo("Starting DSPy API server...")
     click.echo()
@@ -150,9 +161,23 @@ def main(port: int, host: str, logs_dir: str | None, ui: bool, reload: bool = Tr
     click.echo(click.style("Additional Endpoints:", fg="cyan", bold=True))
     click.echo()
     click.echo("  GET /programs - List all programs and their schemas")
+    click.echo("  GET /openapi.json - OpenAPI specification")
     if ui:
         click.echo("  GET / - Web UI for interactive testing")
     click.echo()
+
+    # Generate and save OpenAPI spec if requested
+    if save_openapi:
+        try:
+            spec = generate_openapi_spec(app)
+            spec_filename = f"openapi.{openapi_format}"
+            spec_path = Path.cwd() / spec_filename
+            save_openapi_spec(spec, spec_path, format=openapi_format)
+            click.echo(click.style(f"✓ OpenAPI spec saved: {spec_filename}", fg="green"))
+            click.echo()
+        except Exception as e:
+            click.echo(click.style(f"Warning: Could not save OpenAPI spec: {e}", fg="yellow"))
+            click.echo()
 
     host_string = "localhost" if host == "0.0.0.0" else host
     click.echo(click.style("=" * 60, fg="cyan"))
@@ -218,6 +243,16 @@ if __name__ == "__main__":
     parser.add_argument("--logs-dir", default=None)
     parser.add_argument("--ui", action="store_true")
     parser.add_argument("--reload", action="store_true", default=True)
+    parser.add_argument("--save-openapi", action="store_true", default=True)
+    parser.add_argument("--openapi-format", choices=["json", "yaml"], default="json")
     args = parser.parse_args()
 
-    main(port=args.port, host=args.host, logs_dir=args.logs_dir, ui=args.ui, reload=args.reload)
+    main(
+        port=args.port,
+        host=args.host,
+        logs_dir=args.logs_dir,
+        ui=args.ui,
+        reload=args.reload,
+        save_openapi=args.save_openapi,
+        openapi_format=args.openapi_format
+    )
