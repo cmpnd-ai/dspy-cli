@@ -1,6 +1,5 @@
 """Example DSPy module using Predict."""
 
-from typing import Optional
 import dspy
 from dotenv import load_dotenv
 from code_review_agent.signatures.review_pr import PRReview, ReviewPR
