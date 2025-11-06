@@ -58,3 +58,6 @@ examples/*/__pycache__/
 # MLFlow
 mlruns
 mlartifacts
+
+# Documentation
+/site/
