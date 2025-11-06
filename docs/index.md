@@ -123,22 +123,8 @@ dspy-cli new qa-bot -s "question -> answer"
 Scaffolds modules, signatures, tests, config—everything you need to start coding.
 
 ### Add Your API Key
-dspy-cli new qa-bot -s "question -> answer"
-```
-
-Scaffolds modules, signatures, tests, config—everything you need to start coding.
-
-### Add Your API Key
 
 ```bash
-cd qa-bot
-echo "OPENAI_API_KEY=sk-..." > .env
-uv sync
-```
-
-### Build Your Logic
-
-Edit `src/qa_bot/modules/qa_bot_predict.py`:
 cd qa-bot
 echo "OPENAI_API_KEY=sk-..." > .env
 uv sync
@@ -150,29 +136,20 @@ Edit `src/qa_bot/modules/qa_bot_predict.py`:
 
 ```python
 class QaBotPredict(dspy.Module):
-class QaBotPredict(dspy.Module):
     def __init__(self):
-        self.prog = dspy.Predict(QaBotSignature)
         self.prog = dspy.Predict(QaBotSignature)
     
     def forward(self, question: str):
         return self.prog(question=question)
-    def forward(self, question: str):
-        return self.prog(question=question)
 ```
 
-### Test Locally
 ### Test Locally
 
 ```bash
 dspy-cli serve
-dspy-cli serve
 ```
 
 ```bash
-curl -X POST http://localhost:8000/QaBotPredict \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What is DSPy?"}'
 curl -X POST http://localhost:8000/QaBotPredict \
   -H "Content-Type: application/json" \
   -d '{"question": "What is DSPy?"}'
@@ -181,44 +158,8 @@ curl -X POST http://localhost:8000/QaBotPredict \
 Or open `http://localhost:8000/docs` for interactive testing.
 
 ### Add More Programs
-Or open `http://localhost:8000/docs` for interactive testing.
-
-### Add More Programs
 
 ```bash
-dspy-cli g scaffold summarizer -m CoT -s "text -> summary"
-```
-
-Creates signature and module. Instantly available at `/SummarizerCoT` endpoint.
-
-## Why dspy-cli?
-
-### Speed to Production
-
-- **Scaffold in seconds** - From zero to working project instantly
-- **Auto-discovery** - Drop in a module, get a REST endpoint
-- **Interactive testing** - Built-in web UI for rapid iteration
-- **Docker ready** - Production deployment included
-
-### Built for Reliability
-
-- **Type-safe signatures** - Catch errors before runtime
-- **Testing built-in** - Test templates for every module
-- **Config management** - Environment-based settings with `.env` support
-
-### Focus on What Matters
-
-**Stop spending time on:**
-- Project structure
-- Boilerplate code
-- Server setup
-- Deployment config
-
-**Start spending time on:**
-- Your AI logic
-- Understanding the user problem
-- Training data
-- Shipping features
 dspy-cli g scaffold summarizer -m CoT -s "text -> summary"
 ```
 
@@ -255,17 +196,6 @@ Creates signature and module. Instantly available at `/SummarizerCoT` endpoint.
 
 ## Next Steps
 
-- [Getting Started Guide](getting-started.md) - Detailed walkthrough
-- [Commands Reference](commands/) - All commands and options
-- [Configuration](configuration.md) - Model settings and customization
-
-```bash
-dspy-cli --help     # See all commands
-```
-
----
-
-**Stop tweaking. Start building.** Transform your DSPy ideas into production APIs today.
 - [Getting Started Guide](getting-started.md) - Detailed walkthrough
 - [Commands Reference](commands/) - All commands and options
 - [Configuration](configuration.md) - Model settings and customization
