@@ -85,8 +85,6 @@ Server starting on http://0.0.0.0:8000
 
 Discovered Programs:
   • MyAppPredict - POST /MyAppPredict
-
-✓ Ready at http://localhost:8000/docs
 ```
 
 
@@ -105,12 +103,12 @@ See examples of how to use dspy-cli to solve actual problems:
 ### Content Pipeline
 **Pain:** Manual content generation is slow. Generating headlines, summaries, and tags should be programs that are simple and easy to read.
 
-**Solution:** [blog-tools](../examples/blog-tools/) - Automated headline generator, summarizer, tagger, and tweet extractor. One system, optimized together.
+**Solution:** [blog-tools](https://github.com/cmpnd-ai/dspy-cli-tool/tree/main/examples/blog-tools) - Automated headline generator, summarizer, tagger, and tweet extractor. One system, optimized together.
 
 ### Code Review Agent
 **Pain:** Code review is tedious. You want AI help but building a reliable system takes weeks.
 
-**Solution:** [code-review-agent](../examples/code-review-agent/) - Automated analysis and review, built in days instead of weeks. Uses the GitHub API as a tool.
+**Solution:** [code-review-agent](https://github.com/cmpnd-ai/dspy-cli-tool/tree/main/examples/code-review-agent) - Give an agent tools to use to review code. Uses the GitHub API as a tool.
 
 ## Core Workflow
 
@@ -155,7 +153,7 @@ curl -X POST http://localhost:8000/QaBotPredict \
   -d '{"question": "What is DSPy?"}'
 ```
 
-Or open `http://localhost:8000/docs` for interactive testing.
+Or open `http://localhost:8000/` for interactive testing.
 
 ### Add More Programs
 
