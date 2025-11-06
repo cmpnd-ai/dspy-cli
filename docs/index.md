@@ -1,274 +1,209 @@
 # dspy-cli
 
-**Scaffold and serve DSPy applications with ease.**
+## Tired of Prompts Breaking When You Switch Models?
 
-dspy-cli is a command-line tool for scaffolding and serving [DSPy](https://github.com/stanfordnlp/dspy) applications. It provides convention-based project structure and local development servers.
+You tweak your prompt until it works perfectly with GPT-4. Then you try Claude or Llama and everything breaks. You're stuck manually tuning prompts, chasing edge cases, and praying nothing breaks in production.
 
----
+**There's a better way to build AI systems.**
+
+> **Build. Test. Ship. Iterate.**
+
+DSPy optimizes your AI systems automatically—no manual prompt engineering. **dspy-cli gets you started in minutes.**
+
+## From Frustration to Flow
+
+**Before:**
+```python
+# Brittle prompt strings
+prompt = "You are a helpful assistant. Given this text..."
+# Manual tweaking for every model
+# Breaks when you change providers
+# No systematic testing
+```
+
+**After:**
+```python
+# Declarative, optimizable signatures
+class QASignature(dspy.Signature):
+    question: str = dspy.InputField()
+    answer: str = dspy.OutputField()
+qa = dspy.Predict(QASignature)
+```
+
+**The difference:** Your system adapts automatically. Switch models, run an optimizer, ship with confidence.
 
 ## Quick Start
 
+Go from idea to live API in three commands:
+
 ```bash
-# Install with uv (recommended)
-uv tool install dspy-cli
-
-# Create a new DSPy project
-dspy-cli new my-project
-cd my-project
-
-# Add your API keys to .env
-# OPENAI_API_KEY=sk-...
-
-# Install dependencies
-uv sync
-
-# Activate the virtual environment
-source .venv/bin/activate
-
-# Start local development server
-dspy-cli serve
+dspy-cli new chatbot        # Full project structure
+cd chatbot && uv sync       # Install dependencies  
+dspy-cli serve              # Live REST API
 ```
 
-## Features
-
-- **Project Scaffolding** - Generate complete DSPy projects with best-practice structure
-- **Local Development** - Test your DSPy modules locally with hot reload
-- **Component Generation** - Add new modules, signatures, and optimizers to existing projects
-- **Type-Safe** - Full type hints and signature validation
+Your LLM app is running at `http://localhost:8000`.
 
 ## Installation
 
-### uv (Recommended)
-
 ```bash
 uv tool install dspy-cli
+# or: pipx install dspy-cli
 ```
 
-### pipx
+## What You Get
+
+### 1. Stop Fighting Boilerplate
 
 ```bash
-pipx install dspy-cli
+dspy-cli new my-app
 ```
 
-### pip
-
-```bash
-pip install dspy-cli
+```
+Creating new DSPy project: my-app
+  ✓ Project structure
+  ✓ Type-safe signatures
+  ✓ Test templates
+  ✓ Config files
+  ✓ Git repository
 ```
 
-### Verify Installation
+**No more:** "Where does this file go?" or "Where do I put my modules?" or "What configuration do I need?"
 
-```bash
-dspy-cli --version
-```
+### 2. Ship Faster
 
-## Your First Project
+**Before:** Building REST APIs from scratch.
 
-### 1. Create a new project
-
-```bash
-dspy-cli new qa-bot
-cd qa-bot
-```
-
-This creates a complete project structure:
-
-```
-qa-bot/
-├── src/
-│   └── qa_bot/
-│       ├── modules/        # DSPy modules (programs)
-│       ├── signatures/     # Input/output signatures
-│       ├── optimizers/     # Optimization pipelines
-│       └── metrics/        # Evaluation metrics
-├── tests/
-├── data/
-├── dspy.config.yaml        # Configuration
-├── pyproject.toml
-└── .env                    # API keys (add yours here)
-```
-
-### 2. Add your API keys
-
-Edit `.env`:
-
-```bash
-OPENAI_API_KEY=sk-...
-```
-
-### 3. Install dependencies
-
-```bash
-uv sync
-```
-
-### 4. Start the development server
+**After:** Auto-discovery turns your modules into endpoints.
 
 ```bash
 dspy-cli serve
 ```
 
-This starts a FastAPI server at `http://localhost:8000` with:
-- Auto-discovery of DSPy modules
-- Interactive API documentation at `/docs`
-- Hot reload on code changes
+```
+Server starting on http://0.0.0.0:8000
 
-### 5. Test your module
+Discovered Programs:
+  • MyAppPredict - POST /MyAppPredict
+
+✓ Ready at http://localhost:8000/docs
+```
+
+
+### 3. Iterate Without Friction
+
+Built-in web UI for testing. Edit a module, restart the server, test in a ui immediately.
 
 ```bash
-curl -X POST "http://localhost:8000/predict/qa_bot_predict" \
+dspy-cli serve --ui
+```
+
+## Real-World Examples
+
+See examples of how to use dspy-cli to solve actual problems:
+
+### Content Pipeline
+**Pain:** Manual content generation is slow. Generating headlines, summaries, and tags should be programs that are simple and easy to read.
+
+**Solution:** [blog-tools](../examples/blog-tools/) - Automated headline generator, summarizer, tagger, and tweet extractor. One system, optimized together.
+
+### Code Review Agent
+**Pain:** Code review is tedious. You want AI help but building a reliable system takes weeks.
+
+**Solution:** [code-review-agent](../examples/code-review-agent/) - Automated analysis and review, built in days instead of weeks. Uses the GitHub API as a tool.
+
+## Core Workflow
+
+### Create Your Project
+
+```bash
+dspy-cli new qa-bot -s "question -> answer"
+```
+
+Scaffolds modules, signatures, tests, config—everything you need to start coding.
+
+### Add Your API Key
+
+```bash
+cd qa-bot
+echo "OPENAI_API_KEY=sk-..." > .env
+uv sync
+```
+
+### Build Your Logic
+
+Edit `src/qa_bot/modules/qa_bot_predict.py`:
+
+```python
+class QaBotPredict(dspy.Module):
+    def __init__(self):
+        self.prog = dspy.Predict(QaBotSignature)
+    
+    def forward(self, question: str):
+        return self.prog(question=question)
+```
+
+### Test Locally
+
+```bash
+dspy-cli serve
+```
+
+```bash
+curl -X POST http://localhost:8000/QaBotPredict \
   -H "Content-Type: application/json" \
   -d '{"question": "What is DSPy?"}'
 ```
 
-### 6. Generate additional components
+Or open `http://localhost:8000/docs` for interactive testing.
+
+### Add More Programs
 
 ```bash
-# Add a new ChainOfThought module
-dspy-cli g scaffold analyzer -m CoT -s "text -> summary, sentiment"
-
-# Add a ReAct module
-dspy-cli g scaffold agent -m ReAct -s "task -> result"
+dspy-cli g scaffold summarizer -m CoT -s "text -> summary"
 ```
 
-## Project Configuration
+Creates signature and module. Instantly available at `/SummarizerCoT` endpoint.
 
-Edit `dspy.config.yaml` to configure your project:
+## Why dspy-cli?
 
-```yaml
-# App identifier (used for routing)
-app_id: qa-bot
+### Speed to Production
 
-# Python module path to your DSPy module
-module_path: qa_bot.modules.qa_bot_predict:QaBotPredict
+- **Scaffold in seconds** - From zero to working project instantly
+- **Auto-discovery** - Drop in a module, get a REST endpoint
+- **Interactive testing** - Built-in web UI for rapid iteration
+- **Docker ready** - Production deployment included
 
-# Directory containing your source code
-code_dir: src
+### Built for Reliability
 
-# Deployment host (production)
-host: platform.cmpnd.ai
+- **Type-safe signatures** - Catch errors before runtime
+- **Testing built-in** - Test templates for every module
+- **Config management** - Environment-based settings with `.env` support
 
-# Model configuration
-models:
-  default: openai:gpt-4o-mini
-  
-  registry:
-    openai:gpt-4o-mini:
-      model: openai/gpt-4o-mini
-      env: OPENAI_API_KEY
-      max_tokens: 16000
-```
+### Focus on What Matters
 
-## Development Workflow
+**Stop spending time on:**
+- Project structure
+- Boilerplate code
+- Server setup
+- Deployment config
 
-### Local Development
-
-```bash
-# Start server with UI
-dspy-cli serve --ui
-
-# Custom port and host
-dspy-cli serve --port 8080 --host 127.0.0.1
-
-# Use specific Python interpreter
-dspy-cli serve --python /path/to/venv/bin/python
-```
-
-### Testing
-
-```bash
-# Run tests
-pytest
-
-# Run with coverage
-pytest --cov=src/qa_bot
-```
-
-### Deployment
-
-```bash
-# Deploy to default (production)
-dspy-cli deploy
-
-# Deploy to local control plane
-dspy-cli deploy --control-url http://localhost:9000
-
-# Deploy with custom API key
-dspy-cli deploy --api-key your-key-here
-```
-
-## Project Structure Conventions
-
-dspy-cli follows convention-over-configuration:
-
-- **`src/<package>/modules/`** - DSPy modules (auto-discovered by server)
-- **`src/<package>/signatures/`** - Signature definitions
-- **`src/<package>/optimizers/`** - Optimization pipelines
-- **`src/<package>/metrics/`** - Evaluation metrics
-- **`dspy.config.yaml`** - Deployment configuration
-- **`.env`** - API keys and secrets (never commit!)
-
-## Examples
-
-### Simple Question Answering
-
-```python
-# src/qa_bot/modules/qa_predict.py
-import dspy
-from qa_bot.signatures.qa import QaSignature
-
-class QaPredict(dspy.Module):
-    def __init__(self):
-        self.predictor = dspy.Predict(QaSignature)
-    
-    def forward(self, payload: dict):
-        return self.predictor(**payload)
-```
-
-```python
-# src/qa_bot/signatures/qa.py
-import dspy
-
-class QaSignature(dspy.Signature):
-    question: str = dspy.InputField(desc="Question to answer")
-    answer: str = dspy.OutputField(desc="Answer to the question")
-```
-
-### Chain of Thought Reasoning
-
-Generate with:
-
-```bash
-dspy-cli g scaffold reasoning -m CoT -s "context: list[str], question -> reasoning, answer"
-```
-
-### Multi-Step Agent
-
-Generate with:
-
-```bash
-dspy-cli g scaffold agent -m ReAct -s "task, available_tools: list[str] -> steps: list[str], result"
-```
-
-### Docker deployment
-
-```bash
-docker build -t qa-bot .
-docker run -p 8000:8000 qa-bot
-```
-
-## Command Reference
-
-See [CLI Reference](cli-reference.md) for detailed command documentation.
-
-## Getting Help
-
-- **Issues**: [GitHub Issues](https://github.com/cmpnd-ai/optimization-platform/issues)
-- **Contributing**: [Contributing Guide](contributing.md)
-- **DSPy Documentation**: [dspy.ai](https://dspy.ai)
+**Start spending time on:**
+- Your AI logic
+- Understanding the user problem
+- Training data
+- Shipping features
 
 ## Next Steps
 
-- [Explore all CLI commands](cli-reference.md)
-- [Learn how to contribute](contributing.md)
-- [Read the DSPy documentation](https://dspy.ai)
+- [Getting Started Guide](getting-started.md) - Detailed walkthrough
+- [Commands Reference](commands/) - All commands and options
+- [Configuration](configuration.md) - Model settings and customization
+
+```bash
+dspy-cli --help     # See all commands
+```
+
+---
+
+**Stop tweaking. Start building.** Transform your DSPy ideas into production APIs today.

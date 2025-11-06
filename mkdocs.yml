@@ -28,6 +28,8 @@ theme:
     - navigation.instant        # Instant loading
     - navigation.sections       # Section navigation
     - navigation.tabs           # Top-level tabs
+    - navigation.tabs.sticky    # Keep tabs visible
+    - navigation.indexes        # Section index pages
     - navigation.top            # Back to top button
     - navigation.tracking       # URL tracking
     - search.highlight          # Highlight search terms
@@ -92,6 +94,15 @@ markdown_extensions:
       permalink: true
 
 nav:
-  - Home: index.md
-  - CLI Reference: cli-reference.md
-  - Contributing: contributing.md
+  - User Guide:
+      - Home: index.md
+      - Getting Started: getting-started.md
+      - Configuration: configuration.md
+      - Commands:
+          - commands/index.md
+          - new: commands/new.md
+          - serve: commands/serve.md
+          - generate: commands/generate.md
+  - Development:
+      - Contributing: contributing.md
+      - Releasing: releasing.md
