@@ -36,8 +36,6 @@ qa = dspy.Predict(QASignature)
 
 Go from idea to live API in three commands:
 
-Go from idea to live API in three commands:
-
 ```bash
 dspy-cli new chatbot        # Full project structure
 cd chatbot && uv sync       # Install dependencies  
