@@ -135,6 +135,166 @@ def scaffold(program_name, module, signature):
         raise click.Abort()
 
 
+@generate.command()
+@click.argument("program_name")
+@click.option(
+    "--signature",
+    "-s",
+    default=None,
+    help='Inline signature string (e.g., "question -> answer" or "context: list[str], question -> answer")',
+)
+def signature(program_name, signature):
+    """Generate a new DSPy signature file only.
+
+    Creates a signature file in src/<package>/signatures/ without creating a module.
+
+    Examples:
+        # Create signature with default fields (question -> answer)
+        dspy-cli g signature my_sig
+
+        # Create signature with custom fields
+        dspy-cli g signature categorizer -s "post -> tags: list[str]"
+
+        # Complex signature with multiple inputs and outputs
+        dspy-cli g signature qa -s "context: list[str], question -> answer, confidence: float"
+    """
+    click.echo(f"Generating signature: {program_name}")
+    click.echo()
+
+    # Validate we're in a DSPy project
+    if not validate_project_structure():
+        click.echo(click.style("Error: Not in a valid DSPy project directory", fg="red"))
+        click.echo()
+        click.echo("Make sure you're in a directory created with 'dspy-cli new'")
+        click.echo("Required files: dspy.config.yaml, src/")
+        raise click.Abort()
+
+    # Find package directory
+    package_dir = find_package_directory()
+    if not package_dir:
+        click.echo(click.style("Error: Could not find package in src/", fg="red"))
+        raise click.Abort()
+
+    package_name = package_dir.name
+
+    # Convert dashes to underscores for valid Python identifier
+    original_program_name = program_name
+    program_name = program_name.replace("-", "_")
+
+    if original_program_name != program_name:
+        click.echo(f"  Note: Converted '{original_program_name}' to '{program_name}' for Python compatibility")
+
+    # Validate program name is valid Python identifier
+    if not program_name.replace("_", "").isalnum() or program_name[0].isdigit():
+        click.echo(click.style(f"Error: Program name '{program_name}' is not a valid Python identifier", fg="red"))
+        raise click.Abort()
+
+    # Parse signature if provided
+    signature_fields = None
+    if signature:
+        signature_fields = parse_signature_string(signature)
+        click.echo(f"  Signature: {signature}")
+    else:
+        click.echo(f"  Using default signature (question: str -> answer: str)")
+
+    click.echo(f"  Package: {package_name}")
+    click.echo()
+
+    try:
+        # Create signature file
+        _create_signature_file(package_dir, program_name, signature, signature_fields)
+
+        click.echo(click.style("✓ Signature created successfully!", fg="green"))
+        click.echo()
+        file_name = program_name.lower()
+        click.echo(f"File created: signatures/{file_name}.py")
+
+    except Exception as e:
+        click.echo(click.style(f"Error creating signature: {e}", fg="red"))
+        raise click.Abort()
+
+
+@generate.command()
+@click.argument("program_name")
+@click.option(
+    "--module",
+    "-m",
+    default="Predict",
+    help=f"DSPy module type to use. Available: {', '.join(MODULE_TYPES.keys())} (default: Predict)",
+)
+def module(program_name, module):
+    """Generate a new DSPy module file only.
+
+    Creates a module file in src/<package>/modules/ with an inline signature.
+    The module uses a placeholder signature: "question: str -> answer: str"
+
+    Examples:
+        # Create basic Predict module
+        dspy-cli g module my_module
+
+        # Create ChainOfThought module
+        dspy-cli g module analyzer -m CoT
+
+        # Create ReAct module
+        dspy-cli g module agent -m ReAct
+    """
+    click.echo(f"Generating module: {program_name}")
+    click.echo()
+
+    # Validate we're in a DSPy project
+    if not validate_project_structure():
+        click.echo(click.style("Error: Not in a valid DSPy project directory", fg="red"))
+        click.echo()
+        click.echo("Make sure you're in a directory created with 'dspy-cli new'")
+        click.echo("Required files: dspy.config.yaml, src/")
+        raise click.Abort()
+
+    # Validate module type
+    if module not in MODULE_TYPES:
+        click.echo(click.style(f"Error: Unknown module type '{module}'", fg="red"))
+        click.echo()
+        click.echo(f"Available module types: {', '.join(MODULE_TYPES.keys())}")
+        raise click.Abort()
+
+    # Find package directory
+    package_dir = find_package_directory()
+    if not package_dir:
+        click.echo(click.style("Error: Could not find package in src/", fg="red"))
+        raise click.Abort()
+
+    package_name = package_dir.name
+
+    # Convert dashes to underscores for valid Python identifier
+    original_program_name = program_name
+    program_name = program_name.replace("-", "_")
+
+    if original_program_name != program_name:
+        click.echo(f"  Note: Converted '{original_program_name}' to '{program_name}' for Python compatibility")
+
+    # Validate program name is valid Python identifier
+    if not program_name.replace("_", "").isalnum() or program_name[0].isdigit():
+        click.echo(click.style(f"Error: Program name '{program_name}' is not a valid Python identifier", fg="red"))
+        raise click.Abort()
+
+    click.echo(f"  Module type: {module}")
+    click.echo(f"  Package: {package_name}")
+    click.echo(f"  Using inline signature: \"question: str -> answer: str\"")
+    click.echo()
+
+    try:
+        # Create module file with inline signature
+        _create_module_file_inline(package_dir, package_name, program_name, module)
+
+        click.echo(click.style("✓ Module created successfully!", fg="green"))
+        click.echo()
+        file_name_base = program_name.lower()
+        click.echo(f"File created: modules/{file_name_base}_{MODULE_TYPES[module]['suffix']}.py")
+
+    except Exception as e:
+        click.echo(click.style(f"Error creating module: {e}", fg="red"))
+        raise click.Abort()
+
+
 def _create_signature_file(package_dir, program_name, signature_str, signature_fields):
     """Create a signature file for the program."""
     from dspy_cli.templates import code_templates
@@ -234,6 +394,67 @@ def _create_module_file(package_dir, package_name, program_name, module_type, si
         forward_params=forward_components['forward_params'],
         forward_kwargs=forward_components['forward_kwargs']
     )
+
+    module_file_path.write_text(content)
+    click.echo(f"  Created: modules/{module_file}.py")
+
+
+def _create_module_file_inline(package_dir, package_name, program_name, module_type):
+    """Create a module file with inline signature (no signature import)."""
+    module_info = MODULE_TYPES[module_type]
+    # Convert to lowercase/snake_case for filename
+    file_name_base = program_name.lower()
+    module_file = f"{file_name_base}_{module_info['suffix']}"
+    module_file_path = package_dir / "modules" / f"{module_file}.py"
+
+    # Check if file already exists
+    if module_file_path.exists():
+        click.echo(click.style(f"Warning: Module file already exists: {module_file_path}", fg="yellow"))
+        if not click.confirm("Overwrite?"):
+            raise click.Abort()
+
+    # Determine module class name based on module type
+    if module_type in ["CoT", "ChainOfThought"]:
+        class_suffix = "CoT"
+        predictor_class = "dspy.ChainOfThought"
+    elif module_type in ["PoT", "ProgramOfThought"]:
+        class_suffix = "PoT"
+        predictor_class = "dspy.ProgramOfThought"
+    elif module_type == "ReAct":
+        class_suffix = "ReAct"
+        predictor_class = "dspy.ReAct"
+    elif module_type == "Refine":
+        class_suffix = "Refine"
+        predictor_class = "dspy.Refine"
+    elif module_type == "MultiChainComparison":
+        class_suffix = "MCC"
+        predictor_class = "dspy.MultiChainComparison"
+    else:
+        class_suffix = "Predict"
+        predictor_class = "dspy.Predict"
+
+    module_class = f"{to_class_name(program_name)}{class_suffix}"
+
+    # Use default signature fields for forward method
+    default_fields = {
+        'inputs': [{'name': 'question', 'type': 'str'}],
+        'outputs': [{'name': 'answer', 'type': 'str'}]
+    }
+    forward_components = build_forward_components(default_fields)
+
+    # Generate module content with inline signature
+    content = f'''import dspy
+
+
+class {module_class}(dspy.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.predictor = {predictor_class}("question: str -> answer: str")
+
+    def forward(self, {forward_components['forward_params']}) -> dspy.Prediction:
+        return self.predictor({forward_components['forward_kwargs']})
+'''
 
     module_file_path.write_text(content)
     click.echo(f"  Created: modules/{module_file}.py")

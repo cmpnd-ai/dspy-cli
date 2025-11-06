@@ -26,7 +26,7 @@ Additional Endpoints:
   GET /programs - List all programs and their schemas
 
 ============================================================
-Server starting on http://0.0.0.0:8000
+Server starting on http://localhost:8000
 ============================================================
 ```
 

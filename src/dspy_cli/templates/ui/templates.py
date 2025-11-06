@@ -20,6 +20,10 @@ def render_index(modules: List[Any], config: Dict) -> str:
     if modules:
         # Sort modules alphabetically by name
         sorted_modules = sorted(modules, key=lambda m: m.name)
+
+        # Hide docstrings when there are multiple modules (2+)
+        show_docstrings = len(modules) == 1
+
         for module in sorted_modules:
 
             model_alias = get_program_model(config, module.name)
@@ -27,10 +31,15 @@ def render_index(modules: List[Any], config: Dict) -> str:
             # Extract adapter type from model alias (e.g., "openai" from "openai:gpt-5-mini")
             adapter = model_alias.split(':')[0] if ':' in model_alias else 'default'
 
-            # Get signature docstring if available
+            # Get signature docstring if available (only when showing docstrings)
             signature_doc = ""
-            if module.signature and module.signature.__doc__:
-                signature_doc = module.signature.__doc__.strip()
+            if show_docstrings and module.signature and module.signature.__doc__:
+                full_doc = module.signature.__doc__.strip()
+                # Truncate to approximately 3 lines (roughly 200 characters)
+                if len(full_doc) > 200:
+                    signature_doc = full_doc[:200].rsplit(' ', 1)[0] + '...'
+                else:
+                    signature_doc = full_doc
 
             # Build description HTML
             description_html = f'<p class="program-description">{signature_doc}</p>' if signature_doc else ''

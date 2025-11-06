@@ -96,8 +96,9 @@ def main(port: int, host: str, logs_dir: str | None, ui: bool):
         click.echo("  GET / - Web UI for interactive testing")
     click.echo()
 
+    host_string = "localhost" if host == "0.0.0.0" else host
     click.echo(click.style("=" * 60, fg="cyan"))
-    click.echo(click.style(f"Server starting on http://{host}:{port}", fg="green", bold=True))
+    click.echo(click.style(f"Server starting on http://{host_string}:{port}", fg="green", bold=True))
     click.echo(click.style("=" * 60, fg="cyan"))
     click.echo()
     click.echo("Press Ctrl+C to stop the server")
