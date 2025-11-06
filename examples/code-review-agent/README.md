@@ -1,6 +1,6 @@
 # dspy-code-review-agent
 
-A DSPy project created with dspy-cli.
+Originally based on the Qodo code review agent and converted into dspy.
 
 ## Setup
 

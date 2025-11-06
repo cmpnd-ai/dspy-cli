@@ -1,0 +1,5 @@
+# Requirements for running the example instrumented app
+dspy>=2.5.0
+openinference-instrumentation-dspy>=3.0.0
+opentelemetry-sdk>=1.21.0
+opentelemetry-exporter-otlp-proto-http>=1.21.0

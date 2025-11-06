@@ -1,6 +1,7 @@
 """FastAPI application factory."""
 
 import logging
+import os
 from pathlib import Path
 from typing import Dict
 
@@ -36,6 +37,9 @@ def create_app(
     """
     # Setup logging
     setup_logging()
+    
+    # Setup OpenTelemetry tracing for DSPy
+    _setup_tracing()
 
     # Create FastAPI app
     app = FastAPI(
@@ -190,3 +194,53 @@ def _configure_dspy_model(model_config: Dict):
     api_base = model_config.get("api_base")
     base_info = f" (base: {api_base})" if api_base else ""
     logger.info(f"Configured DSPy with model: {model} (type: {model_type}){base_info}")
+
+
+def _setup_tracing():
+    """Setup OpenTelemetry tracing for DSPy programs.
+    
+    Checks for OTEL_TRACING_ENABLED environment variable.
+    If enabled, configures OTLP exporter and instruments DSPy.
+    """
+    tracing_enabled = os.getenv("OTEL_TRACING_ENABLED", "false").lower() in ("true", "1", "yes")
+    
+    if not tracing_enabled:
+        logger.info("OpenTelemetry tracing disabled (set OTEL_TRACING_ENABLED=true to enable)")
+        return
+    
+    try:
+        from openinference.instrumentation.dspy import DSPyInstrumentor
+        from opentelemetry import trace as trace_api
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.sdk import trace as trace_sdk
+        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+        from opentelemetry.sdk.resources import Resource
+        
+        # Get configuration from environment
+        service_name = os.getenv("OTEL_SERVICE_NAME", "dspy-server")
+        otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://localhost:4318/v1/traces")
+        
+        # Create resource with service name
+        resource = Resource(attributes={
+            "service.name": service_name,
+        })
+        
+        # Setup tracer provider
+        tracer_provider = trace_sdk.TracerProvider(resource=resource)
+        tracer_provider.add_span_processor(
+            SimpleSpanProcessor(
+                OTLPSpanExporter(endpoint=otlp_endpoint)
+            )
+        )
+        trace_api.set_tracer_provider(tracer_provider)
+        
+        # Instrument DSPy
+        DSPyInstrumentor().instrument()
+        
+        logger.info(f"✓ OpenTelemetry tracing enabled: {service_name} -> {otlp_endpoint}")
+        
+    except ImportError as e:
+        logger.warning(f"OpenTelemetry dependencies not installed: {e}")
+        logger.warning("Install with: pip install openinference-instrumentation-dspy opentelemetry-sdk opentelemetry-exporter-otlp-proto-http")
+    except Exception as e:
+        logger.error(f"Failed to setup tracing: {e}")

@@ -28,6 +28,9 @@ dependencies = [
     "python-dotenv>=1.0",
     "pydantic>=2.0",
     "requests>=2.28",
+    "openinference-instrumentation-dspy>=0.1.30",
+    "opentelemetry-sdk>=1.21.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.21.0",
 ]
 
 [project.optional-dependencies]
