@@ -4,9 +4,9 @@
 
 You tweak your prompt until it works perfectly with GPT-4. Then you try Claude or Llama and everything breaks. You're stuck manually tuning prompts, chasing edge cases, and praying nothing breaks in production.
 
-**There's a better way.**
+**There's a better way to build AI systems.**
 
-> **Prompt. Test. Ship.**
+> **Build. Test. Ship. Iterate.**
 
 DSPy optimizes your AI systems automatically—no manual prompt engineering. **dspy-cli gets you started in minutes.**
 
@@ -42,13 +42,13 @@ cd chatbot && uv sync       # Install dependencies
 dspy-cli serve              # Live REST API
 ```
 
-Your LLM app is running at `http://localhost:8000` with interactive docs at `/docs`.
+Your LLM app is running at `http://localhost:8000`.
 
 ## Installation
 
 ```bash
-pipx install dspy-cli
-# or: uv tool install dspy-cli
+uv tool install dspy-cli
+# or: pipx install dspy-cli
 ```
 
 ## What You Get
@@ -72,6 +72,10 @@ Creating new DSPy project: my-app
 
 ### 2. Ship Faster
 
+**Before:** Building REST APIs from scratch.
+
+**After:** Auto-discovery turns your modules into endpoints.
+
 ```bash
 dspy-cli serve
 ```
@@ -85,21 +89,18 @@ Discovered Programs:
 ✓ Ready at http://localhost:8000/docs
 ```
 
-**No more:** Building REST APIs from scratch. Auto-discovery turns your modules into endpoints.
 
 ### 3. Iterate Without Friction
 
-Built-in web UI for testing. Edit a module, restart the server, test immediately.
+Built-in web UI for testing. Edit a module, restart the server, test in a ui immediately.
 
 ```bash
 dspy-cli serve --ui
 ```
 
-**No more:** Building custom testing interfaces.
-
 ## Real-World Examples
 
-See how developers use dspy-cli to solve actual problems:
+See examples of how to use dspy-cli to solve actual problems:
 
 ### Content Pipeline
 **Pain:** Manual content generation is slow. Generating headlines, summaries, and tags should be programs that are simple and easy to read.

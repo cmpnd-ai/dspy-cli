@@ -4,18 +4,18 @@
 
 Building reliable LLM applications is hard. Prompts break when requirements change. Manual tuning is tedious. Production debugging is a nightmare.
 
-**Get from idea to working DSPy application in 5 minutes.**
+**Get from idea to working DSPy application to API endpoint in 5 minutes.**
 
 ## Prerequisites
 
 - Python 3.9+
-- pipx or uv ([install uv](https://docs.astral.sh/uv/))
+- uv ([install uv](https://docs.astral.sh/uv/))
 - An LLM API key (OpenAI, Anthropic, or local models)
 
 ## Installation
 
 ```bash
-pipx install dspy-cli
+uv install dspy-cli
 ```
 
 ## Simple → Real-world → Production-ready
@@ -48,7 +48,7 @@ Server starting on http://0.0.0.0:8000
 ```
 
 **Before:** Writing Flask/FastAPI boilerplate, managing routes, validating inputs.  
-**After:** Automatic REST API with interactive docs at `/docs`.
+**After:** Automatic REST API with input and output validation.
 
 ### 3. Test It
 
@@ -58,7 +58,7 @@ curl -X POST http://localhost:8000/QaBotPredict \
   -d '{"question": "What is DSPy?"}'
 ```
 
-Or open `http://localhost:8000/docs` for interactive testing.
+Or add the `--ui` flag and open `http://localhost:8000/` for interactive testing.
 
 !!! success "Why This Matters"
     You now have a working LLM application. No prompt templates. No brittle string formatting. Just type-safe inputs and outputs.
@@ -75,6 +75,7 @@ dspy-cli g scaffold analyzer -m CoT -s "text, context: list[str] -> summary, key
 - Chaining prompts manually = context loss
 - Parsing structured outputs = fragile regex
 - Managing multi-step workflows = error-prone state
+- Engineering concerns are bundles together into one big string prompt that is hard to reason about and debug.
 
 **DSPy prevents this:** Modules compose cleanly. Signatures enforce types. Programs are testable Python.
 
@@ -184,10 +185,6 @@ dspy-cli g scaffold extractor -s "document -> entities: list[str], metadata: dic
 - [blog-tools](../examples/blog-tools/) - Content generation pipeline
 - [code-review-agent](../examples/code-review-agent/) - Code analysis automation
 
-**Improve Performance:**
-- [Optimization Guide](optimization.md) - Make your app better with data
-- [Metrics](metrics.md) - Measure what matters
-
 **Configure Models:**
 - [Configuration Guide](configuration.md) - LLM providers, custom models
 
@@ -197,10 +194,26 @@ dspy-cli g scaffold extractor -s "document -> entities: list[str], metadata: dic
 ## Troubleshooting
 
 **Module not found error:**
+
+This typically happens if you are trying to import a dependency, but you're not using the correct venv.
 ```bash
 cd qa-bot  # Ensure you're in the project directory
-ls dspy.config.yaml  # Verify config exists
+uv venv
+source .venv/bin/activate
 ```
+
+To use an external dependency, you need to:
+1. Have it in the pyproject.toml file
+2. Make sure that you are using the correct venv
+The global tool install of dspy-cli won't work with external dependencies.
+
+If you run:
+```bash
+which dspy-cli
+```
+The global tool will be at: `~/.local/bin/dspy-cli` (or equivalent on your system)
+The local install will be at: `./venv/bin/dspy-cli`. The local install will allow you to use external dependencies.
+
 
 **API key errors:**
 ```bash
