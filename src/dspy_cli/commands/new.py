@@ -1,6 +1,5 @@
 """Command to create a new DSPy project."""
 
-import os
 import subprocess
 from pathlib import Path
 
