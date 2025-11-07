@@ -99,7 +99,12 @@ def _exec_clean(target_python: Path, args: list[str]) -> NoReturn:
     is_flag=True,
     help="Use system Python environment instead of project venv",
 )
-def serve(port, host, logs_dir, ui, reload, save_openapi, openapi_format, python, system):
+@click.option(
+    "--mcp",
+    is_flag=True,
+    help="Enable Model Context Protocol server at /mcp",
+)
+def serve(port, host, logs_dir, ui, reload, save_openapi, openapi_format, python, system, mcp):
     """Start an HTTP API server that exposes your DSPy programs.
 
     This command:
@@ -121,7 +126,8 @@ def serve(port, host, logs_dir, ui, reload, save_openapi, openapi_format, python
             ui=ui,
             reload=reload,
             save_openapi=save_openapi,
-            openapi_format=openapi_format
+            openapi_format=openapi_format,
+            mcp=mcp
         )
         return
     
@@ -185,6 +191,8 @@ def serve(port, host, logs_dir, ui, reload, save_openapi, openapi_format, python
         if save_openapi:
             args.append("--save-openapi")
         args.extend(["--openapi-format", openapi_format])
+        if mcp:
+            args.append("--mcp")
 
         _exec_clean(target_python, args)
     else:
@@ -195,5 +203,6 @@ def serve(port, host, logs_dir, ui, reload, save_openapi, openapi_format, python
             ui=ui,
             reload=reload,
             save_openapi=save_openapi,
-            openapi_format=openapi_format
+            openapi_format=openapi_format,
+            mcp=mcp
         )

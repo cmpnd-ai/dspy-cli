@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "dspy-ai>=3.0.3",
+    "dspy-cli"
 ]
 
 [project.optional-dependencies]

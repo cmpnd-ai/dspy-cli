@@ -61,3 +61,6 @@ mlartifacts
 
 # Documentation
 /site/
+
+# MCP
+openapi.json
