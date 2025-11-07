@@ -87,20 +87,18 @@ def _register_program_tool(mcp_server: "FastMCP", app: FastAPI, module):
         ResponseModel = None
         has_types = False
 
-    # Define and decorate the tool function
-    # FastMCP requires explicit parameters, so we use a dict input
-    @mcp_server.tool(name=program_name, description=f"Execute DSPy program: {program_name}")
-    async def tool_function(params: Dict[str, Any]) -> Dict[str, Any]:
+    # Create tool execution logic
+    async def execute_program(**kwargs) -> Dict[str, Any]:
         """Execute the DSPy program with given parameters."""
         start_time = time.time()
 
         try:
             # Validate with request model if available
             if has_types and _is_pydantic_model(RequestModel):
-                validated = RequestModel(**params)
+                validated = RequestModel(**kwargs)
                 inputs = validated.model_dump()
             else:
-                inputs = params
+                inputs = kwargs
 
             # Convert dspy types (Image, Audio, etc.)
             inputs = _convert_dspy_types(inputs, module)
@@ -161,7 +159,7 @@ def _register_program_tool(mcp_server: "FastMCP", app: FastAPI, module):
             # Log failed inference
             try:
                 serialized_inputs = _serialize_for_logging(
-                    inputs if "inputs" in locals() else params, app.state.logs_dir, program_name
+                    inputs if "inputs" in locals() else kwargs, app.state.logs_dir, program_name
                 )
             except Exception:
                 serialized_inputs = {}
@@ -178,6 +176,71 @@ def _register_program_tool(mcp_server: "FastMCP", app: FastAPI, module):
 
             logger.exception(f"MCP: Error executing {program_name}")
             raise
+
+    # Register tool with explicit fields if typed, else generic params
+    if has_types and _is_pydantic_model(RequestModel):
+        # Create a wrapper function with explicit parameters from RequestModel
+        import inspect
+        from pydantic.fields import PydanticUndefined
+        
+        # Build keyword-only function parameters from Pydantic model fields
+        params = []
+        annotations = {}
+        
+        for field_name, field_info in RequestModel.model_fields.items():
+            annotation = field_info.annotation
+            
+            if field_info.is_required():
+                # Required parameter - no default
+                params.append(inspect.Parameter(
+                    field_name, 
+                    inspect.Parameter.KEYWORD_ONLY, 
+                    annotation=annotation
+                ))
+            else:
+                # Optional parameter - use actual default or None
+                if field_info.default is not PydanticUndefined:
+                    default = field_info.default
+                elif field_info.default_factory is not None:
+                    # Can't represent factory in signature, use None
+                    default = None
+                else:
+                    default = None
+                    
+                params.append(inspect.Parameter(
+                    field_name,
+                    inspect.Parameter.KEYWORD_ONLY,
+                    default=default,
+                    annotation=annotation
+                ))
+            
+            annotations[field_name] = annotation
+        
+        # Add return annotation
+        if _is_pydantic_model(ResponseModel):
+            annotations['return'] = ResponseModel
+        else:
+            annotations['return'] = Dict[str, Any]
+        
+        # Create signature
+        sig = inspect.Signature(params)
+        
+        # Create wrapper function with proper signature
+        async def tool_function(*args, **kwargs):
+            bound = sig.bind(*args, **kwargs)
+            bound.apply_defaults()
+            return await execute_program(**bound.arguments)
+        
+        tool_function.__signature__ = sig
+        tool_function.__annotations__ = annotations
+        
+        # Register the tool
+        mcp_server.tool(name=program_name, description=f"Execute DSPy program: {program_name}")(tool_function)
+    else:
+        # Fallback to generic params dict
+        @mcp_server.tool(name=program_name, description=f"Execute DSPy program: {program_name}")
+        async def tool_function(params: Dict[str, Any]) -> Dict[str, Any]:
+            return await execute_program(**params)
 
 
 def _register_resources(mcp_server: "FastMCP", app: FastAPI):
