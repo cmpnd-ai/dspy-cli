@@ -281,7 +281,7 @@ def main(
                 access_log=True,
                 reload=True,
                 reload_dirs=[str(src_dir), str(project_root)],
-                reload_includes=["*.py", "*.yaml", ".env"],
+                reload_includes=["*.py", "*.yaml"],
                 factory=True,
             )
         else:
