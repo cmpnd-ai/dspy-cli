@@ -189,7 +189,6 @@ def main(
         click.echo("  Watching for changes in:")
         click.echo(f"    • {modules_path}")
         click.echo(f"    • {Path.cwd() / 'dspy.config.yaml'}")
-        click.echo(f"    • {Path.cwd() / '.env'}")
         click.echo()
     click.echo("Press Ctrl+C to stop the server")
     click.echo()
@@ -213,7 +212,7 @@ def main(
                 access_log=True,
                 reload=True,
                 reload_dirs=[str(src_dir), str(project_root)],
-                reload_includes=["*.py", "*.yaml", ".env"],
+                reload_includes=["*.py", "*.yaml"],
                 factory=True
             )
         else:
