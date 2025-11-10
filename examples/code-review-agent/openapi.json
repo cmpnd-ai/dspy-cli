@@ -1,0 +1,286 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "code-review-agent",
+    "description": "Automatically generated API for DSPy programs",
+    "version": "0.1.0",
+    "x-dspy-config": {
+      "default_model": null,
+      "programs_count": 1
+    },
+    "x-dspy-programs": [
+      {
+        "name": "PRReviewer",
+        "module_path": "code_review_agent.modules.pr_reviewer",
+        "is_forward_typed": true
+      }
+    ],
+    "x-dspy-program-models": {
+      "PRReviewer": "openai:gpt-5-mini"
+    }
+  },
+  "paths": {
+    "/PRReviewer": {
+      "post": {
+        "summary": "Run Program",
+        "description": "Execute the DSPy program with given inputs.",
+        "operationId": "run_program_PRReviewer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PRReviewerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PRReviewerResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/programs": {
+      "get": {
+        "summary": "List Programs",
+        "description": "List all discovered programs and their schemas.",
+        "operationId": "list_programs_programs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "KeyIssue": {
+        "properties": {
+          "relevant_file": {
+            "type": "string",
+            "title": "Relevant File",
+            "description": "File path where the issue was found"
+          },
+          "issue_header": {
+            "type": "string",
+            "title": "Issue Header",
+            "description": "Short title of the issue"
+          },
+          "issue_content": {
+            "type": "string",
+            "title": "Issue Content",
+            "description": "Detailed description of the issue"
+          },
+          "start_line": {
+            "type": "integer",
+            "title": "Start Line",
+            "description": "Starting line number"
+          },
+          "end_line": {
+            "type": "integer",
+            "title": "End Line",
+            "description": "Ending line number"
+          }
+        },
+        "type": "object",
+        "required": [
+          "relevant_file",
+          "issue_header",
+          "issue_content",
+          "start_line",
+          "end_line"
+        ],
+        "title": "KeyIssue",
+        "description": "Individual issue found during review"
+      },
+      "PRReviewerRequest": {
+        "properties": {
+          "repo": {
+            "type": "string",
+            "title": "Repo"
+          },
+          "pr_number": {
+            "type": "integer",
+            "title": "Pr Number"
+          }
+        },
+        "type": "object",
+        "required": [
+          "repo",
+          "pr_number"
+        ],
+        "title": "PRReviewerRequest"
+      },
+      "PRReviewerResponse": {
+        "properties": {
+          "estimated_effort_to_review": {
+            "type": "integer",
+            "title": "Estimated Effort To Review"
+          },
+          "relevant_tests": {
+            "type": "string",
+            "title": "Relevant Tests"
+          },
+          "key_issues_to_review": {
+            "items": {
+              "$ref": "#/components/schemas/KeyIssue"
+            },
+            "type": "array",
+            "title": "Key Issues To Review"
+          },
+          "security_concerns": {
+            "type": "string",
+            "title": "Security Concerns"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "todo_sections": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TodoSection"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Todo Sections"
+          },
+          "estimated_contribution_time_cost": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Contribution Time Cost"
+          }
+        },
+        "type": "object",
+        "required": [
+          "estimated_effort_to_review",
+          "relevant_tests",
+          "key_issues_to_review",
+          "security_concerns",
+          "score",
+          "todo_sections",
+          "estimated_contribution_time_cost"
+        ],
+        "title": "PRReviewerResponse"
+      },
+      "TodoSection": {
+        "properties": {
+          "relevant_file": {
+            "type": "string",
+            "title": "Relevant File"
+          },
+          "todo_content": {
+            "type": "string",
+            "title": "Todo Content"
+          },
+          "start_line": {
+            "type": "integer",
+            "title": "Start Line"
+          },
+          "end_line": {
+            "type": "integer",
+            "title": "End Line"
+          }
+        },
+        "type": "object",
+        "required": [
+          "relevant_file",
+          "todo_content",
+          "start_line",
+          "end_line"
+        ],
+        "title": "TodoSection",
+        "description": "TODO/FIXME found in the PR"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

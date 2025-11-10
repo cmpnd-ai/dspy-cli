@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "dspy-ai>=3.0.3",
-    "dspy-cli>=0.1.4",
+    "dspy-cli",
     "mlflow>=3.5.1",
     "python-dotenv>=1.2.1",
     "requests>=2.32.5",

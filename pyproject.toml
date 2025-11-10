@@ -28,6 +28,8 @@ dependencies = [
     "python-dotenv>=1.0",
     "pydantic>=2.0",
     "requests>=2.28",
+    "fastmcp>=2.0.0",
+    "asgi-lifespan>=2.0.0",
 ]
 
 [project.optional-dependencies]

@@ -1,0 +1,605 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "blog-tools",
+    "description": "A set of functions for a content management system.",
+    "version": "0.1.0",
+    "x-dspy-config": {
+      "default_model": null,
+      "programs_count": 8
+    },
+    "x-dspy-programs": [
+      {
+        "name": "TaggerCoT",
+        "module_path": "blog_tools.modules.tagger_cot",
+        "is_forward_typed": true
+      },
+      {
+        "name": "SummarizerPredict",
+        "module_path": "blog_tools.modules.summarizer_predict",
+        "is_forward_typed": true
+      },
+      {
+        "name": "HeadlineGeneratorPredict",
+        "module_path": "blog_tools.modules.headline_generator_predict",
+        "is_forward_typed": true
+      },
+      {
+        "name": "ImageHeadlineGeneratorPredict",
+        "module_path": "blog_tools.modules.image_headline_generator_predict",
+        "is_forward_typed": true
+      },
+      {
+        "name": "ImageDescriptionGeneratorPredict",
+        "module_path": "blog_tools.modules.image_description_generator_predict",
+        "is_forward_typed": true
+      },
+      {
+        "name": "TweetExtractorPredict",
+        "module_path": "blog_tools.modules.tweet_extractor_predict",
+        "is_forward_typed": true
+      },
+      {
+        "name": "SpellCheckerPredict",
+        "module_path": "blog_tools.modules.spell_checker_predict",
+        "is_forward_typed": true
+      },
+      {
+        "name": "TaggerPredict",
+        "module_path": "blog_tools.modules.tagger_predict",
+        "is_forward_typed": true
+      }
+    ],
+    "x-dspy-program-models": {
+      "TaggerCoT": "openai:gpt-5-nano",
+      "SummarizerPredict": "qwen:qwen-3-4b",
+      "HeadlineGeneratorPredict": "openai:gpt-5-mini",
+      "ImageHeadlineGeneratorPredict": "openai:gpt-5-mini",
+      "ImageDescriptionGeneratorPredict": "openai:gpt-5-mini",
+      "TweetExtractorPredict": "anthropic:sonnet-4.5",
+      "SpellCheckerPredict": "openai:gpt-5-mini",
+      "TaggerPredict": "openai:gpt-5-mini"
+    }
+  },
+  "paths": {
+    "/TaggerCoT": {
+      "post": {
+        "summary": "Run Program",
+        "description": "Execute the DSPy program with given inputs.",
+        "operationId": "run_program_TaggerCoT_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaggerCoTRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Run Program Taggercot Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/SummarizerPredict": {
+      "post": {
+        "summary": "Run Program",
+        "description": "Execute the DSPy program with given inputs.",
+        "operationId": "run_program_SummarizerPredict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummarizerPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Run Program Summarizerpredict Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/HeadlineGeneratorPredict": {
+      "post": {
+        "summary": "Run Program",
+        "description": "Execute the DSPy program with given inputs.",
+        "operationId": "run_program_HeadlineGeneratorPredict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeadlineGeneratorPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeadlineGeneratorPredictResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ImageHeadlineGeneratorPredict": {
+      "post": {
+        "summary": "Run Program",
+        "description": "Execute the DSPy program with given inputs.",
+        "operationId": "run_program_ImageHeadlineGeneratorPredict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageHeadlineGeneratorPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Run Program Imageheadlinegeneratorpredict Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ImageDescriptionGeneratorPredict": {
+      "post": {
+        "summary": "Run Program",
+        "description": "Execute the DSPy program with given inputs.",
+        "operationId": "run_program_ImageDescriptionGeneratorPredict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageDescriptionGeneratorPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Run Program Imagedescriptiongeneratorpredict Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/TweetExtractorPredict": {
+      "post": {
+        "summary": "Run Program",
+        "description": "Execute the DSPy program with given inputs.",
+        "operationId": "run_program_TweetExtractorPredict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TweetExtractorPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Run Program Tweetextractorpredict Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/SpellCheckerPredict": {
+      "post": {
+        "summary": "Run Program",
+        "description": "Execute the DSPy program with given inputs.",
+        "operationId": "run_program_SpellCheckerPredict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpellCheckerPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Run Program Spellcheckerpredict Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/TaggerPredict": {
+      "post": {
+        "summary": "Run Program",
+        "description": "Execute the DSPy program with given inputs.",
+        "operationId": "run_program_TaggerPredict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaggerPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Run Program Taggerpredict Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/programs": {
+      "get": {
+        "summary": "List Programs",
+        "description": "List all discovered programs and their schemas.",
+        "operationId": "list_programs_programs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HeadlineGeneratorPredictRequest": {
+        "properties": {
+          "blog_post": {
+            "type": "string",
+            "title": "Blog Post"
+          }
+        },
+        "type": "object",
+        "required": [
+          "blog_post"
+        ],
+        "title": "HeadlineGeneratorPredictRequest"
+      },
+      "HeadlineGeneratorPredictResponse": {
+        "properties": {
+          "headline_candidates": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Headline Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "headline_candidates"
+        ],
+        "title": "HeadlineGeneratorPredictResponse"
+      },
+      "ImageDescriptionGeneratorPredictRequest": {
+        "properties": {
+          "image": {
+            "type": "string",
+            "title": "Image"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image"
+        ],
+        "title": "ImageDescriptionGeneratorPredictRequest"
+      },
+      "ImageHeadlineGeneratorPredictRequest": {
+        "properties": {
+          "image": {
+            "type": "string",
+            "title": "Image"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image"
+        ],
+        "title": "ImageHeadlineGeneratorPredictRequest"
+      },
+      "SpellCheckerPredictRequest": {
+        "properties": {
+          "blog_post": {
+            "type": "string",
+            "title": "Blog Post"
+          }
+        },
+        "type": "object",
+        "required": [
+          "blog_post"
+        ],
+        "title": "SpellCheckerPredictRequest"
+      },
+      "SummarizerPredictRequest": {
+        "properties": {
+          "blog_post": {
+            "type": "string",
+            "title": "Blog Post"
+          },
+          "summary_length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "medium",
+              "long"
+            ],
+            "title": "Summary Length"
+          },
+          "tone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "blog_post",
+          "summary_length"
+        ],
+        "title": "SummarizerPredictRequest"
+      },
+      "TaggerCoTRequest": {
+        "properties": {
+          "blog_post": {
+            "type": "string",
+            "title": "Blog Post"
+          }
+        },
+        "type": "object",
+        "required": [
+          "blog_post"
+        ],
+        "title": "TaggerCoTRequest"
+      },
+      "TaggerPredictRequest": {
+        "properties": {
+          "blog_post": {
+            "type": "string",
+            "title": "Blog Post"
+          }
+        },
+        "type": "object",
+        "required": [
+          "blog_post"
+        ],
+        "title": "TaggerPredictRequest"
+      },
+      "TweetExtractorPredictRequest": {
+        "properties": {
+          "post": {
+            "type": "string",
+            "title": "Post"
+          },
+          "use_emojis": {
+            "type": "boolean",
+            "title": "Use Emojis"
+          }
+        },
+        "type": "object",
+        "required": [
+          "post",
+          "use_emojis"
+        ],
+        "title": "TweetExtractorPredictRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
