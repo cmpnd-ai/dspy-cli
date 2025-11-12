@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 # Constants
 MCP_DEFAULT_PATH = "/mcp"
 ENV_ENABLE_MCP = "DSPY_CLI_ENABLE_MCP"
-ENV_ENABLE_UI = "DSPY_CLI_ENABLE_UI"
 ENV_LOGS_DIR = "DSPY_CLI_LOGS_DIR"
 
 
@@ -71,7 +70,7 @@ def create_app_instance():
     It reads configuration from environment variables set by main().
 
     How reload works:
-    1. main() sets environment variables (DSPY_CLI_LOGS_DIR, DSPY_CLI_ENABLE_UI, DSPY_CLI_ENABLE_MCP)
+    1. main() sets environment variables (DSPY_CLI_LOGS_DIR, DSPY_CLI_ENABLE_MCP)
     2. main() calls uvicorn.run() with import string and reload=True
     3. Uvicorn watches files in reload_dirs matching reload_includes patterns
     4. On file change, uvicorn restarts the process and calls this factory function
@@ -84,7 +83,6 @@ def create_app_instance():
     """
     # Get parameters from environment (set by main() before reload)
     logs_dir = os.environ.get(ENV_LOGS_DIR, "./logs")
-    enable_ui = os.environ.get(ENV_ENABLE_UI, "false").lower() == "true"
     enable_mcp = os.environ.get(ENV_ENABLE_MCP, "false").lower() == "true"
 
     # Validate project structure
@@ -116,7 +114,7 @@ def create_app_instance():
         package_path=modules_path,
         package_name=f"{package_name}.modules",
         logs_dir=logs_path,
-        enable_ui=enable_ui,
+        enable_ui=True,
     )
 
     # Mount MCP if enabled
@@ -129,7 +127,6 @@ def main(
     port: int,
     host: str,
     logs_dir: str | None,
-    ui: bool,
     reload: bool = True,
     save_openapi: bool = True,
     openapi_format: str = "json",
@@ -141,7 +138,6 @@ def main(
         port: Port to run the server on
         host: Host to bind to
         logs_dir: Directory for logs
-        ui: Whether to enable web UI
         reload: Whether to enable auto-reload on file changes
         save_openapi: Whether to save OpenAPI spec to file
         openapi_format: Format for OpenAPI spec (json or yaml)
@@ -189,7 +185,7 @@ def main(
             package_path=modules_path,
             package_name=f"{package_name}.modules",
             logs_dir=logs_path,
-            enable_ui=ui,
+            enable_ui=True,
         )
 
         # Mount MCP if enabled
@@ -228,8 +224,7 @@ def main(
     click.echo()
     click.echo("  GET /programs - List all programs and their schemas")
     click.echo("  GET /openapi.json - OpenAPI specification")
-    if ui:
-        click.echo("  GET / - Web UI for interactive testing")
+    click.echo("  GET / - Web UI for interactive testing")
     if mcp:
         click.echo("  POST /mcp - Model Context Protocol server")
     click.echo()
@@ -265,7 +260,6 @@ def main(
         if reload:
             # Set environment variables for create_app_instance()
             os.environ[ENV_LOGS_DIR] = str(logs_path)
-            os.environ[ENV_ENABLE_UI] = str(ui).lower()
             os.environ[ENV_ENABLE_MCP] = str(mcp).lower()
 
             # Get project root and src directory for watching
@@ -304,7 +298,6 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--logs-dir", default=None)
-    parser.add_argument("--ui", action="store_true")
     parser.add_argument("--reload", action="store_true", default=True)
     parser.add_argument("--save-openapi", action="store_true", default=True)
     parser.add_argument("--openapi-format", choices=["json", "yaml"], default="json")
@@ -315,7 +308,6 @@ if __name__ == "__main__":
         port=args.port,
         host=args.host,
         logs_dir=args.logs_dir,
-        ui=args.ui,
         reload=args.reload,
         save_openapi=args.save_openapi,
         openapi_format=args.openapi_format,

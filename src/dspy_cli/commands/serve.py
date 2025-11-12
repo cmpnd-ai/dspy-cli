@@ -67,12 +67,6 @@ def _exec_clean(target_python: Path, args: list[str]) -> NoReturn:
     help="Directory for logs (default: ./logs)",
 )
 @click.option(
-    "--ui",
-    "-u",
-    is_flag=True,
-    help="Enable web UI for interactive testing",
-)
-@click.option(
     "--reload/--no-reload",
     default=True,
     help="Enable auto-reload on file changes (default: enabled)",
@@ -104,7 +98,7 @@ def _exec_clean(target_python: Path, args: list[str]) -> NoReturn:
     is_flag=True,
     help="Enable Model Context Protocol server at /mcp",
 )
-def serve(port, host, logs_dir, ui, reload, save_openapi, openapi_format, python, system, mcp):
+def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, system, mcp):
     """Start an HTTP API server that exposes your DSPy programs.
 
     This command:
@@ -123,7 +117,6 @@ def serve(port, host, logs_dir, ui, reload, save_openapi, openapi_format, python
             port=port,
             host=host,
             logs_dir=logs_dir,
-            ui=ui,
             reload=reload,
             save_openapi=save_openapi,
             openapi_format=openapi_format,
@@ -184,8 +177,6 @@ def serve(port, host, logs_dir, ui, reload, save_openapi, openapi_format, python
         args = ["-m", "dspy_cli.server.runner", "--port", str(port), "--host", host]
         if logs_dir:
             args.extend(["--logs-dir", logs_dir])
-        if ui:
-            args.append("--ui")
         if reload:
             args.append("--reload")
         if save_openapi:
@@ -200,7 +191,6 @@ def serve(port, host, logs_dir, ui, reload, save_openapi, openapi_format, python
             port=port,
             host=host,
             logs_dir=logs_dir,
-            ui=ui,
             reload=reload,
             save_openapi=save_openapi,
             openapi_format=openapi_format,
