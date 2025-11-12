@@ -1,207 +1,126 @@
 # dspy-cli
 
-## Tired of Prompts Breaking When You Switch Models?
+## Overview
 
-You tweak your prompt until it works perfectly with GPT-4. Then you try Claude or Llama and everything breaks. You're stuck manually tuning prompts, chasing edge cases, and praying nothing breaks in production.
+dspy-cli is a deployment framework for LLM-backed application features. It generates standardized project structure and HTTP interfaces for DSPy modules, reducing setup time from hours to minutes.
 
-**There's a better way to build AI systems.**
+## The Problem
 
-> **Build. Test. Ship. Iterate.**
+Embedding LLM-backed features into applications requires:
 
-DSPy optimizes your AI systems automatically—no manual prompt engineering. **dspy-cli gets you started in minutes.**
+- Containerizing the runtime environment
+- Exposing a stable HTTP interface
+- Wiring API keys and secrets
+- Implementing health checks and logging
+- Configuring routing and auto-discovery
+- Setting up local development and testing infrastructure
 
-## From Frustration to Flow
+This overhead blocks small-to-medium AI features from shipping. A DSPy module that takes 30 minutes to write can require 4+ hours of infrastructure work before it's usable in a browser extension, Notion plugin, or web application.
 
-**Before:**
-```python
-# Brittle prompt strings
-prompt = "You are a helpful assistant. Given this text..."
-# Manual tweaking for every model
-# Breaks when you change providers
-# No systematic testing
+## What dspy-cli Provides
+
+**Project Scaffolding**
+- Standardized directory structure with modules, signatures, and configurations
+- Auto-generated DSPy signatures from type specifications
+- Docker configurations for local development and production deployment
+
+**HTTP Interface**
+- FastAPI-based REST endpoints with automatic module discovery
+- OpenAPI documentation and interactive testing UI
+- Request/response validation via Pydantic models
+
+**Development Workflow**
+- Hot-reload server for rapid iteration
+- Built-in testing UI with form-based request construction
+- Type-safe module signatures with validation
+
+**Deployment Infrastructure**
+- Production-ready Docker containers
+- Environment variable management
+- Inference API key authentication
+- Integration with any platform that can use a Dockerfile: Fly.io, Render, AWS, and other container platforms
+
+## What Are AI Features?
+
+In this context, "AI features" refers to application-embedded functionality backed by LLMs. These are exposed as HTTP endpoints and called by client applications—browser extensions, Notion workspaces, email clients, web servers.
+
+This differs from:
+- **Agentic Applications** where the LLM controls the conversation flow
+- **Batch pipelines** that process large datasets asynchronously
+
+Examples include text summarization APIs for browser extensions, classification endpoints for content management systems, and generation services for productivity tools.
+
+## Architecture
+
+dspy-cli applications follow a standard structure:
+
+```
+my-project/
+├── pyproject.toml
+├── dspy.config.yaml       # Model registry and configuration
+├── .env                   # API keys and secrets
+├── README.md
+├── src/
+│   └── dspy_project/      # Importable package
+│       ├── __init__.py
+│       ├── modules/       # DSPy program implementations
+│       ├── signatures/    # Reusable signatures
+│       ├── optimizers/    # Optimizer configurations
+│       ├── metrics/       # Evaluation metrics
+│       └── utils/         # Shared helpers
+├── data/
+├── logs/
+└── tests/
 ```
 
-**After:**
-```python
-# Declarative, optimizable signatures
-class QASignature(dspy.Signature):
-    question: str = dspy.InputField()
-    answer: str = dspy.OutputField()
-qa = dspy.Predict(QASignature)
-```
+**Request Flow:**
+1. HTTP request → FastAPI endpoint
+2. Request body validated against Pydantic signature
+3. DSPy module executes with validated inputs
+4. Response serialized and returned
 
-**The difference:** Your system adapts automatically. Switch models, run an optimizer, ship with confidence.
+**Module Discovery:**
+Modules in `src/*/modules/` are automatically registered as endpoints at `/{ModuleName}`. No manual routing configuration required.
 
 ## Quick Start
 
-Go from idea to live API in three commands:
-
 ```bash
-dspy-cli new chatbot        # Full project structure
-cd chatbot && uv sync       # Install dependencies  
-dspy-cli serve              # Live REST API
-```
-
-Your LLM app is running at `http://localhost:8000`.
-
-## Installation
-
-```bash
+# Install
 uv tool install dspy-cli
-# or: pipx install dspy-cli
-```
 
-## What You Get
+# Create project
+dspy-cli new my-feature -s "text -> summary"
+cd my-feature && uv sync
 
-### 1. Stop Fighting Boilerplate
+# Configure
+echo "OPENAI_API_KEY=sk-..." > .env
 
-```bash
-dspy-cli new my-app
-```
-
-```
-Creating new DSPy project: my-app
-  ✓ Project structure
-  ✓ Type-safe signatures
-  ✓ Test templates
-  ✓ Config files
-  ✓ Git repository
-```
-
-**No more:** "Where does this file go?" or "Where do I put my modules?" or "What configuration do I need?"
-
-### 2. Ship Faster
-
-**Before:** Building REST APIs from scratch.
-
-**After:** Auto-discovery turns your modules into endpoints.
-
-```bash
-dspy-cli serve
-```
-
-```
-Server starting on http://0.0.0.0:8000
-
-Discovered Programs:
-  • MyAppPredict - POST /MyAppPredict
-```
-
-
-### 3. Iterate Without Friction
-
-Built-in web UI for testing. Edit a module, restart the server, test in a ui immediately.
-
-```bash
+# Serve locally
 dspy-cli serve --ui
 ```
 
-## Real-World Examples
+Access the API at `http://localhost:8000/{ModuleName}` and testing UI at `http://localhost:8000/`.
 
-See examples of how to use dspy-cli to solve actual problems:
+See the [Getting Started Guide](getting-started.md) for detailed walkthrough.
 
-### Content Pipeline
-**Pain:** Manual content generation is slow. Generating headlines, summaries, and tags should be programs that are simple and easy to read.
+## Use Cases
 
-**Solution:** [blog-tools](https://github.com/cmpnd-ai/dspy-cli-tool/tree/main/examples/blog-tools) - Automated headline generator, summarizer, tagger, and tweet extractor. One system, optimized together.
+**Browser Extensions**
+HTTP endpoints for summarization, extraction, or classification that extensions call on user-triggered events.
 
-### Code Review Agent
-**Pain:** Code review is tedious. You want AI help but building a reliable system takes weeks.
+**Content Management Integration**
+Embedded generation or tagging services for platforms like Notion, Confluence, or custom CMSs.
 
-**Solution:** [code-review-agent](https://github.com/cmpnd-ai/dspy-cli-tool/tree/main/examples/code-review-agent) - Give an agent tools to use to review code. Uses the GitHub API as a tool.
-
-## Core Workflow
-
-### Create Your Project
-
-```bash
-dspy-cli new qa-bot -s "question -> answer"
-```
-
-Scaffolds modules, signatures, tests, config—everything you need to start coding.
-
-### Add Your API Key
-
-```bash
-cd qa-bot
-echo "OPENAI_API_KEY=sk-..." > .env
-uv sync
-```
-
-### Build Your Logic
-
-Edit `src/qa_bot/modules/qa_bot_predict.py`:
-
-```python
-class QaBotPredict(dspy.Module):
-    def __init__(self):
-        self.prog = dspy.Predict(QaBotSignature)
-    
-    def forward(self, question: str):
-        return self.prog(question=question)
-```
-
-### Test Locally
-
-```bash
-dspy-cli serve
-```
-
-```bash
-curl -X POST http://localhost:8000/QaBotPredict \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What is DSPy?"}'
-```
-
-Or open `http://localhost:8000/` for interactive testing.
-
-### Add More Programs
-
-```bash
-dspy-cli g scaffold summarizer -m CoT -s "text -> summary"
-```
-
-Creates signature and module. Instantly available at `/SummarizerCoT` endpoint.
-
-## Why dspy-cli?
-
-### Speed to Production
-
-- **Scaffold in seconds** - From zero to working project instantly
-- **Auto-discovery** - Drop in a module, get a REST endpoint
-- **Interactive testing** - Built-in web UI for rapid iteration
-- **Docker ready** - Production deployment included
-
-### Built for Reliability
-
-- **Type-safe signatures** - Catch errors before runtime
-- **Testing built-in** - Test templates for every module
-- **Config management** - Environment-based settings with `.env` support
-
-### Focus on What Matters
-
-**Stop spending time on:**
-- Project structure
-- Boilerplate code
-- Server setup
-- Deployment config
-
-**Start spending time on:**
-- Your AI logic
-- Understanding the user problem
-- Training data
-- Shipping features
+**Application Microservices**
+Standalone intelligence services that web or mobile applications consume via REST APIs.
 
 ## Next Steps
 
-- [Getting Started Guide](getting-started.md) - Detailed walkthrough
-- [Commands Reference](commands/) - All commands and options
-- [Configuration](configuration.md) - Model settings and customization
+- [Getting Started Guide](getting-started.md) - Complete setup and first deployment
+- [Commands Reference](commands/) - CLI command documentation
+- [Configuration](configuration.md) - Model settings and environment variables
+- [Examples](https://github.com/cmpnd-ai/dspy-cli-tool/tree/main/examples) - Sample projects and patterns
 
 ```bash
-dspy-cli --help     # See all commands
+dspy-cli --help     # View all commands
 ```
-
----
-
-**Stop tweaking. Start building.** Transform your DSPy ideas into production APIs today.
