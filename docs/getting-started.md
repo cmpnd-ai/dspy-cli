@@ -234,10 +234,15 @@ Select appropriate module type for your use case:
 | **ReAct** | `-m ReAct` | Tool-using agents with external actions |
 | **ProgramOfThought** | `-m PoT` | Code generation, calculations, structured logic |
 
-Example with Chain-of-Thought:
+Use `dspy-cli generate scaffold` to create programs with specific module types:
 
 ```bash
-dspy-cli new document-analyzer -m CoT -s "document, criteria -> verdict: bool, reasoning, confidence: float"
+# Create project first
+dspy-cli new document-analyzer
+
+# Add ChainOfThought module
+cd document-analyzer
+dspy-cli g scaffold analyzer -m CoT -s "document, criteria -> verdict: bool, reasoning, confidence: float"
 ```
 
 ## Project Structure
