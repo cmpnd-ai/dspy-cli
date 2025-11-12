@@ -210,7 +210,6 @@ def test_runner_main_no_reload(temp_project, test_config, monkeypatch):
         port=1234,
         host="127.0.0.1",
         logs_dir=str(temp_project["root"] / "logs"),
-        ui=False,
         reload=False,
         save_openapi=True,
         openapi_format="json"
@@ -250,7 +249,6 @@ def test_runner_main_with_reload(temp_project, test_config, monkeypatch):
         port=8000,
         host="0.0.0.0",
         logs_dir=None,
-        ui=True,
         reload=True,
         save_openapi=False,
         openapi_format="json"

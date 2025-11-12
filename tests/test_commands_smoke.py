@@ -92,8 +92,7 @@ def test_cli_e2e_smoke(runner, tmp_cwd, monkeypatch):
             "--port", "8765",
             "--no-reload",
             "--openapi-format", "yaml",
-            "--logs-dir", "logs",
-            "--ui"
+            "--logs-dir", "logs"
         ],
         catch_exceptions=False
     )
@@ -104,7 +103,6 @@ def test_cli_e2e_smoke(runner, tmp_cwd, monkeypatch):
         "port": 8765,
         "host": "127.0.0.1",
         "logs_dir": "logs",
-        "ui": True,
         "reload": False,
         "save_openapi": True,
         "openapi_format": "yaml",
