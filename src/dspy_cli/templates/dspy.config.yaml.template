@@ -33,4 +33,4 @@ models:
 
 # Optional: Override the model for specific programs
 # program_models:
-#   MySpecialProgram: anthropic:claude-sonnet-4-5
+#   MySpecialProgram: anthropic:sonnet-4-5
