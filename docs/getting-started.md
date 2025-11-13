@@ -24,19 +24,41 @@ dspy-cli --version
 
 ## 2. Create Project
 
+### Interactive Mode (Recommended)
+
+```bash
+dspy-cli new
+```
+
+You'll be prompted for:
+- **Project name:** `email-subject`
+- **First program name:** `email_subject` (default, or customize)
+- **Module type:** Choose from Predict, ChainOfThought, ReAct, etc.
+- **Signature:** `body, sender, context -> subject, tone, priority`
+  - Type `?` for guided field-by-field input
+- **Model:** `openai/gpt-4o-mini` (or any LiteLLM-compatible model)
+- **API Key:** Enter your key or press Enter to configure later
+
+**Expected output:**
+```
+Creating new DSPy project: email-subject
+  Package name: email_subject
+  Initial program: email_subject
+  Module type: Predict
+  Signature: body, sender, context -> subject, tone, priority
+  Model: openai/gpt-4o-mini
+
+✓ Project created successfully!
+```
+
+### Non-Interactive Mode
+
 ```bash
 dspy-cli new email-subject -s "body, sender, context -> subject, tone, priority"
 cd email-subject
 ```
 
-**Expected output:**
-```
-✓ Created project structure
-✓ Generated signature: EmailSubjectSignature
-✓ Scaffolded module: EmailSubjectPredict
-```
-
-Configure environment:
+Configure environment (if not done during creation):
 
 ```bash
 echo "OPENAI_API_KEY=sk-..." > .env

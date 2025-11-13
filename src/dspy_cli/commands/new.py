@@ -6,10 +6,28 @@ from pathlib import Path
 import click
 
 from dspy_cli.utils.signature_utils import parse_signature_string, to_class_name, build_forward_components
+from dspy_cli.utils.interactive import (
+    prompt_project_name,
+    prompt_setup_first_program,
+    prompt_program_name,
+    prompt_module_type,
+    prompt_signature,
+    prompt_model,
+    prompt_api_key,
+    prompt_api_base,
+)
+from dspy_cli.utils.model_utils import (
+    parse_model_string,
+    is_local_model,
+    detect_api_key,
+    generate_model_config,
+    get_provider_display_name,
+)
+from dspy_cli.utils.constants import MODULE_TYPES
 
 
 @click.command()
-@click.argument("project_name")
+@click.argument("project_name", required=False)
 @click.option(
     "--program-name",
     "-p",
@@ -22,19 +40,37 @@ from dspy_cli.utils.signature_utils import parse_signature_string, to_class_name
     default=None,
     help='Inline signature string (e.g., "question -> answer" or "post -> tags: list[str]")',
 )
-def new(project_name, program_name, signature):
+@click.option(
+    "--module-type",
+    "-m",
+    default=None,
+    help="DSPy module type (Predict, ChainOfThought, ReAct, etc.)",
+)
+@click.option(
+    "--model",
+    default=None,
+    help="LiteLLM model string (e.g., anthropic/claude-sonnet-4-5, openai/gpt-4o)",
+)
+def new(project_name, program_name, signature, module_type, model):
     """Create a new DSPy project with boilerplate structure.
 
     Creates a directory with PROJECT_NAME and sets up a complete
     DSPy project structure with example code, configuration files,
     and a git repository.
 
-    Example:
+    Interactive mode (recommended):
+        dspy-cli new
+
+    Non-interactive mode:
         dspy-cli new my-project
-        dspy-cli new my-project -p custom_program
+        dspy-cli new my-project -p custom_program -m CoT
         dspy-cli new my-project -s "post -> tags: list[str]"
-        dspy-cli new my-project -p analyzer -s "text, context: list[str] -> summary"
+        dspy-cli new my-project -p analyzer -s "text -> summary" --model anthropic/claude-sonnet-4-5
     """
+    # Interactive prompts for missing parameters
+    if not project_name:
+        project_name = prompt_project_name()
+
     # Validate project name
     if not project_name or not project_name.strip():
         click.echo(click.style("Error: Project name cannot be empty", fg="red"))
@@ -50,43 +86,124 @@ def new(project_name, program_name, signature):
     # Convert project name to Python package name (replace - with _, lowercase)
     package_name = project_name.replace("-", "_").lower()
 
+    # Determine if we should prompt for program details or use defaults
+    # Only ask in interactive mode (when program_name, module_type, and signature are all None)
+    customize_program = True
+    if program_name is None and module_type is None and signature is None:
+        customize_program = prompt_setup_first_program()
+
     # Determine program name
     if program_name is None:
-        # Convert project-name to program_name
-        program_name = project_name.replace("-", "_")
-    else:
-        # Convert dashes to underscores in user-provided program name
-        original_program_name = program_name
-        program_name = program_name.replace("-", "_")
-        if original_program_name != program_name:
-            click.echo(f"Note: Converted program name '{original_program_name}' to '{program_name}' for Python compatibility")
+        if customize_program:
+            # Use default "my_program" instead of deriving from project name
+            program_name = prompt_program_name(default="my_program")
+        else:
+            # Use default without prompting
+            program_name = "my_program"
+
+    # Convert to valid Python identifier (replace dashes and spaces with underscores)
+    original_program_name = program_name
+    program_name = program_name.replace("-", "_").replace(" ", "_")
+
+    if original_program_name != program_name:
+        click.echo(f"Note: Converted program name '{original_program_name}' to '{program_name}' for Python compatibility")
 
     # Validate program name is a valid Python identifier
     if not program_name.replace("_", "").isalnum() or program_name[0].isdigit():
         click.echo(click.style(f"Error: Program name '{program_name}' is not a valid Python identifier", fg="red"))
         raise click.Abort()
 
-    # Parse signature if provided
-    signature_fields = None
-    if signature:
-        signature_fields = parse_signature_string(signature)
+    # Prompt for module type
+    if module_type is None:
+        if customize_program:
+            module_type = prompt_module_type(default="Predict")
+        else:
+            # Use default without prompting
+            module_type = "Predict"
+    elif module_type not in MODULE_TYPES:
+        click.echo(click.style(f"Error: Unknown module type '{module_type}'", fg="red"))
+        click.echo(f"Available: {', '.join(MODULE_TYPES.keys())}")
+        raise click.Abort()
 
-    click.echo(f"Creating new DSPy project: {project_name}")
+    # Prompt for signature
+    signature_fields = None
+    if signature is None:
+        if customize_program:
+            signature, signature_fields = prompt_signature()
+        else:
+            # Use default without prompting
+            signature = "question:str -> answer:str"
+            signature_fields = None
+    else:
+        # Strip optional quotes from command-line signature
+        signature = signature.strip().strip('"').strip("'")
+        # Parse provided signature
+        try:
+            signature_fields = parse_signature_string(signature)
+        except Exception as e:
+            click.echo(click.style(f"Error parsing signature: {e}", fg="red"))
+            raise click.Abort()
+
+    # Prompt for model
+    if model is None:
+        model = prompt_model(default="openai/gpt-5-mini")
+
+    # Parse model string
+    model_info = parse_model_string(model)
+    provider = model_info['provider']
+    provider_display = get_provider_display_name(provider)
+
+    # Handle API key for non-local models
+    api_key_value = None
+    api_key_env_var = None
+
+    if not is_local_model(provider):
+        # Detect existing API key
+        detected_key, env_var_name = detect_api_key(provider)
+        api_key_env_var = env_var_name
+
+        # Prompt for API key (will ask to confirm if detected, or enter new one)
+        api_key_value = prompt_api_key(provider_display, env_var_name, detected_key)
+    else:
+        # For local models, optionally prompt for api_base
+        click.echo(click.style(f"Detected local model provider: {provider_display}", fg="green"))
+
+    # Generate model configuration
+    model_config_dict = generate_model_config(model, api_key_value)
+
+    click.echo()
+    click.echo(f"Creating new DSPy project: {click.style(project_name, fg='green', bold=True)}")
     click.echo(f"  Package name: {package_name}")
     click.echo(f"  Initial program: {program_name}")
-    if signature:
-        click.echo(f"  Signature: {signature}")
+    click.echo(f"  Module type: {MODULE_TYPES[module_type]['display_name']}")
+    click.echo(f"  Signature: {signature}")
+    click.echo(f"  Model: {model}")
     click.echo()
 
     try:
         # Create directory structure
         _create_directory_structure(project_path, package_name, program_name)
 
-        # Create configuration files
-        _create_config_files(project_path, project_name, program_name, package_name)
+        # Create configuration files with model config
+        _create_config_files(
+            project_path,
+            project_name,
+            program_name,
+            package_name,
+            model_config_dict,
+            api_key_value,
+            api_key_env_var
+        )
 
-        # Create Python code files
-        _create_code_files(project_path, package_name, program_name, signature, signature_fields)
+        # Create Python code files with module type
+        _create_code_files(
+            project_path,
+            package_name,
+            program_name,
+            signature,
+            signature_fields,
+            module_type
+        )
 
         # Initialize git repository
         _initialize_git(project_path)
@@ -95,7 +212,8 @@ def new(project_name, program_name, signature):
         click.echo()
         click.echo("Next steps:")
         click.echo(f"  cd {project_name}")
-        click.echo("  # Edit .env and add your API keys")
+        if not api_key_value and not is_local_model(provider):
+            click.echo(f"  # Add your {api_key_env_var} to .env")
         click.echo("  uv sync")
         click.echo("  source .venv/bin/activate")
         click.echo("  dspy-cli serve")
@@ -127,7 +245,7 @@ def _create_directory_structure(project_path, package_name, program_name):
         directory.mkdir(parents=True, exist_ok=True)
         click.echo(f"  Created: {directory.relative_to(project_path.parent)}")
 
-def _create_config_files(project_path, project_name, program_name, package_name):
+def _create_config_files(project_path, project_name, program_name, package_name, model_config_dict, api_key_value, api_key_env_var):
     """Create configuration files from templates."""
     from dspy_cli.templates import code_templates
 
@@ -139,9 +257,27 @@ def _create_config_files(project_path, project_name, program_name, package_name)
     (project_path / "pyproject.toml").write_text(pyproject_content)
     click.echo(f"  Created: {project_name}/pyproject.toml")
 
+    # Generate model alias (e.g., "openai:gpt-4o-mini" from "openai/gpt-4o-mini")
+    model_full = model_config_dict['model']
+    model_alias = model_full.replace('/', ':')
+
+    # Format model config as YAML with proper indentation
+    model_config_lines = []
+    for key, value in model_config_dict.items():
+        if isinstance(value, str):
+            model_config_lines.append(f"      {key}: {value}")
+        else:
+            model_config_lines.append(f"      {key}: {value}")
+    model_config_yaml = "\n".join(model_config_lines)
+
     # Read and write dspy.config.yaml
     config_template = (templates_dir / "dspy.config.yaml.template").read_text()
-    config_content = config_template.format(app_id=project_name)
+    config_content = config_template.format(
+        app_id=project_name,
+        default_model_alias=model_alias,
+        model_alias=model_alias,
+        model_config=model_config_yaml
+    )
     (project_path / "dspy.config.yaml").write_text(config_content)
     click.echo(f"  Created: {project_name}/dspy.config.yaml")
 
@@ -155,9 +291,22 @@ def _create_config_files(project_path, project_name, program_name, package_name)
     (project_path / ".dockerignore").write_text(dockerignore_template)
     click.echo(f"  Created: {project_name}/.dockerignore")
 
+    # Generate .env content
+    if api_key_env_var:
+        if api_key_value:
+            # User provided API key
+            api_key_config = f"# {api_key_env_var} for your LLM provider\n{api_key_env_var}={api_key_value}"
+        else:
+            # User skipped API key, write placeholder
+            api_key_config = f"# {api_key_env_var} for your LLM provider\n# Add your API key here\n{api_key_env_var}="
+    else:
+        # Local model, no API key needed
+        api_key_config = "# No API key required for local models"
+
     # Read and write .env
     env_template = (templates_dir / "env.template").read_text()
-    (project_path / ".env").write_text(env_template)
+    env_content = env_template.format(api_key_config=api_key_config)
+    (project_path / ".env").write_text(env_content)
     click.echo(f"  Created: {project_name}/.env")
 
     # Read and write README.md
@@ -175,7 +324,7 @@ def _create_config_files(project_path, project_name, program_name, package_name)
     (project_path / ".gitignore").write_text(gitignore_template)
     click.echo(f"  Created: {project_name}/.gitignore")
 
-def _create_code_files(project_path, package_name, program_name, signature, signature_fields):
+def _create_code_files(project_path, package_name, program_name, signature, signature_fields, module_type):
     """Create Python code files from templates."""
     from dspy_cli.templates import code_templates
 
@@ -218,9 +367,25 @@ def _create_code_files(project_path, package_name, program_name, signature, sign
 
     (project_path / "src" / package_name / "signatures" / f"{file_name}.py").write_text(signature_content)
 
-    # Create module file
-    module_class = f"{to_class_name(program_name)}Predict"
-    module_file = f"{file_name}_predict"
+    # Get module info from constants
+    module_info = MODULE_TYPES[module_type]
+
+    # Determine module class name based on module type
+    if module_type in ["CoT", "ChainOfThought"]:
+        class_suffix = "CoT"
+    elif module_type in ["PoT", "ProgramOfThought"]:
+        class_suffix = "PoT"
+    elif module_type == "ReAct":
+        class_suffix = "ReAct"
+    elif module_type == "Refine":
+        class_suffix = "Refine"
+    elif module_type == "MultiChainComparison":
+        class_suffix = "MCC"
+    else:
+        class_suffix = "Predict"
+
+    module_class = f"{to_class_name(program_name)}{class_suffix}"
+    module_file = f"{file_name}_{module_info['suffix']}"
 
     # Build forward method components from signature fields
     # If no signature was provided, use default fields (question: str -> answer: str)
@@ -230,7 +395,8 @@ def _create_code_files(project_path, package_name, program_name, signature, sign
     }
     forward_components = build_forward_components(fields_for_forward)
 
-    module_template = (templates_dir / "module_predict.py.template").read_text()
+    # Use the appropriate module template
+    module_template = (templates_dir / module_info['template']).read_text()
     module_content = module_template.format(
         package_name=package_name,
         program_name=file_name,
