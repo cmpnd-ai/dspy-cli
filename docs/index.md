@@ -2,7 +2,13 @@
 
 ## Overview
 
-dspy-cli is a deployment framework for LLM-backed application features. It generates standardized project structure and HTTP interfaces for DSPy modules, reducing setup time from hours to minutes.
+`dspy-cli` helps you quickly create, evolve, and deploy [DSPy](https://dspy.ai/) programs. It generates a standardized project structure and HTTP interfaces for DSPy modules, reducing the time required to deploy an AI-powered endpoint.
+
+`dspy-cli` has three main functions:
+
+- `new`: Creates a new project, after walking you through a few questions. `new` sets up directory structure, an initial program, configuration, and a Dockerfile.
+- `generate`: Creates additional programs, signatures, and modules. Running `generate signature` creates a signature and module according to any provided parameters, with the necessary import statements.
+- `serve`: Stands up an HTTP API with endpoints for all modules and a web UI for calling them. The `serve` command auto-detects modules at run time and hot-reloads as files are updated. 
 
 ## The Problem
 
@@ -12,10 +18,10 @@ Embedding LLM-backed features into applications requires:
 - Exposing a stable HTTP interface
 - Wiring API keys and secrets
 - Implementing health checks and logging
-- Configuring routing and auto-discovery
+- Configuring routing
 - Setting up local development and testing infrastructure
 
-This overhead blocks small-to-medium AI features from shipping. A DSPy module that takes 30 minutes to write can require 4+ hours of infrastructure work before it's usable in a browser extension, Notion plugin, or web application.
+This overhead blocks small-to-medium AI features from shipping. A DSPy module that takes 30 minutes to write can require hours of infrastructure work before it's usable in a browser extension, Notion integration, chat plugin, or web application.
 
 ## What dspy-cli Provides
 
@@ -26,13 +32,13 @@ This overhead blocks small-to-medium AI features from shipping. A DSPy module th
 
 **HTTP Interface**
 - FastAPI-based REST endpoints with automatic module discovery
-- OpenAPI documentation and interactive testing UI
-- Request/response validation via Pydantic models
+- OpenAPI documentation and interactive testing UI {fix}
+- Request/response validation via Pydantic models {fix}
 
 **Development Workflow**
 - Hot-reload server for rapid iteration
 - Built-in testing UI with form-based request construction
-- Type-safe module signatures with validation
+- Type-safe module signatures with validation {repetitive}
 
 **Deployment Infrastructure**
 - Production-ready Docker containers
@@ -88,15 +94,16 @@ Modules in `src/*/modules/` are automatically registered as endpoints at `/{Modu
 # Install
 uv tool install dspy-cli
 
-# Create project
+# Create project (interactive mode - recommended)
+dspy-cli new
+
+# Or with arguments
 dspy-cli new my-feature -s "text -> summary"
+
 cd my-feature && uv sync
 
-# Configure
-echo "OPENAI_API_KEY=sk-..." > .env
-
 # Serve locally
-dspy-cli serve --ui
+dspy-cli serve
 ```
 
 Access the API at `http://localhost:8000/{ModuleName}` and testing UI at `http://localhost:8000/`.

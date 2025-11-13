@@ -6,19 +6,7 @@ import click
 
 from dspy_cli.config.validator import find_package_directory, validate_project_structure
 from dspy_cli.utils.signature_utils import parse_signature_string, to_class_name, build_forward_components
-
-
-# Map of module type aliases to their canonical names and template files
-MODULE_TYPES = {
-    "Predict": {"template": "module_predict.py.template", "suffix": "predict"},
-    "ChainOfThought": {"template": "module_chain_of_thought.py.template", "suffix": "cot"},
-    "CoT": {"template": "module_chain_of_thought.py.template", "suffix": "cot"},
-    "ProgramOfThought": {"template": "module_program_of_thought.py.template", "suffix": "pot"},
-    "PoT": {"template": "module_program_of_thought.py.template", "suffix": "pot"},
-    "ReAct": {"template": "module_react.py.template", "suffix": "react"},
-    "MultiChainComparison": {"template": "module_multi_chain_comparison.py.template", "suffix": "mcc"},
-    "Refine": {"template": "module_refine.py.template", "suffix": "refine"},
-}
+from dspy_cli.utils.constants import MODULE_TYPES
 
 
 @click.group(name="generate")
