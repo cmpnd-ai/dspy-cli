@@ -1,156 +1,305 @@
-# Getting Started
+# Quickstart: Create, Serve, Deploy, Integrate
 
-## The Problem
+Deploy a DSPy AI application as a REST API in 5 minutes.
 
-Building reliable LLM applications is hard. Prompts break when requirements change. Manual tuning is tedious. Production debugging is a nightmare.
-
-**Get from idea to working DSPy application to API endpoint in 5 minutes.**
+**Time to complete:** 5-10 minutes
 
 ## Prerequisites
 
-- Python 3.9+
-- uv ([install uv](https://docs.astral.sh/uv/))
-- An LLM API key (OpenAI, Anthropic, or local models)
+- Python 3.11 or later
+- [uv](https://docs.astral.sh/uv/) package manager
+- LLM API key (OpenAI, Anthropic, or compatible provider)
 
-## Installation
+## 1. Install CLI
 
 ```bash
-uv install dspy-cli
+uv tool install dspy-cli
 ```
 
-## Simple → Real-world → Production-ready
-
-### 1. Create Your Project
+Verify installation:
 
 ```bash
-dspy-cli new qa-bot -s "question -> answer"
-cd qa-bot
+dspy-cli --version
+```
+
+## 2. Create Project
+
+```bash
+dspy-cli new email-subject -s "body, sender, context -> subject, tone, priority"
+cd email-subject
+```
+
+**Expected output:**
+```
+✓ Created project structure
+✓ Generated signature: EmailSubjectSignature
+✓ Scaffolded module: EmailSubjectPredict
+```
+
+Configure environment:
+
+```bash
 echo "OPENAI_API_KEY=sk-..." > .env
 uv sync
 ```
 
-**What this solves:** Manual prompt engineering for every task. DSPy generates optimized prompts automatically from your signature.
-
-### 2. Start Building
+## 3. Run Locally
 
 ```bash
-dspy-cli serve
+dspy-cli serve --ui --reload
 ```
 
+**Expected output:**
 ```
 ✓ Configuration loaded
 
 Discovered Programs:
-  • QaBotPredict
-    POST /QaBotPredict
+  • EmailSubjectPredict
+    POST /EmailSubjectPredict
 
-Server starting on http://0.0.0.0:8000
+Server running at http://0.0.0.0:8000
+Interactive UI at http://localhost:8000
 ```
 
-**Before:** Writing Flask/FastAPI boilerplate, managing routes, validating inputs.  
-**After:** Automatic REST API with input and output validation.
+## 4. Verify Endpoints
 
-### 3. Test It
+Test with curl:
 
 ```bash
-curl -X POST http://localhost:8000/QaBotPredict \
+curl -X POST http://localhost:8000/EmailSubjectPredict \
   -H "Content-Type: application/json" \
-  -d '{"question": "What is DSPy?"}'
+  -d '{
+    "body": "Team, Q4 results are in. Revenue up 23%, NPS at 72.",
+    "sender": "Sarah (CEO)",
+    "context": "Company all-hands"
+  }'
 ```
 
-Or add the `--ui` flag and open `http://localhost:8000/` for interactive testing.
+**Expected response:**
+```json
+{
+  "subject": "Q4 Results: +23% Revenue, 72 NPS",
+  "tone": "professional",
+  "priority": "high"
+}
+```
 
-!!! success "Why This Matters"
-    You now have a working LLM application. No prompt templates. No brittle string formatting. Just type-safe inputs and outputs.
+View interactive UI at http://localhost:8000 to test without curl.
 
-### 4. Add Real-World Features
+## 5. Deploy to Production
 
-Need chain-of-thought reasoning?
+### Option A: Fly.io (Recommended)
+
+Install Fly CLI:
 
 ```bash
-dspy-cli g scaffold analyzer -m CoT -s "text, context: list[str] -> summary, key_points: list[str]"
+curl -L https://fly.io/install.sh | sh
+flyctl auth login
 ```
 
-**What breaks in traditional approaches:**
-- Chaining prompts manually = context loss
-- Parsing structured outputs = fragile regex
-- Managing multi-step workflows = error-prone state
-- Engineering concerns are bundles together into one big string prompt that is hard to reason about and debug.
+Deploy:
 
-**DSPy prevents this:** Modules compose cleanly. Signatures enforce types. Programs are testable Python.
+```bash
+flyctl launch --name email-subject
+flyctl secrets set OPENAI_API_KEY=sk-...
+flyctl deploy
+```
 
-Restart the server and your new `/AnalyzerCoT` endpoint is live.
+**Expected output:**
+```
+==> Monitoring deployment
+✓ Instance created
+✓ Health checks passing
 
-## Make It Better: Optimization
+Visit your deployment at https://email-subject.fly.dev
+```
 
-Your app works. Now make it **great**.
+### Option B: Docker
 
-DSPy supports optimization through its Python API. You can use optimizers like `BootstrapFewShot` to automatically improve your prompts based on training examples:
+```bash
+docker build -t email-subject .
+docker run -p 8000:8000 -e OPENAI_API_KEY=sk-... email-subject
+```
+
+Deploy to AWS ECS, Google Cloud Run, Azure Container Instances, or Kubernetes.
+
+## 6. Verify Production Deployment
+
+Test deployed endpoint:
+
+```bash
+curl -X POST https://email-subject.fly.dev/EmailSubjectPredict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "body": "Team, Q4 results are in. Revenue up 23%, NPS at 72.",
+    "sender": "Sarah (CEO)",
+    "context": "Company all-hands"
+  }'
+```
+
+Retrieve OpenAPI schema:
+
+```bash
+curl https://email-subject.fly.dev/openapi.json
+```
+
+## 7. Integrate with Applications
+
+### JavaScript/TypeScript
+
+```typescript
+interface EmailSubjectRequest {
+  body: string;
+  sender: string;
+  context: string;
+}
+
+interface EmailSubjectResponse {
+  subject: string;
+  tone: string;
+  priority: string;
+}
+
+async function generateEmailSubject(
+  req: EmailSubjectRequest
+): Promise<EmailSubjectResponse> {
+  const response = await fetch(
+    'https://email-subject.fly.dev/EmailSubjectPredict',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req)
+    }
+  );
+  
+  return await response.json();
+}
+
+// Usage
+const result = await generateEmailSubject({
+  body: "Team meeting notes...",
+  sender: "manager@company.com",
+  context: "Internal communication"
+});
+
+console.log(result.subject); // "Weekly Team Sync: Key Decisions"
+```
+
+### Python
 
 ```python
-import dspy
-from dspy.teleprompt import BootstrapFewShot
+import requests
 
-# Define your metric
-def accuracy(example, pred, trace=None):
-    return example.answer.lower() == pred.answer.lower()
+def generate_email_subject(body: str, sender: str, context: str) -> dict:
+    response = requests.post(
+        'https://email-subject.fly.dev/EmailSubjectPredict',
+        json={
+            'body': body,
+            'sender': sender,
+            'context': context
+        }
+    )
+    return response.json()
 
-# Optimize
-optimizer = BootstrapFewShot(metric=accuracy)
-optimized_program = optimizer.compile(
-    student=qa_bot,
-    trainset=training_examples
+# Usage
+result = generate_email_subject(
+    body="Team meeting notes...",
+    sender="manager@company.com",
+    context="Internal communication"
 )
 
-# Then load your optimized program inside module init!
-# TODO: (Isaac) Does this work?
-class QaBot(dspy.Module):
-    def __init__(self):
-        self.load("path/to/optimized_program.<json|pkl>")
+print(result['subject'])  # "Weekly Team Sync: Key Decisions"
 ```
 
-**Before optimization:** Generic prompts. Inconsistent quality. Trial-and-error tuning.  
-**After optimization:** Prompts tailored to your task. Measurable improvements. Data-driven.
+### cURL
 
-See the [DSPy documentation](https://dspy.ai) for more on optimization strategies.
+```bash
+curl -X POST https://email-subject.fly.dev/EmailSubjectPredict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "body": "Team meeting notes...",
+    "sender": "manager@company.com",
+    "context": "Internal communication"
+  }'
+```
 
 ## Module Types
 
+Select appropriate module type for your use case:
+
 | Type | Flag | Use Case |
 |------|------|----------|
-| Predict | default | Simple input → output |
-| ChainOfThought | `-m CoT` | Show reasoning steps |
-| ReAct | `-m ReAct` | Tool-using agents |
-| ProgramOfThought | `-m PoT` | Code generation |
+| **Predict** | (default) | Classification, extraction, simple generation |
+| **ChainOfThought** | `-m CoT` | Tasks requiring reasoning steps |
+| **ReAct** | `-m ReAct` | Tool-using agents with external actions |
+| **ProgramOfThought** | `-m PoT` | Code generation, calculations, structured logic |
+
+Use `dspy-cli generate scaffold` to create programs with specific module types:
+
+```bash
+# Create project first
+dspy-cli new document-analyzer
+
+# Add ChainOfThought module
+cd document-analyzer
+dspy-cli g scaffold analyzer -m CoT -s "document, criteria -> verdict: bool, reasoning, confidence: float"
+```
 
 ## Project Structure
 
 ```
-qa-bot/
-├── src/qa_bot/
-│   ├── modules/         # Your DSPy programs (auto-discovered)
-│   ├── signatures/      # Input/output type definitions
-│   ├── optimizers/      # Prompt optimization configs
-│   ├── metrics/         # Custom evaluation metrics
+email-subject/
+├── src/email_subject/
+│   ├── modules/         # DSPy programs (auto-discovered as endpoints)
+│   ├── signatures/      # Input/output schemas
+│   ├── optimizers/      # Optimization configurations
+│   ├── metrics/         # Evaluation metrics
 │   └── utils/           # Helper functions
-├── data/                # Example data
-├── logs/                # Server logs
-├── tests/               # Automatically generated test files
-├── dspy.config.yaml     # Model and LLM provider settings
-├── .env                 # API keys (never committed)
-├── Dockerfile           # Production deployment
-└── pyproject.toml       # Dependencies and package config
+├── data/                # Training/test datasets
+├── logs/                # Request logs
+├── tests/               # Test scaffolds
+├── dspy.config.yaml     # Model configuration
+├── .env                 # API keys (gitignored)
+├── Dockerfile           # Container configuration
+└── pyproject.toml       # Dependencies
 ```
 
 ## Development Workflow
 
-### Web UI
+### Hot Reload
 
 ```bash
-dspy-cli serve --ui
+dspy-cli serve --ui --reload
 ```
 
-Visual testing interface at `http://localhost:8000`.
+Changes to `src/email_subject/modules/*.py` reload automatically (< 1s).
+
+### Switch Models
+
+Edit `dspy.config.yaml` to change providers without code changes:
+
+```yaml
+models:
+  default: openai:gpt-4o-mini
+  registry:
+    openai:gpt-4o-mini:
+      model: openai/gpt-4o-mini
+      env: OPENAI_API_KEY
+      max_tokens: 16000
+      temperature: 1.0
+      model_type: chat
+```
+
+```yaml
+# Anthropic
+lm:
+  provider: anthropic
+  model: claude-3-sonnet-20240229
+  max_tokens: 1000
+  temperature: 0.7
+```
+
+Restart server to apply configuration changes.
 
 ### Custom Port
 
@@ -158,80 +307,83 @@ Visual testing interface at `http://localhost:8000`.
 dspy-cli serve --port 3000
 ```
 
-## Common Patterns
-
-### Multiple Inputs
-
-```bash
-dspy-cli g scaffold search -s "query, context: list[str] -> answer, sources: list[str]"
-```
-
-### Typed Outputs
-
-```bash
-dspy-cli g scaffold classifier -s "text -> category, confidence: float, reasoning"
-```
-
-### Complex Types
-
-```bash
-# Supports: str, int, float, bool, list[T], dict, Any
-dspy-cli g scaffold extractor -s "document -> entities: list[str], metadata: dict"
-```
-
 ## Next Steps
 
-**See Real Examples:**
-- [blog-tools](../examples/blog-tools/) - Content generation pipeline
-- [code-review-agent](../examples/code-review-agent/) - Code analysis automation
-
-**Configure Models:**
-- [Configuration Guide](configuration.md) - LLM providers, custom models
-
-**Deploy:**
-- Coming Soon
+- **[Deployment Guide](deployment.md)** - Production configuration, scaling, monitoring
+- **[Configuration Reference](configuration.md)** - Model providers, advanced settings
+- **[Command Reference](commands/index.md)** - Complete CLI documentation
+- **[Examples](../examples/)** - Working applications (blog-tools, code-review-agent)
 
 ## Troubleshooting
 
-**Module not found error:**
+### Module Not Found
 
-This typically happens if you are trying to import a dependency, but you're not using the correct venv.
+Activate project virtual environment:
+
 ```bash
-cd qa-bot  # Ensure you're in the project directory
-uv venv
-source .venv/bin/activate
+cd email-subject
+uv sync
+source .venv/bin/activate  # Unix/macOS
+# or
+.venv\Scripts\activate     # Windows
 ```
 
-To use an external dependency, you need to:
-1. Have it in the pyproject.toml file
-2. Make sure that you are using the correct venv
-The global tool install of dspy-cli won't work with external dependencies.
+Add external dependencies to `pyproject.toml`:
 
-If you run:
 ```bash
-which dspy-cli
-```
-The global tool will be at: `~/.local/bin/dspy-cli` (or equivalent on your system)
-The local install will be at: `./venv/bin/dspy-cli`. The local install will allow you to use external dependencies.
-
-
-**API key errors:**
-```bash
-cat .env  # Check .env file
-export OPENAI_API_KEY=sk-...  # Ensure key is set
+uv add requests pandas
+uv sync
 ```
 
-**Port already in use:**
+### API Key Errors
+
+Verify `.env` file exists:
+
+```bash
+cat .env  # Should show OPENAI_API_KEY=sk-...
+```
+
+Export to current shell:
+
+```bash
+export OPENAI_API_KEY=sk-...  # Unix/macOS
+# or
+set OPENAI_API_KEY=sk-...     # Windows
+```
+
+### Port In Use
+
+Use different port:
+
 ```bash
 dspy-cli serve --port 8080
 ```
 
-**Virtual environment issues:**
+Identify process using port 8000:
+
 ```bash
-rm -rf .venv && uv sync
-source .venv/bin/activate
+lsof -ti:8000  # Unix/macOS
+netstat -ano | findstr :8000  # Windows
 ```
 
----
+### Deployment Failures
 
-**You're ready to build.** Start with a working system, iterate with real data, optimize for production.
+Check Fly.io logs:
+
+```bash
+flyctl logs
+```
+
+Verify secrets configured:
+
+```bash
+flyctl secrets list  # Should show OPENAI_API_KEY
+```
+
+Validate Docker build:
+
+```bash
+docker build -t email-subject . --progress=plain
+```
+
+For additional issues, see [Deployment Troubleshooting](deployment.md#troubleshooting).

@@ -43,7 +43,7 @@ theme:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/caisco/optimization-platform
+      link: https://github.com/cmpnd-ai/dspy-cli-tool
 
 plugins:
   - search
@@ -94,15 +94,15 @@ markdown_extensions:
       permalink: true
 
 nav:
-  - User Guide:
-      - Home: index.md
-      - Getting Started: getting-started.md
-      - Configuration: configuration.md
-      - Commands:
-          - commands/index.md
-          - new: commands/new.md
-          - serve: commands/serve.md
-          - generate: commands/generate.md
-  - Development:
-      - Contributing: contributing.md
-      - Releasing: releasing.md
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Use Cases:
+      - AI Features: use-cases/ai-features.md
+  - Deployment: deployment.md
+  - Commands:
+      - serve: commands/serve.md
+      - new: commands/new.md
+  - Configuration: configuration.md
+  - Examples:
+      - Blog Tools: https://github.com/cmpnd-ai/dspy-cli-tool/tree/main/examples/blog-tools
+      - Code Review Agent: https://github.com/cmpnd-ai/dspy-cli-tool/tree/main/examples/code-review-agent
