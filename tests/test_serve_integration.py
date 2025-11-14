@@ -38,15 +38,20 @@ def temp_project(tmp_path, monkeypatch):
     # Change to temp directory
     monkeypatch.chdir(tmp_path)
     
-    # Use actual 'dspy-cli new' command to create project
+    # Use actual 'dspy-cli new' command to create project (with defaults to avoid prompts)
     runner = CliRunner()
-    result = runner.invoke(main, ["new", "testpkg"], catch_exceptions=False)
+    result = runner.invoke(
+        main, 
+        ["new", "testpkg", "--program-name", "main", "--module-type", "Predict", 
+         "--signature", "question -> answer", "--model", "openai/gpt-4o-mini", "--api-key", ""], 
+        catch_exceptions=False
+    )
     assert result.exit_code == 0
     
     project_root = tmp_path / "testpkg"
     
     # Remove the default module and add our no-LLM Echo module
-    default_module = project_root / "src" / "testpkg" / "modules" / "testpkg_predict.py"
+    default_module = project_root / "src" / "testpkg" / "modules" / "main_predict.py"
     if default_module.exists():
         default_module.unlink()
     
