@@ -1,29 +1,20 @@
 # Commands
 
-DSPy CLI helps you build LLM systems that iterate fast and scale without breaking. Start simple, add complexity when you need it, and let DSPy handle optimization.
-
-## Workflow
-
-```
-dspy-cli new      → Start with structure that scales
-dspy-cli serve    → Iterate without breaking things
-dspy-cli generate → Add complexity safely
-[Future: dspy-cli optimize → run DSPy optimization]
-```
+CLI commands for scaffolding, serving, and generating DSPy components.
 
 ## Available Commands
 
-### [new](new.md) - Start with structure that scales
+### [new](new.md)
 
-Create projects with built-in best practices. Skip the boilerplate, avoid common pitfalls, and get a foundation ready for DSPy's optimization tools.
+Create new DSPy project with standard directory structure.
 
-### [serve](serve.md) - Iterate without breaking things
+### [serve](serve.md)
 
-Test your prompts and logic with a live API server. Auto-discovery turns your modules into REST endpoints. Keep your development loop tight.
+Start HTTP server that exposes modules as REST endpoints.
 
-### [generate](generate.md) - Add complexity safely
+### [generate](generate.md)
 
-Scaffold new components with the right patterns. Generate signatures, modules, and programs that integrate cleanly with your existing code and DSPy's optimizer.
+Generate new modules, signatures, and programs in existing projects.
 
 ## Aliases
 

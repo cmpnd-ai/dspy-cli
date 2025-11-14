@@ -1,53 +1,40 @@
 # OpenAPI Specification Generation
 
-The `dspy-cli serve` command automatically generates OpenAPI 3.1.0 specifications for your DSPy programs.
+`dspy-cli serve` automatically generates OpenAPI 3.1.0 specifications for DSPy programs.
 
 ## Features
 
 - **Automatic generation** on server start (enabled by default)
-- **Multiple formats** supported: JSON and YAML
+- **Multiple formats**: JSON and YAML
 - **Enhanced metadata** from `dspy.config.yaml` (app_id, description)
-- **DSPy-specific extensions** with program and model information
-- **Always available** via `/openapi.json` endpoint, regardless of file generation
+- **DSPy extensions** with program and model information
+- **Always available** at `/openapi.json` endpoint
 
 ## Usage
 
-### Default Behavior (JSON)
-
 ```bash
+# JSON format (default)
 dspy-cli serve
-# Creates openapi.json in project root
-```
 
-### YAML Format
-
-```bash
+# YAML format
 dspy-cli serve --openapi-format yaml
-# Creates openapi.yaml in project root
-```
 
-### Disable File Generation
-
-```bash
+# Disable file generation (still available at /openapi.json)
 dspy-cli serve --no-save-openapi
-# Spec still available at http://localhost:8000/openapi.json
 ```
 
 ## Generated Specification
 
-### Standard OpenAPI Fields
+Includes:
 
-The generated spec includes:
+- **Endpoints**: All DSPy programs as POST endpoints
+- **Request/response schemas**: From module `forward()` signatures
+- **Validation**: Input/output validation via Pydantic
+- **Additional endpoints**: `/programs` for listing programs
 
-- **Endpoints**: All discovered DSPy programs as POST endpoints
-- **Request schemas**: Dynamically generated from DSPy module forward() signatures
-- **Response schemas**: Output types from your modules
-- **Validation**: Input/output validation via Pydantic models
-- **Additional endpoints**: `/programs` for listing all programs
+### DSPy Extensions
 
-### DSPy-Specific Extensions
-
-The spec includes custom OpenAPI extensions (x-* fields):
+Custom OpenAPI extensions (x-* fields):
 
 ```json
 {
@@ -66,8 +53,7 @@ The spec includes custom OpenAPI extensions (x-* fields):
       }
     ],
     "x-dspy-program-models": {
-      "CategorizerPredict": "openai:gpt-4",
-      "SummarizerCoT": "anthropic:claude-3-sonnet"
+      "CategorizerPredict": "openai:gpt-4"
     }
   }
 }
@@ -75,83 +61,62 @@ The spec includes custom OpenAPI extensions (x-* fields):
 
 ## Configuration
 
-### Metadata Source
-
-The OpenAPI spec pulls metadata from `dspy.config.yaml`:
+Metadata from `dspy.config.yaml`:
 
 ```yaml
 app_id: my-blog-tools
 description: A set of functions for a content management system.
 ```
 
-These values populate the OpenAPI `title` and `description` fields.
-
-### Fallback Defaults
-
-If not specified in config:
+Fallback defaults if not specified:
 - **title**: "DSPy API"
 - **description**: "Automatically generated API for DSPy programs"
 - **version**: "0.1.0"
 
 ## Accessing the Specification
 
-### As a File
-
+**As a file:**
 ```bash
-# After running dspy-cli serve
 cat openapi.json
 ```
 
-### Via HTTP Endpoint
-
+**Via HTTP:**
 ```bash
-# While server is running
 curl http://localhost:8000/openapi.json
 ```
 
-### In Code
-
+**In code:**
 ```python
-from fastapi import FastAPI
 from dspy_cli.utils.openapi import generate_openapi_spec
-
-# After creating your FastAPI app
 spec = generate_openapi_spec(app)
 ```
 
-## Integration with Tools
+## Integration
 
-### Swagger UI
+### Interactive Documentation
 
-FastAPI automatically provides interactive API documentation at:
+FastAPI provides:
 - **Swagger UI**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
 
-### API Clients
-
-Use the generated spec to create type-safe API clients:
+### Generate API Clients
 
 ```bash
-# Generate TypeScript client
+# TypeScript
 npx openapi-typescript openapi.json -o types.ts
 
-# Generate Python client
+# Python
 openapi-generator-cli generate -i openapi.json -g python
 ```
 
 ### Validation
 
-Validate your spec:
-
 ```bash
-# Install validator
 npm install -g @ibm/openapi-validator
-
-# Validate spec
 lint-openapi openapi.json
 ```
 
-## Command-Line Options
+## Command Options
 
 ```bash
 dspy-cli serve [OPTIONS]
@@ -164,93 +129,26 @@ Options:
                                 (default: json)
 ```
 
-## Examples
-
-### Example: JSON Spec
-
-```bash
-cd my-project
-dspy-cli serve
-```
-
-Creates `openapi.json`:
-```json
-{
-  "openapi": "3.1.0",
-  "info": {
-    "title": "my-project",
-    "description": "Automatically generated API for DSPy programs",
-    "version": "0.1.0"
-  },
-  "paths": {
-    "/MyProgramPredict": {
-      "post": {
-        "summary": "Run Program",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MyProgramPredictRequest"
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-### Example: YAML Spec
-
-```bash
-dspy-cli serve --openapi-format yaml
-```
-
-Creates `openapi.yaml`:
-```yaml
-openapi: 3.1.0
-info:
-  title: my-project
-  description: Automatically generated API for DSPy programs
-  version: 0.1.0
-paths:
-  /MyProgramPredict:
-    post:
-      summary: Run Program
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MyProgramPredictRequest'
-```
-
 ## Troubleshooting
 
-### Spec Not Generated
+**Spec not generated:**
+1. Verify `--no-save-openapi` wasn't used
+2. Check write permissions
+3. Check server logs
 
-If `openapi.json` isn't created:
-1. Check that `--no-save-openapi` wasn't used
-2. Verify write permissions in project directory
-3. Check server logs for errors
-
-### Missing Program Schemas
-
-If programs don't appear in the spec:
+**Missing program schemas:**
 1. Ensure modules subclass `dspy.Module`
-2. Verify `forward()` method has type annotations
-3. Check that modules are in `src/<package>/modules/`
+2. Verify `forward()` has type annotations
+3. Check modules are in `src/<package>/modules/`
 
-### Incorrect Metadata
-
-If title/description are wrong:
+**Incorrect metadata:**
 1. Check `app_id` in `dspy.config.yaml`
-2. Verify `description` field in config
+2. Verify `description` field
 3. Ensure config file is in project root
 
-## Implementation Details
+## Implementation
 
-- **Utility module**: `src/dspy_cli/utils/openapi.py`
-- **Integration point**: `src/dspy_cli/server/app.py` (metadata enhancement)
-- **File generation**: `src/dspy_cli/server/runner.py` (on server start)
-- **Uses**: FastAPI's built-in `app.openapi()` method
+- **Utility**: `src/dspy_cli/utils/openapi.py`
+- **Integration**: `src/dspy_cli/server/app.py`
+- **Generation**: `src/dspy_cli/server/runner.py`
+- **Uses**: FastAPI's `app.openapi()` method
