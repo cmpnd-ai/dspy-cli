@@ -17,9 +17,6 @@ dspy-cli serve
 # Production configuration
 dspy-cli serve --no-reload --host 0.0.0.0 --port 8000
 
-# Development with UI
-dspy-cli serve --ui --port 3000
-
 # Enable MCP tools
 dspy-cli serve --mcp
 ```
@@ -35,7 +32,6 @@ Starts an HTTP server for local testing or production deployment. Discovers DSPy
 | `--port` | `8000` | Port to run server on (1-65535) |
 | `--host` | `0.0.0.0` | Host to bind to |
 | `--logs-dir` | `./logs` | Directory for log files |
-| `--ui` / `-u` | disabled | Enable web UI for testing |
 | `--reload` / `--no-reload` | enabled | Auto-reload on file changes |
 | `--save-openapi` / `--no-save-openapi` | enabled | Save OpenAPI spec to file |
 | `--openapi-format` | `json` | OpenAPI format (`json` or `yaml`) |
@@ -60,9 +56,6 @@ Every deployment provides:
 | `/<ModuleName>` | POST | Execute module with JSON request body |
 | `/programs` | GET | List all discovered modules and their schemas |
 | `/openapi.json` | GET | OpenAPI specification |
-
-With `--ui` enabled:
-- `/` serves interactive testing interface
 
 With `--mcp` enabled:
 - `/mcp` provides Model Context Protocol server
