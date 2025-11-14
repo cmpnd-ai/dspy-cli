@@ -1,92 +1,24 @@
 # dspy-cli
 
-## Overview
+Deploy [DSPy](https://dspy.ai/) programs as HTTP APIs in minutes.
 
-`dspy-cli` helps you quickly create, evolve, and deploy [DSPy](https://dspy.ai/) programs. It generates a standardized project structure and HTTP interfaces for DSPy modules, reducing the time required to deploy an AI-powered endpoint.
+**Get started** → [Getting Started](getting-started.md)  
+**Deploy** → [Deployment Guide](deployment.md)
 
-`dspy-cli` has three main functions:
+## What is dspy-cli?
 
-- `new`: Creates a new project, after walking you through a few questions. `new` sets up directory structure, an initial program, configuration, and a Dockerfile.
-- `generate`: Creates additional programs, signatures, and modules. Running `generate signature` creates a signature and module according to any provided parameters, with the necessary import statements.
-- `serve`: Stands up an HTTP API with endpoints for all modules and a web UI for calling them. The `serve` command auto-detects modules at run time and hot-reloads as files are updated. 
+Turns DSPy modules into production-ready HTTP APIs. Scaffolds projects, auto-discovers modules as JSON endpoints, and packages everything in Docker. Use it to ship LLM services fast with minimal ops.
 
-## The Problem
+**Three commands:**
 
-Embedding LLM-backed features into applications requires:
+- `new` — Create a project with directory structure, initial program, configuration, and Dockerfile
+- `generate` — Add programs, signatures, and modules with proper imports
+- `serve` — HTTP API with auto-detected modules, hot-reload, and testing UI
 
-- Containerizing the runtime environment
-- Exposing a stable HTTP interface
-- Wiring API keys and secrets
-- Implementing health checks and logging
-- Configuring routing
-- Setting up local development and testing infrastructure
+## Prerequisites
 
-This overhead blocks small-to-medium AI features from shipping. A DSPy module that takes 30 minutes to write can require hours of infrastructure work before it's usable in a browser extension, Notion integration, chat plugin, or web application.
-
-## What dspy-cli Provides
-
-- **Project scaffolding** - Standardized structure with auto-generated DSPy signatures and Docker configs
-- **HTTP interface** - FastAPI endpoints with automatic module discovery and OpenAPI docs
-- **Development workflow** - Hot-reload server with built-in testing UI
-- **Deployment** - Production-ready containers for Fly.io, Render, AWS, and any Docker platform
-
-**HTTP Interface**
-- FastAPI-based REST endpoints with automatic module discovery
-- OpenAPI documentation and interactive testing UI {fix}
-- Request/response validation via Pydantic models {fix}
-
-**Development Workflow**
-- Hot-reload server for rapid iteration
-- Built-in testing UI with form-based request construction
-- Type-safe module signatures with validation {repetitive}
-
-**Deployment Infrastructure**
-- Production-ready Docker containers
-- Environment variable management
-- Inference API key authentication
-- Integration with any platform that can use a Dockerfile: Fly.io, Render, AWS, and other container platforms
-
-## What Are AI Features?
-
-In this context, "AI features" refers to application-embedded functionality backed by LLMs. These are exposed as HTTP endpoints and called by client applications—browser extensions, Notion workspaces, email clients, web servers.
-
-This differs from:
-- **Agentic Applications** where the LLM controls the conversation flow
-- **Batch pipelines** that process large datasets asynchronously
-
-Examples include text summarization APIs for browser extensions, classification endpoints for content management systems, and generation services for productivity tools.
-
-## Architecture
-
-dspy-cli applications follow a standard structure:
-
-```
-my-project/
-├── pyproject.toml
-├── dspy.config.yaml       # Model registry and configuration
-├── .env                   # API keys and secrets
-├── README.md
-├── src/
-│   └── dspy_project/      # Importable package
-│       ├── __init__.py
-│       ├── modules/       # DSPy program implementations
-│       ├── signatures/    # Reusable signatures
-│       ├── optimizers/    # Optimizer configurations
-│       ├── metrics/       # Evaluation metrics
-│       └── utils/         # Shared helpers
-├── data/
-├── logs/
-└── tests/
-```
-
-**Request Flow:**
-1. HTTP request → FastAPI endpoint
-2. Request body validated against Pydantic signature
-3. DSPy module executes with validated inputs
-4. Response serialized and returned
-
-**Module Discovery:**
-Modules in `src/*/modules/` are automatically registered as endpoints at `/{ModuleName}`. No manual routing configuration required.
+- Python 3.11+ and `uv` (or pipx/pip) installed
+- A model provider API key (e.g., OpenAI)
 
 ## Quick Start
 
@@ -100,23 +32,100 @@ dspy-cli new
 # Or with arguments
 dspy-cli new my-feature -s "text -> summary"
 
-cd my-feature && uv sync
-
 # Serve locally
-dspy-cli serve
+cd my-feature && dspy-cli serve
 ```
 
-Access the API at `http://localhost:8000/{ModuleName}` and testing UI at `http://localhost:8000/`.
+Access your API at `http://localhost:8000/{ModuleName}` and the testing UI at `http://localhost:8000/`.
 
-## Next Steps
+## How it works
 
-- [Getting Started Guide](getting-started.md) - Complete setup and first deployment
-- [Commands Reference](commands/) - CLI command documentation
-- [Deployment Guide](deployment.md) - Production deployment patterns
-- [Configuration](configuration.md) - Model settings and environment variables
-- [Use Cases](use-cases/) - Browser extensions, integrations, microservices
-- [Examples](../examples/) - Sample projects and patterns
+**Discovery → Routing → Execution**: dspy-cli scans for DSPy modules, creates `POST /{ModuleName}` endpoints with JSON schemas from signatures, validates requests, and runs your module's forward/predict.
+
+**Example:**
+
+```python
+import dspy
+
+class Rewrite(dspy.Signature):
+    text: str
+    revised: str
+
+class Rewriter(dspy.Module):
+    def __init__(self):
+        super().__init__()
+        self.predict = dspy.ChainOfThought(Rewrite)
+    
+    def forward(self, text: str) -> dspy.Prediction:
+        return self.predict(text=text)
+```
+
+**Becomes:** `POST /Rewriter` with body `{"text": "..."}` → response `{"revised": "..."}`
+
+**Try it:**
 
 ```bash
-dspy-cli --help     # View all commands
+curl -X POST http://localhost:8000/Rewriter \
+  -H "Content-Type: application/json" \
+  -d '{"text":"make this shorter"}'
 ```
+
+## Deploy
+
+Your project includes a production-ready Docker container. Deploy to [Fly.io](deployment.md#flyio), [Render](deployment.md#render), [AWS](deployment.md#aws), or any Docker platform. See the [Deployment Guide](deployment.md).
+
+## Architecture
+
+**Project structure:**
+
+```text
+my-feature/
+├── modules/       # DSPy modules (exposed as endpoints)
+├── signatures/    # DSPy signatures (request/response schema)
+├── app/           # Server, discovery, settings
+├── Dockerfile
+├── .env
+├── dspy.config.yaml
+└── pyproject.toml
+
+```
+
+**Request flow:** JSON request → validate against signature → module forward/predict → JSON response
+
+**Discovery:** Exposes `dspy.Module` subclasses as `POST /{ClassName}` endpoints with schemas from signatures
+
+## Top Tasks
+
+**Create** — Get up and running with your first DSPy module
+
+- [Getting Started](getting-started.md)
+- [Examples](../examples/)
+
+**Configure** — Environment variables and model settings
+
+- [Configuration](configuration.md)
+- [Environment variables](configuration.md#environment-variables)
+- [Model registry](configuration.md#model-registry)
+
+**Deploy** — Ship to production
+
+- [Deployment Guide](deployment.md)
+- [Production checklist](deployment.md#production-checklist)
+
+**Operate** — Test and iterate
+
+- [Testing UI & OpenAPI docs](getting-started.md#testing-ui)
+- [Commands Reference](commands/)
+
+## What You Get
+
+- **Project scaffolding** — Standardized structure with DSPy signatures, modules, and Docker configs
+- **HTTP interface** — FastAPI endpoints with automatic module discovery and OpenAPI docs
+- **Hot-reload server** — Built-in testing UI with live code updates
+- **Production-ready** — Deploy to any Docker platform
+
+**Defaults:** Local server at `http://localhost:8000`, testing UI at `/`, no auth (add via platform or middleware)
+
+---
+
+Run `dspy-cli --help` for all commands. View more [examples](../examples/) on GitHub.
