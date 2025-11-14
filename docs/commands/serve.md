@@ -26,9 +26,7 @@ dspy-cli serve --mcp
 
 ## Description
 
-Starts an HTTP server for local testing or production deployment. Discovers DSPy modules in `src/<package>/modules/` and exposes each as a POST endpoint. Generates request/response schemas from module type hints and provides OpenAPI documentation.
-
-The server watches source files and configuration, restarting automatically on changes (unless `--no-reload` is specified).
+Starts an HTTP server for local testing or production deployment. Discovers DSPy modules in `src/<package>/modules/` and exposes each as a POST endpoint.
 
 ## Options
 
@@ -47,91 +45,11 @@ The server watches source files and configuration, restarting automatically on c
 
 ## Auto-Discovery
 
-The server scans `src/<package>/modules/` for classes that subclass `dspy.Module`, analyzes their `forward()` method signatures, and generates POST endpoints automatically.
-
-**Example module:**
-
-```python
-# src/blog_tools/modules/summarizer_predict.py
-import dspy
-from blog_tools.signatures.summarizer import SummarizerSignature
-from typing import Literal, Optional
-
-class SummarizerPredict(dspy.Module):
-    def __init__(self):
-        super().__init__()
-        self.predictor = dspy.Predict(SummarizerSignature)
-
-    def forward(
-        self, 
-        blog_post: str, 
-        summary_length: Literal['short', 'medium', 'long'], 
-        tone: Optional[str]
-    ) -> dspy.Prediction:
-        return self.predictor(
-            blog_post=blog_post, 
-            summary_length=summary_length, 
-            tone=tone
-        )
-```
-
-**Generates:**
-
-```
-POST /SummarizerPredict
-```
-
-### Endpoint Naming
-
-Endpoints match module class names:
-- `SummarizerPredict` → `/SummarizerPredict`
-- `HeadlineGeneratorCoT` → `/HeadlineGeneratorCoT`
-- `TweetExtractorPredict` → `/TweetExtractorPredict`
-
-### Schema Generation
-
-Type hints from `forward()` parameters become JSON request schemas. Default values become optional fields.
-
-**Python signature:**
-
-```python
-def forward(
-    self,
-    text: str,
-    options: list[str],
-    confidence_threshold: float = 0.8
-) -> dspy.Prediction:
-    ...
-```
-
-**Generated request schema:**
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "text": {"type": "string"},
-    "options": {
-      "type": "array",
-      "items": {"type": "string"}
-    },
-    "confidence_threshold": {
-      "type": "number",
-      "default": 0.8
-    }
-  },
-  "required": ["text", "options"]
-}
-```
+Discovers modules in `src/<package>/modules/` and generates endpoints from class names. Schemas generated from `forward()` type hints. See [OpenAPI Reference](../OPENAPI.md).
 
 ## Hot Reload
 
-The server watches for changes to:
-- All `.py` files in `src/` directory
-- `dspy.config.yaml` configuration file
-- `.env` environment variables
-
-Saving any watched file triggers an automatic restart (~2 seconds). Disable with `--no-reload` for production deployments.
+Watches `.py` files in `src/`, `dspy.config.yaml`, and `.env` for changes. Restarts automatically (~2s). Disable with `--no-reload` for production.
 
 ## Endpoints
 
@@ -151,17 +69,7 @@ With `--mcp` enabled:
 
 ## Logging
 
-Requests are logged to console by default. Use `--logs-dir` to persist logs per module:
-
-```bash
-dspy-cli serve --logs-dir ./logs
-```
-
-Creates:
-- `logs/SummarizerPredict.log`
-- `logs/HeadlineGeneratorPredict.log`
-
-Each log entry includes timestamp, request inputs, response outputs, execution time, and model used.
+Logs to console by default. Use `--logs-dir` to write per-module JSON logs with request/response data, execution time, and model info.
 
 ## Examples
 
@@ -191,17 +99,6 @@ Response:
 }
 ```
 
-### Development Mode
-
-```bash
-dspy-cli serve --ui --logs-dir ./logs --port 3000
-```
-
-Enables:
-- Interactive web UI at `http://localhost:3000`
-- Hot reload on file changes
-- Persistent logs in `./logs/`
-
 ### Production Mode
 
 ```bash
@@ -210,19 +107,7 @@ dspy-cli serve --no-reload --host 0.0.0.0 --port 8000
 
 Disables hot reload and binds to all network interfaces for production deployment.
 
-### Multiple Parameters
-
-```bash
-curl -X POST http://localhost:8000/TaggerPredict \
-  -H "Content-Type: application/json" \
-  -d '{
-    "blog_post": "Content here",
-    "max_tags": 5,
-    "style": "casual"
-  }'
-```
-
-### Error Responses
+## Error Responses
 
 **Validation error (422):**
 
@@ -268,10 +153,7 @@ curl -X POST http://localhost:8000/SummarizerPredict \
 
 ## Environment Variables
 
-Configure via environment variables or `.env` file:
-
-- `OPENAI_API_KEY` - OpenAI API key
-- Model-specific configuration in `dspy.config.yaml`
+See [Configuration](../configuration.md) for environment variable and model configuration details.
 
 ## Limitations
 
@@ -282,5 +164,5 @@ Configure via environment variables or `.env` file:
 
 - [dspy-cli new](new.md) - Create new projects
 - [Deployment Guide](../deployment.md) - Deploy to production
-- [OpenAPI Generation](../OPENAPI.md) - API specification details
+- [OpenAPI Reference](../OPENAPI.md) - API specification details
 - [Configuration Guide](../configuration.md) - Model configuration

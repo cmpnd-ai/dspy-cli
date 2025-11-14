@@ -25,10 +25,10 @@ This overhead blocks small-to-medium AI features from shipping. A DSPy module th
 
 ## What dspy-cli Provides
 
-**Project Scaffolding**
-- Standardized directory structure with modules, signatures, and configurations
-- Auto-generated DSPy signatures from type specifications
-- Docker configurations for local development and production deployment
+- **Project scaffolding** - Standardized structure with auto-generated DSPy signatures and Docker configs
+- **HTTP interface** - FastAPI endpoints with automatic module discovery and OpenAPI docs
+- **Development workflow** - Hot-reload server with built-in testing UI
+- **Deployment** - Production-ready containers for Fly.io, Render, AWS, and any Docker platform
 
 **HTTP Interface**
 - FastAPI-based REST endpoints with automatic module discovery
@@ -108,25 +108,14 @@ dspy-cli serve
 
 Access the API at `http://localhost:8000/{ModuleName}` and testing UI at `http://localhost:8000/`.
 
-See the [Getting Started Guide](getting-started.md) for detailed walkthrough.
-
-## Use Cases
-
-**Browser Extensions**
-HTTP endpoints for summarization, extraction, or classification that extensions call on user-triggered events.
-
-**Content Management Integration**
-Embedded generation or tagging services for platforms like Notion, Confluence, or custom CMSs.
-
-**Application Microservices**
-Standalone intelligence services that web or mobile applications consume via REST APIs.
-
 ## Next Steps
 
 - [Getting Started Guide](getting-started.md) - Complete setup and first deployment
 - [Commands Reference](commands/) - CLI command documentation
+- [Deployment Guide](deployment.md) - Production deployment patterns
 - [Configuration](configuration.md) - Model settings and environment variables
-- [Examples](https://github.com/cmpnd-ai/dspy-cli-tool/tree/main/examples) - Sample projects and patterns
+- [Use Cases](use-cases/) - Browser extensions, integrations, microservices
+- [Examples](../examples/) - Sample projects and patterns
 
 ```bash
 dspy-cli --help     # View all commands

@@ -56,122 +56,23 @@ AI features differ from chat interfaces in that they provide specific functional
 
 ## Integration Patterns
 
-### Browser Extension Integration
+AI features are invoked via HTTP POST requests with JSON payloads. Common integration points:
 
-Browser extensions call AI feature endpoints from content scripts or background workers:
+- **Browser extensions**: Content scripts call endpoints for page analysis
+- **CMS plugins**: Authoring tools invoke generation endpoints
+- **Email clients**: Background workers call categorization endpoints
+- **Background automation**: Async workers process documents via API
 
-```javascript
-// Content script calling document analysis endpoint
-async function analyzeDocument(content) {
-  const response = await fetch('https://api.example.com/DocumentAnalyzerPredict', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ document: content })
-  });
-  return response.json();
-}
-```
-
-### CMS Plugin Integration
-
-Content management systems integrate AI features to enhance authoring workflows:
-
-```javascript
-// Notion-style plugin calling emoji suggestion endpoint
-async function suggestEmoji(postContent) {
-  const response = await fetch('https://api.example.com/EmojiPickerPredict', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ post_content: postContent })
-  });
-  const { emoji } = await response.json();
-  return emoji;
-}
-```
-
-### Email Client Integration
-
-Email applications use AI features for categorization and smart replies:
-
-```python
-# Email categorizer endpoint
-class EmailCategorizer(dspy.Module):
-    def __init__(self):
-        super().__init__()
-        self.classify = dspy.ChainOfThought(
-            "email_content, sender -> category, priority"
-        )
-    
-    def forward(self, email_content, sender):
-        return self.classify(email_content=email_content, sender=sender)
-```
-
-### Background Automation
-
-Background services invoke AI features for asynchronous processing:
-
-```python
-# Invoice processor for automated document handling
-class InvoiceProcessor(dspy.Module):
-    def __init__(self):
-        super().__init__()
-        self.extract = dspy.ChainOfThought(
-            "invoice_data -> vendor, amount, date, line_items"
-        )
-    
-    def forward(self, invoice_data):
-        return self.extract(invoice_data=invoice_data)
-```
+See [Examples](../../examples/) for complete integration code.
 
 ## Implementation with dspy-cli
 
-dspy-cli provides tooling to create and deploy AI features. A typical workflow:
+Create and deploy AI features:
 
 ```bash
-# Create a new AI feature module
-dspy-cli new document-summarizer --program-name Summarizer \
-  --signature "document -> summary, key_points"
-
-# Test locally
+dspy-cli new document-summarizer -s "document -> summary, key_points"
 dspy-cli serve
-
-# Deploy to production
 flyctl launch
 ```
 
-The resulting endpoint accepts structured input and returns structured output:
-
-```bash
-curl http://localhost:8000/SummarizerPredict \
-  -H "Content-Type: application/json" \
-  -d '{"document": "Long document text..."}'
-
-# Returns
-{
-  "summary": "Brief summary of document",
-  "key_points": ["Point 1", "Point 2", "Point 3"]
-}
-```
-
-## Deployment Requirements
-
-AI features require:
-
-- **HTTP server**: To expose endpoints for application integration
-- **Model inference**: Runtime for executing language model operations
-- **Authentication**: API keys or tokens for access control
-- **Monitoring**: Logging and metrics for production operations
-- **Versioning**: Ability to update features without breaking integrations
-
-## Examples
-
-- [Email Categorizer](../../examples/email-categorizer/) - Classifies emails by category and priority
-- [Document Summarizer](../../examples/doc-summarizer/) - Generates structured summaries from text
-- [Smart Form Filler](../../examples/form-filler/) - Completes forms using contextual understanding
-
-## Learn More
-
-- [Getting Started Guide](../getting-started.md) - Build your first AI feature
-- [Deployment Guide](../deployment.md) - Deploy to production environments
-- [Commands: serve](../commands/serve.md) - Local development and testing
-- [Examples](../../examples/) - Complete integration examples
+See [Getting Started](../getting-started.md) for complete workflow.
