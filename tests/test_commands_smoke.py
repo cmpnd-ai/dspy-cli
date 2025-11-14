@@ -26,13 +26,29 @@ def tmp_cwd(tmp_path, monkeypatch):
         os.chdir(old)
 
 
+def with_new_defaults(args):
+    """Add default args to 'new' command to make it non-interactive."""
+    out = args[:]
+    if "--program-name" not in out and "-p" not in out:
+        out += ["--program-name", "main"]
+    if "--module-type" not in out and "-m" not in out:
+        out += ["--module-type", "Predict"]
+    if "--signature" not in out and "-s" not in out:
+        out += ["--signature", "question -> answer"]
+    if "--model" not in out:
+        out += ["--model", "openai/gpt-4o-mini"]
+    if "--api-key" not in out:
+        out += ["--api-key", ""]  # Empty string to skip API key prompt
+    return out
+
+
 def test_cli_e2e_smoke(runner, tmp_cwd, monkeypatch):
     """End-to-end smoke test: new -> generate -> serve.
     
     Creates project, generates components, validates serve args.
     """
     # 1. Test 'new' command
-    res = runner.invoke(main, ["new", "acme-app"], catch_exceptions=False)
+    res = runner.invoke(main, with_new_defaults(["new", "acme-app"]), catch_exceptions=False)
     assert res.exit_code == 0
     
     proj = tmp_cwd / "acme-app"
@@ -42,8 +58,8 @@ def test_cli_e2e_smoke(runner, tmp_cwd, monkeypatch):
         assert (proj / name).exists(), f"Missing {name}"
     
     # Verify code structure created
-    assert (proj / "src" / "acme_app" / "modules" / "acme_app_predict.py").exists()
-    assert (proj / "src" / "acme_app" / "signatures" / "acme_app.py").exists()
+    assert (proj / "src" / "acme_app" / "modules" / "main_predict.py").exists()
+    assert (proj / "src" / "acme_app" / "signatures" / "main.py").exists()
     assert (proj / "tests" / "test_modules.py").exists()
     
     # 2. Test 'generate scaffold' command
@@ -114,7 +130,7 @@ def test_new_with_signature(runner, tmp_cwd):
     """Test 'new' command with custom signature."""
     res = runner.invoke(
         main,
-        ["new", "my-project", "-p", "analyzer", "-s", "text, context: list[str] -> summary"],
+        with_new_defaults(["new", "my-project", "-p", "analyzer", "-s", "text, context: list[str] -> summary"]),
         catch_exceptions=False
     )
     assert res.exit_code == 0
@@ -133,7 +149,7 @@ def test_new_with_signature(runner, tmp_cwd):
 def test_generate_different_module_types(runner, tmp_cwd):
     """Test generating different module types."""
     # Create a project first
-    res = runner.invoke(main, ["new", "test-app"], catch_exceptions=False)
+    res = runner.invoke(main, with_new_defaults(["new", "test-app"]), catch_exceptions=False)
     assert res.exit_code == 0
     
     proj = tmp_cwd / "test-app"

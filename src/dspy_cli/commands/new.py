@@ -51,7 +51,12 @@ from dspy_cli.utils.constants import MODULE_TYPES
     default=None,
     help="LiteLLM model string (e.g., anthropic/claude-sonnet-4-5, openai/gpt-4o)",
 )
-def new(project_name, program_name, signature, module_type, model):
+@click.option(
+    "--api-key",
+    default=None,
+    help="API key for the LLM provider (will be stored in .env)",
+)
+def new(project_name, program_name, signature, module_type, model, api_key):
     """Create a new DSPy project with boilerplate structure.
 
     Creates a directory with PROJECT_NAME and sets up a complete
@@ -162,8 +167,13 @@ def new(project_name, program_name, signature, module_type, model):
         detected_key, env_var_name = detect_api_key(provider)
         api_key_env_var = env_var_name
 
-        # Prompt for API key (will ask to confirm if detected, or enter new one)
-        api_key_value = prompt_api_key(provider_display, env_var_name, detected_key)
+        # Use provided API key or prompt for one
+        if api_key is not None:
+            # API key was provided via CLI
+            api_key_value = api_key
+        else:
+            # Prompt for API key (will ask to confirm if detected, or enter new one)
+            api_key_value = prompt_api_key(provider_display, env_var_name, detected_key)
     else:
         # For local models, optionally prompt for api_base
         click.echo(click.style(f"Detected local model provider: {provider_display}", fg="green"))
