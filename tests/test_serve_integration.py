@@ -1,7 +1,6 @@
 """Integration tests for serve command - real server without LLM calls."""
 
 import sys
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -286,6 +285,7 @@ def test_create_app_with_ui_enabled(temp_project, test_config):
     
     # UI might be at /ui or mounted differently - just verify app was created
     assert app is not None
+    assert ui_route_found
 
 
 def test_real_server_endpoints(temp_project, test_config):

@@ -183,7 +183,7 @@ def signature(program_name, signature):
         signature_fields = parse_signature_string(signature)
         click.echo(f"  Signature: {signature}")
     else:
-        click.echo(f"  Using default signature (question: str -> answer: str)")
+        click.echo("  Using default signature (question: str -> answer: str)")
 
     click.echo(f"  Package: {package_name}")
     click.echo()
@@ -266,7 +266,7 @@ def module(program_name, module):
 
     click.echo(f"  Module type: {module}")
     click.echo(f"  Package: {package_name}")
-    click.echo(f"  Using inline signature: \"question: str -> answer: str\"")
+    click.echo("  Using inline signature: \"question: str -> answer: str\"")
     click.echo()
 
     try:

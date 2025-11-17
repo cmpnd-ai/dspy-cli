@@ -1,7 +1,6 @@
 """Smoke tests for CLI commands: new, generate, serve."""
 
 import os
-from pathlib import Path
 
 import pytest
 from click.testing import CliRunner

@@ -262,7 +262,7 @@ def prompt_api_key(provider_display: str, env_var_name: str, detected_key: str |
     # Prompt for API key
     click.echo(click.style(f"Enter your {provider_display} API key:", fg="cyan"))
     click.echo(click.style(f"  (This will be stored in .env as {env_var_name})", fg="bright_black"))
-    click.echo(click.style(f"  Press Enter to skip and set it manually later", fg="bright_black"))
+    click.echo(click.style("  Press Enter to skip and set it manually later", fg="bright_black"))
 
     api_key = click.prompt(
         f"{env_var_name}",

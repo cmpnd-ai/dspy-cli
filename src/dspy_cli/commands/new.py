@@ -14,7 +14,6 @@ from dspy_cli.utils.interactive import (
     prompt_signature,
     prompt_model,
     prompt_api_key,
-    prompt_api_base,
 )
 from dspy_cli.utils.model_utils import (
     parse_model_string,

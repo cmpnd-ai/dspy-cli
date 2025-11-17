@@ -1,7 +1,6 @@
 """Utilities for working with LLM model providers."""
 
 import os
-import re
 
 
 def parse_model_string(model_str: str) -> dict:
