@@ -17,7 +17,6 @@ def main():
         try:
             os.chdir(tmpdir)
             result = runner.invoke(cli_main, ['new', 'test-project', '--module-type', 'Predict', '--model', 'anthropic/claude-sonnet-4-5', '--api-key', 'test-api-key', '--signature', 'question -> answer', '--program-name', 'test-program'], catch_exceptions=False)
-            print(result.output)
             if result.exit_code != 0:
                 print(f"❌ Smoke test failed: Command exited with code {result.exit_code}", file=sys.stderr)
                 print(result.output, file=sys.stderr)
