@@ -1,5 +1,8 @@
 # dspy-cli
 
+[![Documentation](https://img.shields.io/badge/docs-cmpnd--ai.github.io-blue)](https://cmpnd-ai.github.io/dspy-cli-tool/)
+[![PyPI](https://img.shields.io/pypi/v/dspy-cli)](https://pypi.org/project/dspy-cli/)
+
 CLI for deploying DSPy programs as HTTP APIs. Auto-generates endpoints, OpenAPI specs, and Docker configs.
 
 Reduces deployment setup from hours to minutes for developers embedding LLM features in applications.
@@ -54,9 +57,10 @@ See [Command Reference](docs/commands/) for complete documentation.
 
 ## Documentation
 
+See the full docs at: [https://cmpnd-ai.github.io/dspy-cli-tool/](https://cmpnd-ai.github.io/dspy-cli-tool/)
+
 - [Getting Started](docs/getting-started.md) - Quickstart guide
 - [Commands](docs/commands/) - CLI reference
-- [Deployment](docs/deployment.md) - Production deployment
 - [Configuration](docs/configuration.md) - Model and environment settings
 - [Examples](examples/) - Sample projects
 
