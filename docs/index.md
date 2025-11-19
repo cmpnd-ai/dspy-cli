@@ -48,8 +48,8 @@ Access your API at `http://localhost:8000/{ModuleName}` and the testing UI at `h
 import dspy
 
 class Rewrite(dspy.Signature):
-    text: str
-    revised: str
+    text: str = dspy.InputField()
+    cleaned: str = dspy.OutputField()
 
 class Rewriter(dspy.Module):
     def __init__(self):
@@ -60,7 +60,7 @@ class Rewriter(dspy.Module):
         return self.predict(text=text)
 ```
 
-**Becomes:** `POST /Rewriter` with body `{"text": "..."}` → response `{"revised": "..."}`
+**Becomes:** `POST /Rewriter` with body `{"text": "..."}` → response `{"cleaned": "..."}`
 
 **Try it:**
 
