@@ -189,3 +189,52 @@ def test_generate_outside_project(runner, tmp_cwd):
     res = runner.invoke(main, ["g", "scaffold", "test"], catch_exceptions=False)
     assert res.exit_code != 0
     assert "Not in a valid DSPy project" in res.output
+
+
+def test_new_with_reasoning_model(runner, tmp_cwd):
+    """Test 'new' command with OpenAI reasoning models sets max_tokens=16000."""
+    test_cases = [
+        ("openai/o1-preview", 16000),
+        ("openai/o1-mini", 16000),
+        ("openai/o3-mini", 16000),
+        ("openai/gpt-5", 16000),
+        ("openai/gpt-5-mini", 16000),
+        ("openai/gpt-5.1", 16000),
+    ]
+
+    for model, expected_max_tokens in test_cases:
+        project_name = f"test-{model.replace('/', '-').replace('.', '-')}"
+        res = runner.invoke(
+            main,
+            with_new_defaults(["new", project_name, "--model", model]),
+            catch_exceptions=False
+        )
+        assert res.exit_code == 0
+
+        proj = tmp_cwd / project_name
+        config_content = (proj / "dspy.config.yaml").read_text()
+        assert f"max_tokens: {expected_max_tokens}" in config_content, \
+            f"Expected max_tokens: {expected_max_tokens} for model {model}"
+
+
+def test_new_with_standard_model_uses_new_default(runner, tmp_cwd):
+    """Test 'new' command with standard models uses increased default max_tokens=8192."""
+    test_cases = [
+        "openai/gpt-4o",
+        "openai/gpt-4o-mini",
+        "anthropic/claude-sonnet-4-5",
+    ]
+
+    for model in test_cases:
+        project_name = f"test-{model.replace('/', '-')}"
+        res = runner.invoke(
+            main,
+            with_new_defaults(["new", project_name, "--model", model]),
+            catch_exceptions=False
+        )
+        assert res.exit_code == 0
+
+        proj = tmp_cwd / project_name
+        config_content = (proj / "dspy.config.yaml").read_text()
+        assert "max_tokens: 8192" in config_content, \
+            f"Expected max_tokens: 8192 for standard model {model}"

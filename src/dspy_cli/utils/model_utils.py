@@ -48,6 +48,51 @@ def is_local_model(provider: str) -> bool:
     return provider.lower() in local_providers
 
 
+def is_reasoning_model(provider: str, model: str) -> bool:
+    """Check if a model is an OpenAI reasoning model that requires higher max_tokens.
+
+    OpenAI reasoning models (o1, o3, gpt-5 series) require higher max_tokens limits
+    to accommodate their extended reasoning processes.
+
+    Args:
+        provider: Provider name (e.g., "openai")
+        model: Model name (e.g., "o1-preview", "gpt-5-mini", "gpt-5.1")
+
+    Returns:
+        True if model is a reasoning model that requires max_tokens=16000
+
+    Examples:
+        >>> is_reasoning_model("openai", "o1-preview")
+        True
+
+        >>> is_reasoning_model("openai", "gpt-5-mini")
+        True
+
+        >>> is_reasoning_model("openai", "gpt-4o")
+        False
+    """
+    if provider.lower() != 'openai':
+        return False
+
+    # Check for o1-* and o3-* series
+    if model.startswith('o1-') or model.startswith('o3-'):
+        return True
+
+    # Check for gpt-5 (exact match)
+    if model == 'gpt-5':
+        return True
+
+    # Check for gpt-5-* series (e.g., gpt-5-mini)
+    if model.startswith('gpt-5-'):
+        return True
+
+    # Check for gpt-5.x versions (e.g., gpt-5.1, gpt-5.2)
+    if model.startswith('gpt-5.'):
+        return True
+
+    return False
+
+
 def detect_api_key(provider: str) -> tuple[str | None, str]:
     """Detect API key environment variable for a given provider.
 
@@ -111,12 +156,20 @@ def generate_model_config(model_str: str, api_key: str | None, api_base: str | N
     """
     parsed = parse_model_string(model_str)
     provider = parsed['provider']
+    model = parsed['model']
     _, env_var_name = detect_api_key(provider)
+
+    # Determine max_tokens based on model type
+    # OpenAI reasoning models (o1/o3/gpt-5) need higher limits for extended reasoning
+    if is_reasoning_model(provider, model):
+        max_tokens = 16000
+    else:
+        max_tokens = 8192  # Increased default from 4096
 
     config = {
         'model': model_str,
         'model_type': 'chat',
-        'max_tokens': 4096,
+        'max_tokens': max_tokens,
         'temperature': 1.0,
     }
 
