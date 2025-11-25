@@ -69,6 +69,7 @@ description: A set of functions for a content management system.
 ```
 
 Fallback defaults if not specified:
+
 - **title**: "DSPy API"
 - **description**: "Automatically generated API for DSPy programs"
 - **version**: "0.1.0"
@@ -96,6 +97,7 @@ spec = generate_openapi_spec(app)
 ### Interactive Documentation
 
 FastAPI provides:
+
 - **Swagger UI**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
 
@@ -132,16 +134,19 @@ Options:
 ## Troubleshooting
 
 **Spec not generated:**
+
 1. Verify `--no-save-openapi` wasn't used
 2. Check write permissions
 3. Check server logs
 
 **Missing program schemas:**
+
 1. Ensure modules subclass `dspy.Module`
 2. Verify `forward()` has type annotations
 3. Check modules are in `src/<package>/modules/`
 
 **Incorrect metadata:**
+
 1. Check `app_id` in `dspy.config.yaml`
 2. Verify `description` field
 3. Ensure config file is in project root

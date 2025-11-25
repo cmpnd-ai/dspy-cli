@@ -76,12 +76,14 @@ dspy-cli g scaffold agent -m ReAct -s "task, tools: list[str] -> action, result"
 ## Output Structure
 
 Creates two files:
+
 - `signatures/{name}.py` - Input/output schema
 - `modules/{name}_{type}.py` - Module implementation (e.g., analyzer_predict.py, reasoner_cot.py)
 
 ## Endpoint Naming
 
 Endpoints are derived from the generated module class name. For example:
+
 - **Predict**: `analyzer` → `AnalyzerPredict` → `POST /AnalyzerPredict`
 - **CoT**: `reasoner -m CoT` → `ReasonerCoT` → `POST /ReasonerCoT`
 - **ReAct**: `agent -m ReAct` → `AgentReAct` → `POST /AgentReAct`

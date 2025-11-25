@@ -6,8 +6,8 @@ Thank you for your interest in contributing to dspy-cli! This guide will help yo
 
 ```bash
 # Clone the repository
-git clone https://github.com/cmpnd-ai/optimization-platform
-cd optimization-platform/dspy-cli
+git clone https://github.com/cmpnd-ai/cli-tool
+cd cli-tool/dspy-cli
 
 # Install with uv (recommended)
 uv sync --extra dev
@@ -105,137 +105,6 @@ from dspy_cli.errors import DSPyError
 - Use `Path` from `pathlib`, not strings
 - Example: `Path.cwd() / "dspy.config.yaml"` not `"dspy.config.yaml"`
 
-### Error Handling
-
-- Use custom exceptions from `dspy_cli/errors.py`
-- Available: `DSPyError`, `DSPyCommandError`, `ValidationError`, etc.
-
-### Type Hints
-
-All functions must have type hints:
-
-```python
-from typing import Optional
-from pathlib import Path
-
-def load_config(path: Optional[Path] = None) -> dict[str, Any]:
-    """Load configuration from YAML file."""
-    ...
-```
-
-## Project Structure
-
-```
-dspy-cli/
-├── src/
-│   └── dspy_cli/
-│       ├── cli.py              # Main CLI entry point
-│       ├── commands/           # CLI commands
-│       │   ├── new.py
-│       │   ├── serve.py
-│       │   └── generate.py
-│       ├── server/             # FastAPI server
-│       ├── discovery/          # Module discovery
-│       ├── utils/              # Utilities
-│       ├── templates/          # Project templates
-│       └── errors.py           # Custom exceptions
-├── tests/                      # Test files
-├── docs/                       # Documentation
-├── pyproject.toml             # Package configuration
-└── README.md
-```
-
-## Making Changes
-
-### 1. Create a Branch
-
-```bash
-git checkout -b feature/my-feature
-# or
-git checkout -b fix/my-bugfix
-```
-
-### 2. Make Your Changes
-
-- Write tests for new features
-- Update documentation if needed
-- Follow code style conventions
-- Add type hints
-
-### 3. Run Tests
-
-```bash
-pytest
-```
-
-### 4. Commit Your Changes
-
-```bash
-git add .
-git commit -m "feat: add new feature"
-```
-
-Use conventional commits:
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `docs:` - Documentation changes
-- `test:` - Test changes
-- `refactor:` - Code refactoring
-- `chore:` - Maintenance tasks
-
-## Releasing
-
-For information on how to release new versions to PyPI, see [Releasing](releasing.md).
-
-### 5. Push and Create PR
-
-```bash
-git push origin feature/my-feature
-```
-
-Then create a Pull Request on GitHub.
-
-## Adding New Commands
-
-To add a new command:
-
-1. **Create command file** in `src/dspy_cli/commands/`:
-
-```python
-# src/dspy_cli/commands/my_command.py
-import click
-
-@click.command()
-@click.argument('name')
-@click.option('--flag', is_flag=True)
-def my_command(name, flag):
-    """Description of my command."""
-    click.echo(f"Hello {name}")
-```
-
-2. **Register in CLI** (`src/dspy_cli/cli.py`):
-
-```python
-from dspy_cli.commands.my_command import my_command
-
-main.add_command(my_command)
-```
-
-3. **Add tests** (`tests/test_my_command.py`):
-
-```python
-from click.testing import CliRunner
-from dspy_cli.commands.my_command import my_command
-
-def test_my_command():
-    runner = CliRunner()
-    result = runner.invoke(my_command, ['World'])
-    assert result.exit_code == 0
-    assert 'Hello World' in result.output
-```
-
-4. **Update documentation** (`docs/cli-reference.md`)
-
 ## Testing Locally
 
 ### Test with Sample App
@@ -316,11 +185,15 @@ Visit http://localhost:8000 to preview.
 - `docs/contributing.md` - This file
 - `mkdocs.yml` - MkDocs configuration
 
+## Releasing
+
+For information on how to release new versions to PyPI, see [Releasing](releasing.md).
+
 ## Reporting Issues
 
 Found a bug or have a feature request?
 
-1. **Check existing issues**: [GitHub Issues](https://github.com/cmpnd-ai/optimization-platform/issues)
+1. **Check existing issues**: [GitHub Issues](https://github.com/cmpnd-ai/cli-tool/issues)
 2. **Create new issue** with:
    - Clear description
    - Steps to reproduce (for bugs)
@@ -329,8 +202,8 @@ Found a bug or have a feature request?
 
 ## Getting Help
 
-- **Issues**: [GitHub Issues](https://github.com/cmpnd-ai/optimization-platform/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/cmpnd-ai/optimization-platform/discussions)
+- **Issues**: [GitHub Issues](https://github.com/cmpnd-ai/cli-tool/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/cmpnd-ai/cli-tool/discussions)
 
 ## Code of Conduct
 
