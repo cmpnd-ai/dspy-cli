@@ -35,6 +35,7 @@ flyctl deploy
 App available at `https://your-app.fly.dev`
 
 Verify:
+
 ```bash
 curl -X POST "https://your-app.fly.dev/SummarizerPredict" \
   -d '{"blog_post": "Test"}' -H "Content-Type: application/json"
@@ -54,12 +55,14 @@ docker run -p 8000:8000 -e OPENAI_API_KEY=sk-... my-app:latest
 ### Push to Registry
 
 **Docker Hub:**
+
 ```bash
 docker tag my-app:latest username/my-app:latest
 docker push username/my-app:latest
 ```
 
 **AWS ECR:**
+
 ```bash
 aws ecr get-login-password --region us-west-2 | \
   docker login --username AWS --password-stdin <account>.dkr.ecr.us-west-2.amazonaws.com
@@ -68,6 +71,7 @@ docker push <account>.dkr.ecr.us-west-2.amazonaws.com/my-app:latest
 ```
 
 **Google Artifact Registry:**
+
 ```bash
 gcloud auth configure-docker us-central1-docker.pkg.dev
 docker tag my-app:latest us-central1-docker.pkg.dev/<project>/dspy/my-app:latest
@@ -79,6 +83,7 @@ docker push us-central1-docker.pkg.dev/<project>/dspy/my-app:latest
 **Render:** Connect GitHub repository, create Web Service, Render auto-detects Dockerfile, configure environment variables, deploy.
 
 **Google Cloud Run:**
+
 ```bash
 gcloud run deploy my-app \
   --source . \
@@ -138,12 +143,14 @@ curl https://my-app.fly.dev/openapi.json
 ## Logs
 
 **Fly.io:**
+
 ```bash
 flyctl logs                # Stream logs
 flyctl logs --recent       # Recent logs
 ```
 
 **Google Cloud Run:**
+
 ```bash
 gcloud logging read "resource.type=cloud_run_revision"
 gcloud logging tail "resource.type=cloud_run_revision"
@@ -154,6 +161,7 @@ gcloud logging tail "resource.type=cloud_run_revision"
 **AWS App Runner:** CloudWatch Logs console
 
 Structured JSON log format:
+
 ```json
 {
   "timestamp": "2024-01-15T10:30:45.123Z",
@@ -173,6 +181,7 @@ Structured JSON log format:
 **Error: `uv: command not found`**
 
 Update Dockerfile:
+
 ```dockerfile
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 ```
@@ -192,6 +201,7 @@ Update Docker to 20.10+.
 **Error: `OPENAI_API_KEY not set`**
 
 Configure environment variable:
+
 ```bash
 flyctl secrets set OPENAI_API_KEY=sk-proj-...           # Fly.io
 gcloud run services update my-app --set-env-vars OPENAI_API_KEY=sk-...  # Cloud Run
@@ -236,7 +246,7 @@ flyctl scale count 3
 
 - [Configuration](configuration.md) - Model configuration and advanced settings
 - [OpenAPI Generation](OPENAPI.md) - OpenAPI spec and MCP integration
-- [Getting Started](getting-started.md#continuous-optimization) - Production data optimization
+- [Getting Started](getting-started.md) - Production data optimization
 - [Use Cases: AI Features](use-cases/ai-features.md) - Integration patterns
 
 ## Platform Documentation

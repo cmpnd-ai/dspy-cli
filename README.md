@@ -1,6 +1,6 @@
 # dspy-cli
 
-[![Documentation](https://img.shields.io/badge/docs-cmpnd--ai.github.io-blue)](https://cmpnd-ai.github.io/dspy-cli-tool/)
+[![Documentation](https://img.shields.io/badge/docs-cmpnd--ai.github.io-blue)](https://cmpnd-ai.github.io/dspy-cli/)
 [![PyPI](https://img.shields.io/pypi/v/dspy-cli)](https://pypi.org/project/dspy-cli/)
 
 `dspy-cli` is a tool for creating, developing, testing, and deploying [DSPy](https://dspy.ai) programs as HTTP APIs. `dspy-cli` auto-generates endpoints, OpenAPI specs, and Docker configs.
@@ -203,7 +203,7 @@ We've built out a lot of quality of life features in `dspy-cli`, including:
 - **MCP tool support:** Pass in `--mcp` while calling `serve` to stand up an MCP server for your program.
 - **Docker configuration:** Running `new` creates a Dockerfile, which can be used to quickly stand up your program in Docker.
 
-Check out [the full docs](https://cmpnd-ai.github.io/dspy-cli-tool/) to learn more.
+Check out [the full docs](https://cmpnd-ai.github.io/dspy-cli/) to learn more.
 
 ### License
 

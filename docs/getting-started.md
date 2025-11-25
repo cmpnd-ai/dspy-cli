@@ -42,7 +42,7 @@ You'll be prompted for:
 
 **Expected output:**
 
-```
+```text
 What is your project name? [my-project]: email-subject
 Would you like to specify your first program? [Y/n]: Y
 What is the name of your first DSPy program? [my_program]: email_subject
@@ -99,6 +99,6 @@ See [Deployment Guide](deployment.md) for Fly.io, Docker, AWS, GCP, and more.
 - **[Deployment Guide](deployment.md)** - Production deployment, scaling, monitoring, troubleshooting
 - **[Configuration Reference](configuration.md)** - Model providers, advanced settings, optimization
 - **[Command Reference](commands/index.md)** - Complete CLI documentation (`new`, `generate`, `serve`)
-- **[Examples](../examples/)** - Working applications (blog-tools, code-review-agent, multi-module patterns)
+- **[Examples](https://github.com/cmpnd-ai/dspy-cli/tree/main/examples)** - Working applications (blog-tools, code-review-agent, multi-module patterns)
 - **[Project Structure](commands/new.md)** - Understand generated files and conventions
 - **[Module Types](commands/generate.md)** - Predict, ChainOfThought, ReAct, ProgramOfThought

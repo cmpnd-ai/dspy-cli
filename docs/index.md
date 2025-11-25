@@ -72,7 +72,7 @@ curl -X POST http://localhost:8000/Rewriter \
 
 ## Deploy
 
-Your project includes a production-ready Docker container. Deploy to [Fly.io](deployment.md#flyio), [Render](deployment.md#render), [AWS](deployment.md#aws), or any Docker platform. See the [Deployment Guide](deployment.md).
+Your project includes a production-ready Docker container. Deploy to [Fly.io](deployment.md#deployment-to-flyio), [Render](deployment.md#deploy-to-platform), [AWS](deployment.md#docker-deployment), or any Docker platform. See the [Deployment Guide](deployment.md).
 
 ## Architecture
 
@@ -99,23 +99,23 @@ my-feature/
 **Create** — Get up and running with your first DSPy module
 
 - [Getting Started](getting-started.md)
-- [Examples](../examples/)
+- [Examples](https://github.com/cmpnd-ai/dspy-cli/tree/main/examples)
 
 **Configure** — Environment variables and model settings
 
 - [Configuration](configuration.md)
-- [Environment variables](configuration.md#environment-variables)
-- [Model registry](configuration.md#model-registry)
+- [Environment variables](deployment.md#environment-variables)
+- [Model registry](configuration.md#registry-entry)
 
 **Deploy** — Ship to production
 
 - [Deployment Guide](deployment.md)
-- [Production checklist](deployment.md#production-checklist)
+- [Production checklist](deployment.md)
 
 **Operate** — Test and iterate
 
-- [Testing UI & OpenAPI docs](getting-started.md#testing-ui)
-- [Commands Reference](commands/)
+- [Testing UI & OpenAPI docs](getting-started.md#3-run-locally)
+- [Commands Reference](commands/index.md)
 
 ## What You Get
 
@@ -128,4 +128,4 @@ my-feature/
 
 ---
 
-Run `dspy-cli --help` for all commands. View more [examples](../examples/) on GitHub.
+Run `dspy-cli --help` for all commands. View more [examples](https://github.com/cmpnd-ai/dspy-cli/tree/main/examples) on GitHub.
