@@ -3,21 +3,30 @@
 [![Documentation](https://img.shields.io/badge/docs-cmpnd--ai.github.io-blue)](https://cmpnd-ai.github.io/dspy-cli-tool/)
 [![PyPI](https://img.shields.io/pypi/v/dspy-cli)](https://pypi.org/project/dspy-cli/)
 
-`dspy-cli` is a tool for creating, developing, testing, and deploying DSPy programs as HTTP APIs. `dspy-cli` Auto-generates endpoints, OpenAPI specs, and Docker configs.
+`dspy-cli` is a tool for creating, developing, testing, and deploying [DSPy](https://dspy.ai) programs as HTTP APIs. `dspy-cli` auto-generates endpoints, OpenAPI specs, and Docker configs.
+
+With `dspy-cli`, you get:
+
+- A standard project layout for DSPy programs.
+- A [FastAPI](https://fastapi.tiangolo.com) server with auto-generated endpoints.
+- [OpenAPI](https://www.openapis.org) specs and an optional [MCP server](https://modelcontextprotocol.io/docs/getting-started/intro).
+- [Dockerfile](https://docs.docker.com/reference/dockerfile/) and logging out of the box.
 
 ## Quick Start
 
 ### Installing & Creating a New Project
 
-To install `dspy-cli`, we recommend using `uv`.
+To install `dspy-cli`, we recommend using [`uv`](https://github.com/astral-sh/uv).
 
 ```bash
 uv tool install dspy-cli
 ```
 
+> You can also use `pip install dspy-cli`, but the example below assumes `uv`.
+
 Running `dspy-cli new` creates a new *project*, which can have many *programs*, each of which performs a specific task.
 
-To illustrate, let's build a project that manages AI-powered functions we might want to call from a [content management system](https://en.wikipedia.org/wiki/Content_management_system) we use to draft, publish, and manage blog posts. We'll call it, "cms-kit".
+To illustrate, let's build a project that manages AI-powered functions we might want to call from a [content management system](https://en.wikipedia.org/wiki/Content_management_system) we use to draft, publish, and manage blog posts. We'll call it "cms-kit".
 
 ```bash
 dspy-cli new cms-kit
@@ -25,7 +34,7 @@ dspy-cli new cms-kit
 
 This command launches an interactive menu that walks you through setting up your first program and connecting to an inference provider. 
 
-Here's our answers:
+Here are our answers:
 
 ```bash
 Would you like to specify your first program? [Y/n]: Y
@@ -50,7 +59,7 @@ Enter your signature or type '?' for guided input:
 Signature [question:str -> answer:str]: blog_post -> summary
 ```
 
-Here we're using a basic `Predict` [module](https://dspy.ai/learn/programming/modules/) and specifying our [signature](https://dspy.ai/learn/programming/signatures/) as, `blog_post -> summary`. 
+Here we're using a basic `Predict` [module](https://dspy.ai/learn/programming/modules/) and specifying our [signature](https://dspy.ai/learn/programming/signatures/) as "blog_post -> summary". 
 
 Lastly, we'll connect to the model we want to use:
 
@@ -75,7 +84,11 @@ source .venv/bin/activate
 dspy-cli serve
 ```
 
-`dspy-cli` will detect the module we've defined, define an endpoint for it, then stand up an HTTP server to call, at `http://localhost:8000` (by default). Visiting that url will let you submit a form to call your program. Or, you can call the API endpoint directly, like so:
+`dspy-cli` will detect the module we've defined, define an endpoint for it, then stand up an HTTP server to call, at `http://localhost:8000` (by default). Visiting that URL will let you submit a form to call your program:
+
+![The summarizer program web UI](docs/assets/images/initial_ui.png)
+
+Or, you can call the API endpoint directly, like so:
 
 ```bash
 curl -X POST http://0.0.0.0:8000/SummarizerPredict \
@@ -85,11 +98,13 @@ curl -X POST http://0.0.0.0:8000/SummarizerPredict \
 }'
 ```
 
+Here, `/SummarizerPredict` is the auto-generated route name corresponding to the DSPy module created for our `summarizer` program.
+
 ### Creating Another Program
 
-In addition to summarizing blogposts, we can imagine several other LLM-powered functions we could perform in our CMS: tagging, image description writing, drafting social media posts, etc. 
+In addition to summarizing blog posts, we can imagine several other LLM-powered functions we could perform in our CMS: tagging, image description writing, drafting social media posts, etc. 
 
-To add a new program to `cms_kit`, we can run the `generate scaffold` command:
+To add a new program to `cms-kit`, we can run the `generate scaffold` command:
 
 ```bash
 dspy-cli generate scaffold tagger -s "blog_post -> tags:list[str]"
@@ -134,27 +149,37 @@ models:
       env: OPENAI_API_KEY
 ```
 
-In the `registry` list we define models, using the LiteLLM convention, like: "openai/gpt-5-mini". Here's what [Sonnet 4.5](https://www.anthropic.com/claude/sonnet) looks like: 
+In the `registry` list we define models, using the LiteLLM convention, like: "openai/gpt-5-mini". 
 
-```yaml
-anthropic:sonnet-4.5:
-  model: anthropic/claude-sonnet-4-5
-  env: ANTHROPIC_API_KEY
-  max_tokens: 8192
-  temperature: 0.7
-  model_type: chat
-```
+To add more models, extend the `registry`:
 
-Or Qwen3-4b hosted locally with [LM Studio](https://lmstudio.ai):
+```bash
+models:
+  default: openai:gpt-5-mini
 
-```yaml
-qwen:qwen-3-4b:
-  model: openai/qwen/qwen3-4b
-  api_base: http://127.0.0.1:1234/v1
-  api_key: placeholder
-  max_tokens: 4096
-  temperature: 1.0
-  model_type: chat
+  registry:
+    openai:gpt-5-mini:
+      model: openai/gpt-5-mini
+      model_type: chat
+      max_tokens: 16000
+      temperature: 1.0
+      env: OPENAI_API_KEY
+
+    anthropic:sonnet-4.5:
+      model: anthropic/claude-sonnet-4-5
+      env: ANTHROPIC_API_KEY
+      max_tokens: 8192
+      temperature: 0.7
+      model_type: chat
+
+    # A local model hosted with LM Studio
+    qwen:qwen-3-4b:
+      model: openai/qwen/qwen3-4b
+      api_base: http://127.0.0.1:1234/v1
+      api_key: placeholder
+      max_tokens: 4096
+      temperature: 1.0
+      model_type: chat
 ```
 
 The `default` key in the `models` list specifies the default model your programs will call. If you'd like, you can assign different programs to different models, like so:
@@ -164,6 +189,8 @@ program_models:
    TaggerPredict: qwen:qwen-3-4b
    SummarizerPredict: anthropic:sonnet-4.5
 ```
+
+The `env` variable for each model refers to an API key defined in an `.env` file located at the root of your project directory.
 
 ### Learning More
 
