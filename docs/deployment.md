@@ -42,7 +42,7 @@ curl -X POST "https://your-app.fly.dev/SummarizerPredict" \
 
 ## Docker Deployment
 
-Compatible with Render, Railway, Google Cloud Run, AWS App Runner, DigitalOcean, Azure Container Instances.
+Compatible with any platform that can serve arbitrary dockerfiles.
 
 ### Build and Test
 
@@ -78,12 +78,6 @@ docker push us-central1-docker.pkg.dev/<project>/dspy/my-app:latest
 
 **Render:** Connect GitHub repository, create Web Service, Render auto-detects Dockerfile, configure environment variables, deploy.
 
-**Railway:**
-```bash
-railway up
-railway variables set OPENAI_API_KEY=sk-proj-...
-```
-
 **Google Cloud Run:**
 ```bash
 gcloud run deploy my-app \
@@ -92,10 +86,6 @@ gcloud run deploy my-app \
   --allow-unauthenticated \
   --set-env-vars OPENAI_API_KEY=sk-proj-...
 ```
-
-**AWS App Runner:** Push image to ECR, create App Runner service, configure ECR image source, set environment variables.
-
-**DigitalOcean:** Connect GitHub repository, App Platform detects Dockerfile, configure environment variables.
 
 ## Environment Variables
 
@@ -118,21 +108,20 @@ Configure via platform secret managers:
 | Platform | Command |
 |----------|---------|
 | **Fly.io** | `flyctl secrets set KEY=value` |
-| **Render** | Dashboard → Environment tab |
-| **Railway** | `railway variables set KEY=value` |
 | **Google Cloud Run** | `--set-env-vars KEY=value` or Secret Manager |
 | **AWS** | Systems Manager Parameter Store / Secrets Manager |
-| **DigitalOcean** | App Platform → Settings |
 
 ### Secrets Best Practices
 
 **Required:**
+
 - Store secrets in platform secret managers
 - Use `.env` for local development only
 - Rotate API keys regularly
 - Use separate keys per environment
 
 **Prohibited:**
+
 - Committing `.env` to Git
 - Hardcoding keys in source code
 - Sharing production keys
@@ -146,43 +135,12 @@ Verify service availability:
 curl https://my-app.fly.dev/openapi.json
 ```
 
-### Platform Configuration
-
-**Fly.io (fly.toml):**
-```toml
-[http_service]
-  internal_port = 8000
-  force_https = true
-  
-  [[http_service.checks]]
-    grace_period = "10s"
-    interval = "30s"
-    timeout = "5s"
-    method = "GET"
-    path = "/openapi.json"
-```
-
-**Google Cloud Run:**
-```bash
-gcloud run deploy my-app \
-  --timeout=300 \
-  --max-instances=10 \
-  --cpu=1 \
-  --memory=512Mi
-```
-
 ## Logs
 
 **Fly.io:**
 ```bash
 flyctl logs                # Stream logs
 flyctl logs --recent       # Recent logs
-```
-
-**Railway:**
-```bash
-railway logs               # View logs
-railway logs --follow      # Stream logs
 ```
 
 **Google Cloud Run:**
@@ -223,7 +181,7 @@ Or regenerate: `dspy-cli new --force`
 
 **Error: `No module named 'dspy'`**
 
-Verify `pyproject.toml` includes `dspy>=2.5.0`, rebuild container.
+Verify `pyproject.toml` includes `dspy`, rebuild container.
 
 **Error: `failed to solve with frontend dockerfile.v0`**
 
@@ -236,7 +194,6 @@ Update Docker to 20.10+.
 Configure environment variable:
 ```bash
 flyctl secrets set OPENAI_API_KEY=sk-proj-...           # Fly.io
-railway variables set OPENAI_API_KEY=sk-proj-...        # Railway
 gcloud run services update my-app --set-env-vars OPENAI_API_KEY=sk-...  # Cloud Run
 ```
 
@@ -244,9 +201,12 @@ gcloud run services update my-app --set-env-vars OPENAI_API_KEY=sk-...  # Cloud 
 
 Verify module exists with correct class name in `src/<package>/modules/`.
 
+This can also happen when an external dependency is not added to the `pyproject.toml` file.
+
 **Error: `500 Internal Server Error`**
 
 Check logs for:
+
 - Missing environment variables
 - Model API rate limits
 - Invalid signature definition
@@ -282,8 +242,5 @@ flyctl scale count 3
 ## Platform Documentation
 
 - [Fly.io](https://fly.io/docs/)
-- [Render](https://render.com/docs)
-- [Railway](https://docs.railway.app/)
 - [Google Cloud Run](https://cloud.google.com/run/docs)
 - [AWS App Runner](https://docs.aws.amazon.com/apprunner/)
-- [DigitalOcean](https://docs.digitalocean.com/products/app-platform/)

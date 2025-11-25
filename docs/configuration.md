@@ -34,29 +34,24 @@ program_models:
 
 ## Fields
 
-**`app_id`** (required) - Unique identifier
-
-**`models.default`** (required) - Default model alias
-
-**`models.registry`** (required) - Available models
+| Field | Required | Description |
+|-------|----------|-------------|
+| `app_id` | Yes | Unique identifier |
+| `models.default` | Yes | Default model alias |
+| `models.registry` | Yes | Available models |
+| `program_models` | No | Per-program model overrides |
 
 ### Registry Entry
 
-**`model`** (required) - Provider/model name (e.g., `openai/gpt-5-mini`)
-
-**`env`** (optional) - Environment variable for API key
-
-**`api_key`** (optional) - Direct API key (use `env` for security)
-
-**`api_base`** (optional) - Custom API endpoint
-
-**`max_tokens`** (optional) - Max response tokens
-
-**`temperature`** (optional) - Sampling temperature (0.0-2.0)
-
-**`model_type`** (optional) - `chat` or `responses` (default: `chat`)
-
-**`program_models`** (optional) - Per-program model overrides
+| Field | Required | Description |
+|-------|----------|-------------|
+| `model` | Yes | Provider/model name (e.g., `openai/gpt-5-mini`) |
+| `env` | No | Environment variable for API key |
+| `api_key` | No | Direct API key (use `env` for security) |
+| `api_base` | No | Custom API endpoint |
+| `max_tokens` | No | Max response tokens |
+| `temperature` | No | Sampling temperature (0.0-2.0) |
+| `model_type` | No | `chat` or `responses` (default: `chat`) |
 
 ## API Keys
 

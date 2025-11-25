@@ -30,26 +30,31 @@ AI features differ from chat interfaces in that they provide specific functional
 ## Common Use Cases
 
 **Content Analysis**
+
 - Document summarization that extracts key points and generates structured summaries
 - Technical documentation analysis that explains complex concepts
 - Code review assistance that identifies patterns and suggests improvements
 
 **Classification and Categorization**
+
 - Email categorization based on content, sender, and context
 - Content tagging systems that apply metadata automatically
 - Priority scoring for tasks, tickets, or messages
 
 **Contextual Generation**
+
 - Smart reply generation for email and messaging applications
 - Form completion based on user context and historical data
 - Content recommendations tailored to specific situations
 
 **Data Extraction**
+
 - Invoice processing that extracts vendor, amount, and line items
 - Resume parsing that structures candidate information
 - Document metadata extraction from unstructured sources
 
 **Browser Extensions**
+
 - Page summarizers that condense content with custom focus
 - Context-aware form fillers
 - Research assistants that analyze and annotate content
@@ -67,12 +72,11 @@ See [Examples](../../examples/) for complete integration code.
 
 ## Implementation with dspy-cli
 
-Create and deploy AI features:
+Create and launch AI features:
 
 ```bash
 dspy-cli new document-summarizer -s "document -> summary, key_points"
 dspy-cli serve
-flyctl launch
 ```
 
 See [Getting Started](../getting-started.md) for complete workflow.

@@ -122,9 +122,9 @@ my-feature/
 - **Project scaffolding** — Standardized structure with DSPy signatures, modules, and Docker configs
 - **HTTP interface** — FastAPI endpoints with automatic module discovery and OpenAPI docs
 - **Hot-reload server** — Built-in testing UI with live code updates
-- **Production-ready** — Deploy to any Docker platform
+- **Deployment-ready** — Deploy to any Docker platform
 
-**Defaults:** Local server at `http://localhost:8000`, testing UI at `/`, no auth (add via platform or middleware)
+**Defaults:** Local server at `http://localhost:8000`, testing UI at `/`
 
 ---
 

@@ -87,6 +87,7 @@ We follow [Semantic Versioning](https://semver.org/):
 Tags must follow the format: `v{MAJOR}.{MINOR}.{PATCH}`
 
 Examples:
+
 - `v0.1.0` - Initial alpha release
 - `v0.2.0` - New features added
 - `v0.2.1` - Bug fix
@@ -114,11 +115,13 @@ git push origin :refs/tags/v0.1.9
 ### Failed Publish
 
 If the workflow fails before publishing to PyPI:
+
 - Fix the issue
 - Delete the tag: `git push origin :refs/tags/vX.Y.Z`
 - Re-tag and push again
 
 If the workflow succeeded but the release has issues:
+
 - **Yank** the release on PyPI (Settings → "Yank release")
 - Create a new patch version (e.g., if v0.2.0 failed, release v0.2.1)
 - PyPI uploads are immutable - you cannot delete or replace them
@@ -131,6 +134,7 @@ Error: Invalid or non-existent authentication information
 ```
 
 Double-check the Trusted Publisher configuration on PyPI matches:
+
 - Owner: `caisco`
 - Repository: `optimization-platform`
 - Workflow: `publish.yml`

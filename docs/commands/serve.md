@@ -58,6 +58,7 @@ Every deployment provides:
 | `/openapi.json` | GET | OpenAPI specification |
 
 With `--mcp` enabled:
+
 - `/mcp` provides Model Context Protocol server
 
 ## Logging
@@ -72,7 +73,9 @@ Logs to console by default. Use `--logs-dir` to write per-module JSON logs with 
 dspy-cli serve
 ```
 
-Server starts on `http://localhost:8000`. Call modules:
+Assuming that there exists a module with the name `SummarizerPredict`, and it has a signature of `blog_post, summary_length, tone -> summary`.
+
+The server starts on `http://localhost:8000`. Call `SummarizerPredict`:
 
 ```bash
 curl -X POST http://localhost:8000/SummarizerPredict \
