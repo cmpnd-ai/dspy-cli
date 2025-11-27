@@ -276,6 +276,7 @@ def main(
                 reload=True,
                 reload_dirs=[str(src_dir), str(project_root)],
                 reload_includes=["*.py", "*.yaml"],
+                reload_excludes=["*.pyc", "*.pyo", "*.pyd", "*/.venv/*", "*/.git/*", "*/__pycache__/*", "*/venv/*"],
                 factory=True,
             )
         else:
