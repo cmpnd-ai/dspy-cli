@@ -3,7 +3,7 @@
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -222,7 +222,7 @@ def get_all_metrics(
         metrics_list.sort(key=lambda m: m.total_tokens, reverse=reverse)
     elif sort_by == "last_call":
         metrics_list.sort(
-            key=lambda m: m.last_call_ts or datetime.min,
+            key=lambda m: m.last_call_ts or datetime.min.replace(tzinfo=timezone.utc),
             reverse=reverse,
         )
     else:  # name
