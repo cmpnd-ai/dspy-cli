@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from dspy_cli.config import get_model_config, get_program_model
 from dspy_cli.discovery import discover_modules
 from dspy_cli.server.logging import setup_logging
+from dspy_cli.server.metrics import get_all_metrics, get_program_metrics_cached
 from dspy_cli.server.routes import create_program_routes
 from dspy_cli.utils.openapi import enhance_openapi_metadata, create_openapi_extensions
 
@@ -45,8 +46,9 @@ def create_app(
         version="0.1.0"
     )
 
-    # Store logs directory in app state
+    # Store logs directory and metrics cache in app state
     app.state.logs_dir = logs_dir
+    app.state.metrics_cache = {}
 
     # Discover modules
     logger.info(f"Discovering modules in {package_path}")
@@ -113,6 +115,39 @@ def create_app(
             programs.append(program_info)
 
         return {"programs": programs}
+
+    # Add metrics endpoints
+    @app.get("/api/metrics")
+    async def list_metrics(sort_by: str = "calls", order: str = "desc"):
+        """Get aggregated metrics for all programs.
+
+        Args:
+            sort_by: Sort key (name, calls, latency, cost, tokens, last_call)
+            order: Sort order (asc, desc)
+        """
+        program_names = [m.name for m in modules]
+        metrics_list = get_all_metrics(
+            logs_dir,
+            program_names,
+            app.state.metrics_cache,
+            sort_by=sort_by,
+            order=order,
+        )
+        return {"programs": [m.to_dict() for m in metrics_list]}
+
+    @app.get("/api/metrics/{program_name}")
+    async def program_metrics(program_name: str):
+        """Get detailed metrics for a specific program."""
+        if not any(m.name == program_name for m in modules):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail=f"Program '{program_name}' not found")
+
+        metrics = get_program_metrics_cached(
+            logs_dir,
+            program_name,
+            app.state.metrics_cache,
+        )
+        return {"metrics": metrics.to_dict()}
 
     # Store modules in app state for access by routes
     app.state.modules = modules

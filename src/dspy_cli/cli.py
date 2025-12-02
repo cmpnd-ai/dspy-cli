@@ -8,7 +8,7 @@ from dspy_cli.commands.generate import generate
 
 
 @click.group()
-@click.version_option()
+@click.version_option(package_name="dspy-cli")
 def main():
     """dspy-cli: A CLI tool for creating and serving DSPy projects.
 

@@ -5,7 +5,7 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import dspy
 from fastapi import FastAPI, HTTPException
@@ -15,6 +15,63 @@ from dspy_cli.discovery import DiscoveredModule
 from dspy_cli.server.logging import log_inference
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_lm_metrics(lm: dspy.LM, history_start_idx: int) -> Dict[str, Any]:
+    """Extract metrics from LM history entries created during a program call.
+
+    Args:
+        lm: The language model instance
+        history_start_idx: Index in lm.history where this call's entries start
+
+    Returns:
+        Dictionary with tokens, cost_usd, and lm_calls breakdown
+    """
+    if not hasattr(lm, 'history') or not lm.history:
+        return {"tokens": None, "cost_usd": None, "lm_calls": None}
+
+    new_entries = lm.history[history_start_idx:]
+    if not new_entries:
+        return {"tokens": None, "cost_usd": None, "lm_calls": None}
+
+    total_prompt_tokens = 0
+    total_completion_tokens = 0
+    total_cost = 0.0
+    has_cost = False
+    lm_calls: List[Dict[str, Any]] = []
+
+    for entry in new_entries:
+        usage = entry.get("usage", {})
+        if isinstance(usage, dict):
+            prompt = usage.get("prompt_tokens", 0) or 0
+            completion = usage.get("completion_tokens", 0) or 0
+            total_prompt_tokens += prompt
+            total_completion_tokens += completion
+
+        cost = entry.get("cost")
+        if cost is not None:
+            total_cost += cost
+            has_cost = True
+
+        lm_calls.append({
+            "model": entry.get("model", "unknown"),
+            "timestamp": entry.get("timestamp"),
+            "prompt_tokens": usage.get("prompt_tokens") if isinstance(usage, dict) else None,
+            "completion_tokens": usage.get("completion_tokens") if isinstance(usage, dict) else None,
+            "cost_usd": cost,
+        })
+
+    tokens = {
+        "prompt_tokens": total_prompt_tokens,
+        "completion_tokens": total_completion_tokens,
+        "total_tokens": total_prompt_tokens + total_completion_tokens,
+    }
+
+    return {
+        "tokens": tokens if total_prompt_tokens > 0 or total_completion_tokens > 0 else None,
+        "cost_usd": total_cost if has_cost else None,
+        "lm_calls": lm_calls if lm_calls else None,
+    }
 
 
 def _convert_dspy_types(inputs: Dict[str, Any], module: DiscoveredModule) -> Dict[str, Any]:
@@ -231,6 +288,10 @@ def create_program_routes(
         """Execute the DSPy program with given inputs."""
         start_time = time.time()
 
+        # Create a fresh LM copy for this request to avoid race conditions
+        # with concurrent requests (each copy has its own empty history)
+        request_lm = lm.copy()
+
         try:
             # Convert request to dict if it's a Pydantic model
             if isinstance(request, BaseModel):
@@ -242,9 +303,9 @@ def create_program_routes(
             # Note: This only works if forward types include proper dspy type annotations
             inputs = _convert_dspy_types(inputs, module)
 
-            # Execute the program with the program-specific LM via context
+            # Execute the program with the request-specific LM via context
             logger.info(f"Executing {program_name} with inputs: {inputs}")
-            with dspy.context(lm=lm):
+            with dspy.context(lm=request_lm):
                 if hasattr(instance, 'aforward'):
                     result = await instance.acall(**inputs)
                 else:
@@ -259,34 +320,35 @@ def create_program_routes(
                 output = result
             else:
                 # Simple return value (str, int, list, etc.)
-                # Check if module has forward output fields to determine the key name
                 if module.is_forward_typed and module.forward_output_fields:
-                    # Use the first (and typically only) output field name
                     field_names = list(module.forward_output_fields.keys())
                     if len(field_names) == 1:
                         output = {field_names[0]: result}
                     else:
-                        # Multiple fields expected but got single value - this shouldn't happen
-                        # Fall back to wrapping in "result"
                         output = {"result": result}
                 else:
                     output = {"result": result}
 
-            # Calculate duration
             duration_ms = (time.time() - start_time) * 1000
+
+            # Extract metrics from the request-specific LM's history (starts at 0)
+            metrics = _extract_lm_metrics(request_lm, 0)
 
             # Serialize inputs and outputs for logging (extract images to files)
             serialized_inputs = _serialize_for_logging(inputs, app.state.logs_dir, program_name)
             serialized_outputs = _serialize_for_logging(output, app.state.logs_dir, program_name)
 
-            # Log the inference trace
+            # Log the inference trace with metrics
             log_inference(
                 logs_dir=app.state.logs_dir,
                 program_name=program_name,
                 model=model_name,
                 inputs=serialized_inputs,
                 outputs=serialized_outputs,
-                duration_ms=duration_ms
+                duration_ms=duration_ms,
+                tokens=metrics["tokens"],
+                cost_usd=metrics["cost_usd"],
+                lm_calls=metrics["lm_calls"],
             )
 
             logger.info(f"Program {program_name} completed successfully. Response: {output}")
@@ -295,11 +357,12 @@ def create_program_routes(
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
 
-            # Serialize inputs for logging (if they exist)
+            # Extract metrics even on failure
+            metrics = _extract_lm_metrics(request_lm, 0)
+
             raw_inputs = inputs if 'inputs' in locals() else {}
             serialized_inputs = _serialize_for_logging(raw_inputs, app.state.logs_dir, program_name)
 
-            # Log the failed inference
             log_inference(
                 logs_dir=app.state.logs_dir,
                 program_name=program_name,
@@ -307,7 +370,10 @@ def create_program_routes(
                 inputs=serialized_inputs,
                 outputs={},
                 duration_ms=duration_ms,
-                error=str(e)
+                error=str(e),
+                tokens=metrics["tokens"],
+                cost_usd=metrics["cost_usd"],
+                lm_calls=metrics["lm_calls"],
             )
 
             logger.error(f"Error executing {program_name}: {e}", exc_info=True)

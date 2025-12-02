@@ -864,6 +864,192 @@ footer code {
     background: rgba(0, 0, 0, 0.9);
 }
 
+/* Sort Controls */
+.sort-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 4px;
+}
+
+.sort-controls label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.sort-controls select {
+    padding: 6px 10px;
+    border: 1px solid var(--border-primary);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.sort-controls select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.sort-order-btn {
+    padding: 6px 10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    color: var(--text-primary);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sort-order-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-hover);
+}
+
+/* Program Card Metrics */
+.program-metrics {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-secondary);
+    flex-wrap: wrap;
+}
+
+.program-metrics .metric {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    background: var(--bg-secondary);
+    padding: 3px 8px;
+    border-radius: 3px;
+}
+
+/* Metrics Section (Program Page) */
+.metrics-container {
+    min-height: 100px;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+}
+
+.metric-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px 10px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--text-heading);
+    margin-bottom: 4px;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Collapsible Sections */
+.section-card.collapsible .section-header {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.section-card.collapsible .section-header:hover {
+    color: var(--accent-primary);
+}
+
+.collapse-icon {
+    font-size: 0.8rem;
+    transition: transform 0.2s;
+    width: 12px;
+    display: inline-block;
+}
+
+.section-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.2s ease;
+    max-height: 2000px;
+    opacity: 1;
+}
+
+.section-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.section-header .refresh-btn {
+    margin-left: auto;
+    margin-bottom: 0;
+}
+
+/* LM Breakdown Table */
+.lm-breakdown {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-primary);
+}
+
+.lm-breakdown h3 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+}
+
+.breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.breakdown-table th,
+.breakdown-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-secondary);
+}
+
+.breakdown-table th {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.breakdown-table td {
+    color: var(--text-primary);
+}
+
+.breakdown-table tr:hover td {
+    background: var(--bg-secondary);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .container {

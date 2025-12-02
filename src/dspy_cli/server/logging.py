@@ -2,9 +2,9 @@
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,10 @@ def log_inference(
     inputs: Dict[str, Any],
     outputs: Dict[str, Any],
     duration_ms: float,
-    error: Optional[str] = None
+    error: Optional[str] = None,
+    tokens: Optional[Dict[str, int]] = None,
+    cost_usd: Optional[float] = None,
+    lm_calls: Optional[List[Dict[str, Any]]] = None,
 ):
     """Log a DSPy inference trace to a per-program log file.
 
@@ -31,10 +34,12 @@ def log_inference(
         outputs: Output fields from the program
         duration_ms: Execution duration in milliseconds
         error: Optional error message if inference failed
+        tokens: Optional token counts {"prompt_tokens": int, "completion_tokens": int, "total_tokens": int}
+        cost_usd: Optional total cost in USD for this inference
+        lm_calls: Optional list of LM calls made during inference (for compound programs)
     """
-    # Create log entry with inference trace
     log_entry = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "program": program_name,
         "model": model,
         "duration_ms": round(duration_ms, 2),
@@ -48,7 +53,15 @@ def log_inference(
     else:
         log_entry["success"] = True
 
-    # Write to per-program log file
+    if tokens:
+        log_entry["tokens"] = tokens
+
+    if cost_usd is not None:
+        log_entry["cost_usd"] = round(cost_usd, 8)
+
+    if lm_calls:
+        log_entry["lm_calls"] = lm_calls
+
     log_file = logs_dir / f"{program_name}.log"
 
     try:

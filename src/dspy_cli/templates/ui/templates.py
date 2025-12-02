@@ -18,7 +18,7 @@ def render_index(modules: List[Any], config: Dict) -> str:
     programs_html = ""
 
     if modules:
-        # Sort modules alphabetically by name
+        # Sort modules alphabetically by name (initial render, JS will re-sort based on metrics)
         sorted_modules = sorted(modules, key=lambda m: m.name)
 
         # Hide docstrings when there are multiple modules (2+)
@@ -50,13 +50,19 @@ def render_index(modules: List[Any], config: Dict) -> str:
                 error_html = '<p class="program-error" style="color: #e74c3c;">This module\'s forward function isn\'t typed</p>'
 
             programs_html += f"""
-            <div class="program-card" data-url="/ui/{module.name}">
+            <div class="program-card" data-url="/ui/{module.name}" data-program="{module.name}">
                 <div class="program-header">
                     <h3><a href="/ui/{module.name}">{module.name}</a></h3>
                     <span class="model-badge" data-adapter="{adapter}">{model_alias}</span>
                 </div>
                 {description_html}
                 {error_html}
+                <div class="program-metrics">
+                    <span class="metric metric-calls" title="Total calls">—</span>
+                    <span class="metric metric-latency" title="Average latency">—</span>
+                    <span class="metric metric-cost" title="Total cost">—</span>
+                    <span class="metric metric-last-call" title="Last called">—</span>
+                </div>
             </div>
             """
     else:
@@ -102,7 +108,18 @@ def render_index(modules: List[Any], config: Dict) -> str:
         </header>
 
         <main>
-            <div class="programs-grid">
+            <div class="sort-controls">
+                <label for="sortSelect">Sort by:</label>
+                <select id="sortSelect">
+                    <option value="calls" selected>Calls</option>
+                    <option value="latency">Latency</option>
+                    <option value="cost">Cost</option>
+                    <option value="last_call">Last Called</option>
+                    <option value="name">Name</option>
+                </select>
+                <button id="sortOrderBtn" class="sort-order-btn" title="Toggle sort order">↓</button>
+            </div>
+            <div class="programs-grid" id="programsGrid">
                 {programs_html}
             </div>
         </main>
@@ -130,6 +147,9 @@ def render_index(modules: List[Any], config: Dict) -> str:
                 }}
             }});
         }});
+
+        // Initialize metrics on index page
+        initIndexMetrics();
     </script>
 </body>
 </html>"""
@@ -336,12 +356,35 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
                 </div>
             </section>
 
+            <section class="metrics-section">
+                <div class="section-card collapsible">
+                    <h2 class="section-header" data-section="metrics">
+                        <span class="collapse-icon">▼</span>
+                        Metrics
+                    </h2>
+                    <div id="metricsContent" class="section-content">
+                        <div id="metricsContainer" class="metrics-container">
+                            <p class="loading">Loading metrics...</p>
+                        </div>
+                        <div id="lmBreakdown" class="lm-breakdown" style="display: none;">
+                            <h3>LM Call Breakdown</h3>
+                            <div id="lmBreakdownContent"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section class="logs-section">
-                <div class="section-card">
-                    <h2>Recent Inferences</h2>
-                    <button id="refreshLogs" class="refresh-btn">Refresh Logs</button>
-                    <div id="logs" class="logs-container">
-                        <p class="loading">Loading logs...</p>
+                <div class="section-card collapsible">
+                    <h2 class="section-header" data-section="logs">
+                        <span class="collapse-icon">▼</span>
+                        Recent Inferences
+                        <button id="refreshLogs" class="refresh-btn">Refresh</button>
+                    </h2>
+                    <div id="logsContent" class="section-content">
+                        <div id="logs" class="logs-container">
+                            <p class="loading">Loading logs...</p>
+                        </div>
                     </div>
                 </div>
             </section>
