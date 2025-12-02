@@ -1,3 +1,8 @@
-"""dspy-cli: A CLI tool for creating and serving DSPy projects."""
+"""DSPy CLI - A CLI tool for creating and serving DSPy projects."""
 
-__version__ = "0.1.0"
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("dspy-cli")
+except PackageNotFoundError:
+    __version__ = "0.0.0"

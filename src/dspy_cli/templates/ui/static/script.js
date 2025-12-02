@@ -55,8 +55,12 @@ function updateThemeIcon() {
  * Initialize the program page with event handlers and log loading
  */
 function initProgramPage(programName) {
-    // Load logs on page load
+    // Load logs and metrics on page load
     loadLogs(programName);
+    loadProgramMetrics(programName);
+
+    // Initialize collapsible sections
+    initCollapsibleSections();
 
     // Set up form submission
     const form = document.getElementById('programForm');
@@ -235,8 +239,11 @@ async function submitProgram(programName) {
         // Scroll to result
         resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-        // Reload logs to show the new inference
-        setTimeout(() => loadLogs(programName), 500);
+        // Reload logs and metrics to show the new inference
+        setTimeout(() => {
+            loadLogs(programName);
+            loadProgramMetrics(programName);
+        }, 500);
 
     } catch (error) {
         // Display error with better formatting
@@ -640,4 +647,237 @@ function initCheckboxes() {
             label.textContent = this.checked ? 'True' : 'False';
         });
     });
+}
+
+// ===== METRICS FUNCTIONS =====
+
+let currentSortBy = 'calls';
+let currentOrder = 'desc';
+
+/**
+ * Initialize metrics display and sorting on the index page
+ */
+async function initIndexMetrics() {
+    const sortSelect = document.getElementById('sortSelect');
+    const sortOrderBtn = document.getElementById('sortOrderBtn');
+
+    if (!sortSelect) return; // Not on index page
+
+    // Load initial metrics
+    await loadAndDisplayMetrics();
+
+    // Set up sort select handler
+    sortSelect.addEventListener('change', async () => {
+        currentSortBy = sortSelect.value;
+        await loadAndDisplayMetrics();
+    });
+
+    // Set up sort order toggle
+    sortOrderBtn.addEventListener('click', async () => {
+        currentOrder = currentOrder === 'desc' ? 'asc' : 'desc';
+        sortOrderBtn.textContent = currentOrder === 'desc' ? '↓' : '↑';
+        await loadAndDisplayMetrics();
+    });
+}
+
+/**
+ * Load metrics from API and update the UI
+ */
+async function loadAndDisplayMetrics() {
+    try {
+        const response = await fetch(`/api/metrics?sort_by=${currentSortBy}&order=${currentOrder}`);
+        if (!response.ok) throw new Error('Failed to load metrics');
+
+        const data = await response.json();
+        const metricsMap = {};
+
+        // Build a map of program name to metrics
+        data.programs.forEach(m => {
+            metricsMap[m.program] = m;
+        });
+
+        // Update each program card with metrics
+        document.querySelectorAll('.program-card').forEach(card => {
+            const programName = card.dataset.program;
+            const metrics = metricsMap[programName];
+            if (!metrics) return;
+
+            const callsEl = card.querySelector('.metric-calls');
+            const latencyEl = card.querySelector('.metric-latency');
+            const costEl = card.querySelector('.metric-cost');
+            const lastCallEl = card.querySelector('.metric-last-call');
+
+            if (callsEl) {
+                callsEl.textContent = `${metrics.call_count} calls`;
+            }
+            if (latencyEl) {
+                latencyEl.textContent = metrics.avg_latency_ms != null
+                    ? `${Math.round(metrics.avg_latency_ms)}ms avg`
+                    : '—';
+            }
+            if (costEl) {
+                costEl.textContent = metrics.total_cost_usd != null
+                    ? `$${metrics.total_cost_usd.toFixed(4)}`
+                    : '—';
+            }
+            if (lastCallEl) {
+                lastCallEl.textContent = metrics.last_call_ts
+                    ? formatRelativeTime(metrics.last_call_ts)
+                    : 'never';
+            }
+        });
+
+        // Reorder cards based on API response order
+        reorderCards(data.programs.map(m => m.program));
+
+    } catch (error) {
+        console.error('Error loading metrics:', error);
+    }
+}
+
+/**
+ * Reorder program cards in the DOM to match the sorted order
+ */
+function reorderCards(orderedProgramNames) {
+    const grid = document.getElementById('programsGrid');
+    if (!grid) return;
+
+    const cards = Array.from(grid.querySelectorAll('.program-card'));
+    const cardMap = {};
+    cards.forEach(card => {
+        cardMap[card.dataset.program] = card;
+    });
+
+    // Reorder by appending in the new order
+    orderedProgramNames.forEach(name => {
+        const card = cardMap[name];
+        if (card) {
+            grid.appendChild(card);
+        }
+    });
+}
+
+/**
+ * Format a timestamp as relative time (e.g., "5m ago", "2h ago")
+ */
+function formatRelativeTime(isoString) {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) return 'just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffHour < 24) return `${diffHour}h ago`;
+    if (diffDay < 7) return `${diffDay}d ago`;
+    return date.toLocaleDateString();
+}
+
+/**
+ * Initialize collapsible sections with localStorage persistence
+ */
+function initCollapsibleSections() {
+    document.querySelectorAll('.section-header').forEach(header => {
+        const section = header.dataset.section;
+        const content = header.nextElementSibling;
+        const icon = header.querySelector('.collapse-icon');
+
+        if (!content || !section) return;
+
+        // Restore state from localStorage
+        const isCollapsed = localStorage.getItem(`section-${section}-collapsed`) === 'true';
+        if (isCollapsed) {
+            content.classList.add('collapsed');
+            icon.textContent = '▶';
+        }
+
+        // Add click handler
+        header.addEventListener('click', (e) => {
+            // Don't toggle if clicking the refresh button
+            if (e.target.closest('.refresh-btn')) return;
+
+            const isNowCollapsed = content.classList.toggle('collapsed');
+            icon.textContent = isNowCollapsed ? '▶' : '▼';
+            localStorage.setItem(`section-${section}-collapsed`, isNowCollapsed);
+        });
+    });
+}
+
+/**
+ * Load and display metrics for a specific program page
+ */
+async function loadProgramMetrics(programName) {
+    const container = document.getElementById('metricsContainer');
+    const breakdownSection = document.getElementById('lmBreakdown');
+    const breakdownContent = document.getElementById('lmBreakdownContent');
+
+    if (!container) return;
+
+    try {
+        const response = await fetch(`/api/metrics/${programName}`);
+        if (!response.ok) throw new Error('Failed to load metrics');
+
+        const data = await response.json();
+        const m = data.metrics;
+
+        container.innerHTML = `
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <span class="metric-value">${m.call_count}</span>
+                    <span class="metric-label">Total Calls</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-value">${m.success_count}</span>
+                    <span class="metric-label">Successful</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-value">${m.error_count}</span>
+                    <span class="metric-label">Errors</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-value">${m.avg_latency_ms != null ? Math.round(m.avg_latency_ms) + 'ms' : '—'}</span>
+                    <span class="metric-label">Avg Latency</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-value">${m.p95_latency_ms != null ? Math.round(m.p95_latency_ms) + 'ms' : '—'}</span>
+                    <span class="metric-label">P95 Latency</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-value">${m.total_tokens.toLocaleString()}</span>
+                    <span class="metric-label">Total Tokens</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-value">${m.total_cost_usd != null ? '$' + m.total_cost_usd.toFixed(4) : '—'}</span>
+                    <span class="metric-label">Total Cost</span>
+                </div>
+            </div>
+        `;
+
+        // Show LM breakdown if available
+        if (m.lm_call_breakdown && Object.keys(m.lm_call_breakdown).length > 0) {
+            let breakdownHtml = '<table class="breakdown-table"><thead><tr><th>Model</th><th>Calls</th><th>Prompt Tokens</th><th>Completion Tokens</th><th>Cost</th></tr></thead><tbody>';
+
+            for (const [model, stats] of Object.entries(m.lm_call_breakdown)) {
+                breakdownHtml += `
+                    <tr>
+                        <td>${escapeHtml(model)}</td>
+                        <td>${stats.call_count}</td>
+                        <td>${stats.total_prompt_tokens.toLocaleString()}</td>
+                        <td>${stats.total_completion_tokens.toLocaleString()}</td>
+                        <td>${stats.total_cost_usd > 0 ? '$' + stats.total_cost_usd.toFixed(4) : '—'}</td>
+                    </tr>
+                `;
+            }
+
+            breakdownHtml += '</tbody></table>';
+            breakdownContent.innerHTML = breakdownHtml;
+            breakdownSection.style.display = 'block';
+        }
+
+    } catch (error) {
+        container.innerHTML = `<p class="loading">Error loading metrics: ${error.message}</p>`;
+    }
 }

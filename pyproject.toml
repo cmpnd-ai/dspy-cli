@@ -71,4 +71,5 @@ testpaths = ["tests"]
 dev = [
     "docker>=7.1.0",
     "python-multipart>=0.0.20",
+    "pytest>=7.4.0",
 ]

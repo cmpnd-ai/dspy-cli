@@ -706,6 +706,7 @@ docs = [
 [package.dev-dependencies]
 dev = [
     { name = "docker" },
+    { name = "pytest" },
     { name = "python-multipart" },
 ]
 
@@ -736,6 +737,7 @@ provides-extras = ["dev", "docs"]
 [package.metadata.requires-dev]
 dev = [
     { name = "docker", specifier = ">=7.1.0" },
+    { name = "pytest", specifier = ">=7.4.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
 ]
 
