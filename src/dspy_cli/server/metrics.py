@@ -90,6 +90,11 @@ def compute_program_metrics(logs_dir: Path, program_name: str) -> ProgramMetrics
                 if ts_str:
                     try:
                         ts = datetime.fromisoformat(ts_str)
+                        # Normalize to UTC-aware datetime for consistent comparison
+                        if ts.tzinfo is None:
+                            ts = ts.replace(tzinfo=timezone.utc)
+                        else:
+                            ts = ts.astimezone(timezone.utc)
                         if metrics.last_call_ts is None or ts > metrics.last_call_ts:
                             metrics.last_call_ts = ts
                     except ValueError:
