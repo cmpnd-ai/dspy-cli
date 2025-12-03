@@ -71,6 +71,24 @@ def render_index(modules: List[Any], config: Dict) -> str:
     description = config.get("description", "")
     description_html = f'<p class="project-description">{description}</p>' if description else ''
 
+    # Build auth UI if enabled
+    auth_ui = ""
+    if config.get("auth", {}).get("enabled", False):
+        auth_ui = """
+        <div class="auth-section">
+            <div class="auth-container">
+                <label for="apiKey">API Key:</label>
+                <input type="password" id="apiKey" placeholder="Enter your API key" autocomplete="off">
+                <button id="saveKeyBtn" onclick="saveApiKey()">Save</button>
+                <button id="clearKeyBtn" onclick="clearApiKey()">Clear</button>
+                <span id="authStatus" class="auth-status"></span>
+            </div>
+            <p class="auth-help">
+                Need an API key? Generate one with: <code>dspy-cli auth</code>
+            </p>
+        </div>
+        """
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -96,6 +114,7 @@ def render_index(modules: List[Any], config: Dict) -> str:
         <header>
             <h1>{display_name}</h1>
             {description_html}
+            {auth_ui}
             <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
                 <span id="themeIcon" class="theme-toggle-icon">🌙</span>
             </button>
@@ -278,6 +297,24 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
             </div>
             """
 
+    # Build auth UI if enabled
+    auth_ui = ""
+    if config.get("auth", {}).get("enabled", False):
+        auth_ui = """
+        <div class="auth-section">
+            <div class="auth-container">
+                <label for="apiKey">API Key:</label>
+                <input type="password" id="apiKey" placeholder="Enter your API key" autocomplete="off">
+                <button id="saveKeyBtn" onclick="saveApiKey()">Save</button>
+                <button id="clearKeyBtn" onclick="clearApiKey()">Clear</button>
+                <span id="authStatus" class="auth-status"></span>
+            </div>
+            <p class="auth-help">
+                Need an API key? Generate one with: <code>dspy-cli auth</code>
+            </p>
+        </div>
+        """
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -310,6 +347,7 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
             <h1>{program_name} <span class="model-badge" data-adapter="{adapter}">{model_alias}</span></h1>
             {f'<p class="program-description">{program_docstring}</p>' if program_docstring else ''}
             {f'<p class="field-info">{signature_string}</p>' if signature_string else ''}
+            {auth_ui}
         </header>
 
         <main>

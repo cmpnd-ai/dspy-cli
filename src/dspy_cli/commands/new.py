@@ -245,6 +245,7 @@ def _create_directory_structure(project_path, package_name, program_name):
         project_path / "src" / package_name / "optimizers",
         project_path / "src" / package_name / "metrics",
         project_path / "src" / package_name / "utils",
+        project_path / "src" / package_name / "auth",
         project_path / "data",
         project_path / "logs",
         project_path / "tests",
@@ -348,6 +349,7 @@ def _create_code_files(project_path, package_name, program_name, signature, sign
     (project_path / "src" / package_name / "optimizers" / "__init__.py").write_text("")
     (project_path / "src" / package_name / "metrics" / "__init__.py").write_text("")
     (project_path / "src" / package_name / "utils" / "__init__.py").write_text("")
+    (project_path / "src" / package_name / "auth" / "__init__.py").write_text("")
 
     # Create signature file
     signature_class = to_class_name(program_name) + "Signature"
@@ -428,6 +430,12 @@ def _create_code_files(project_path, package_name, program_name, signature, sign
     click.echo(f"  Created: {package_name}/modules/{module_file}.py")
     click.echo(f"  Created: {package_name}/signatures/{file_name}.py")
     click.echo("  Created: tests/test_modules.py")
+
+    # Create auth middleware from template
+    auth_middleware_template = (templates_dir.parent / "auth_middleware.py.template").read_text()
+    auth_middleware_content = auth_middleware_template.format(package_name=package_name)
+    (project_path / "src" / package_name / "auth" / "middleware.py").write_text(auth_middleware_content)
+    click.echo(f"  Created: {package_name}/auth/middleware.py")
 
 
 def _initialize_git(project_path):

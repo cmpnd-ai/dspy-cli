@@ -1,0 +1,124 @@
+"""Authentication middleware for {package_name}."""
+
+import hashlib
+import hmac
+import os
+from typing import Optional
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
+
+class APIKeyAuthMiddleware(BaseHTTPMiddleware):
+    """Middleware to validate API keys for all requests."""
+
+    def __init__(self, app, config: dict):
+        super().__init__(app)
+        self.enabled = config.get("auth", {{}}).get("enabled", False)
+        self.key_header = config.get("auth", {{}}).get("key_header", "X-API-Key")
+        self.allow_bearer = config.get("auth", {{}}).get("allow_bearer", True)
+
+        # Load hashed keys from environment variable
+        self.hashed_keys = self._load_hashed_keys()
+
+    def _load_hashed_keys(self) -> list:
+        """Load hashed API keys from environment variable.
+
+        Returns:
+            List of hashed keys (without the sha256: prefix)
+        """
+        env_value = os.getenv("DSPY_API_KEY_HASHES", "")
+        if not env_value:
+            return []
+
+        # Split by comma and extract hash part (remove sha256: prefix if present)
+        hashes = []
+        for key_hash in env_value.split(","):
+            key_hash = key_hash.strip()
+            if key_hash.startswith("sha256:"):
+                key_hash = key_hash[7:]  # Remove "sha256:" prefix
+            if key_hash:
+                hashes.append(key_hash)
+
+        return hashes
+
+    async def dispatch(self, request: Request, call_next):
+        """Process the request through authentication middleware."""
+        # Skip if auth is disabled
+        if not self.enabled:
+            return await call_next(request)
+
+        # Extract API key from headers
+        api_key = self._extract_key(request)
+
+        if not api_key:
+            return self._unauthorized_response("Missing API key")
+
+        # Validate key
+        if not self._validate_key(api_key):
+            return self._unauthorized_response("Invalid API key")
+
+        # Key is valid - proceed with request
+        return await call_next(request)
+
+    def _extract_key(self, request: Request) -> Optional[str]:
+        """Extract API key from request headers.
+
+        Args:
+            request: The FastAPI request object
+
+        Returns:
+            The API key if found, None otherwise
+        """
+        # Try X-API-Key header (or custom header)
+        if self.key_header in request.headers:
+            return request.headers[self.key_header]
+
+        # Try Authorization: Bearer header
+        if self.allow_bearer and "Authorization" in request.headers:
+            auth = request.headers["Authorization"]
+            if auth.startswith("Bearer "):
+                return auth[7:]  # Remove "Bearer " prefix
+
+        return None
+
+    def _validate_key(self, api_key: str) -> bool:
+        """Validate API key against stored hashes.
+
+        Uses constant-time comparison to prevent timing attacks.
+
+        Args:
+            api_key: The plaintext API key to validate
+
+        Returns:
+            True if key is valid, False otherwise
+        """
+        if not self.hashed_keys:
+            # No keys configured - reject all requests
+            return False
+
+        # Hash the provided key
+        key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+
+        # Compare against stored hashes using constant-time comparison
+        for stored_hash in self.hashed_keys:
+            if hmac.compare_digest(key_hash, stored_hash):
+                return True
+
+        return False
+
+    def _unauthorized_response(self, detail: str) -> JSONResponse:
+        """Return 401 Unauthorized response.
+
+        Args:
+            detail: Error message detail
+
+        Returns:
+            JSON response with 401 status
+        """
+        return JSONResponse(
+            status_code=401,
+            content={{"detail": detail}},
+            headers={{"WWW-Authenticate": f'{{{{self.key_header}}}}="API Key"'}}
+        )

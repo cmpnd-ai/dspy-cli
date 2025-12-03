@@ -50,6 +50,96 @@ curl -X POST http://localhost:8000/{program_name} \\
   -d '{{"question": "your question here"}}'
 ```
 
+## Authentication
+
+This project supports optional API key authentication to secure your endpoints when deployed publicly.
+
+### Enabling Authentication
+
+1. **Generate an API key:**
+   ```bash
+   dspy-cli auth
+   ```
+
+   This will:
+   - Generate a secure random API key
+   - Automatically add the hash to your `.env` file
+   - Display the plaintext key (save this securely - it's shown only once!)
+
+2. **Enable authentication in `dspy.config.yaml`:**
+   ```yaml
+   auth:
+     enabled: true  # Change from false to true
+   ```
+
+3. **Restart the server:**
+   ```bash
+   dspy-cli serve
+   ```
+
+### Using the Web UI with Authentication
+
+1. Open http://localhost:8000
+2. Enter your API key in the "API Key" field
+3. Click "Save"
+4. The key is stored in your browser's localStorage for convenience
+
+### Making Authenticated API Requests
+
+Include your API key in the `X-API-Key` header:
+
+```bash
+curl -X POST http://localhost:8000/{program_name} \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: ak_YourGeneratedKeyHere" \\
+  -d '{{"question": "your question here"}}'
+```
+
+Or use the `Authorization: Bearer` format:
+
+```bash
+curl -X POST http://localhost:8000/{program_name} \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ak_YourGeneratedKeyHere" \\
+  -d '{{"question": "your question here"}}'
+```
+
+### Docker Deployment with Authentication
+
+The Dockerfile automatically includes your `.env` file, so authentication "just works" in Docker:
+
+1. **Build the image:**
+   ```bash
+   docker build -t {project_name} .
+   ```
+
+2. **Run the container:**
+   ```bash
+   docker run -p 8000:8000 {project_name}
+   ```
+
+That's it! Your API key hashes are baked into the image via the `.env` file.
+
+#### Production: Override at Runtime
+
+For production, you can override the API key hashes without rebuilding:
+
+```bash
+docker run -p 8000:8000 \\
+  -e DSPY_API_KEY_HASHES="sha256:production_key1,sha256:production_key2" \\
+  {project_name}
+```
+
+### Security Best Practices
+
+- ✅ **Use HTTPS in production** - Deploy behind a reverse proxy (nginx, Caddy, Cloudflare)
+- ✅ **Rotate keys regularly** - Generate new keys every 90 days
+- ✅ **Use different keys per environment** - Separate keys for dev/staging/prod
+- ✅ **Store backup keys securely** - Keep a copy in a password manager or vault
+- ✅ **Monitor failed attempts** - Watch for 401 responses in your logs
+- ❌ **Never commit `.env` to git** - It's already git-ignored by default
+- ❌ **Don't share plaintext keys** - Only share hashes, not the actual `ak_` keys
+
 ## Testing
 
 Run tests:

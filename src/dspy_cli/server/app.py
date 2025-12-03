@@ -45,6 +45,27 @@ def create_app(
         version="0.1.0"
     )
 
+    # Load auth middleware if enabled
+    auth_config = config.get("auth", {})
+    if auth_config.get("enabled", False):
+        try:
+            import importlib.util
+
+            # Find auth middleware in the generated project
+            auth_middleware_path = package_path.parent / "auth" / "middleware.py"
+            if auth_middleware_path.exists():
+                spec = importlib.util.spec_from_file_location("auth.middleware", auth_middleware_path)
+                auth_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(auth_module)
+
+                # Add middleware to app
+                app.add_middleware(auth_module.APIKeyAuthMiddleware, config=config)
+                logger.info("Authentication enabled - all routes protected")
+            else:
+                logger.warning("Authentication enabled but middleware not found at: %s", auth_middleware_path)
+        except Exception as e:
+            logger.error("Failed to load auth middleware: %s", e)
+
     # Store logs directory in app state
     app.state.logs_dir = logs_dir
 

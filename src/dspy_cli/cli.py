@@ -5,6 +5,7 @@ import click
 from dspy_cli.commands.new import new
 from dspy_cli.commands.serve import serve
 from dspy_cli.commands.generate import generate
+from dspy_cli.commands.auth import auth
 
 
 @click.group()
@@ -22,6 +23,7 @@ def main():
 main.add_command(new)
 main.add_command(serve)
 main.add_command(generate)
+main.add_command(auth)
 main.add_command(generate, name='g')  # Alias for generate
 main.add_command(serve, name='s')  # Alias for serve
 

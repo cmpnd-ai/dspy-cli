@@ -1,5 +1,89 @@
 // DSPy UI JavaScript
 
+// ===== Authentication Functions =====
+
+/**
+ * Save API key to localStorage
+ */
+function saveApiKey() {
+    const input = document.getElementById('apiKey');
+    const key = input.value.trim();
+
+    if (!key) {
+        alert('Please enter an API key');
+        return;
+    }
+
+    // Store in localStorage
+    localStorage.setItem('dspy_api_key', key);
+
+    // Clear input for security
+    input.value = '';
+
+    // Update status
+    updateAuthStatus(true);
+
+    // Show success message
+    showMessage('API key saved successfully', 'success');
+}
+
+/**
+ * Clear API key from localStorage
+ */
+function clearApiKey() {
+    localStorage.removeItem('dspy_api_key');
+    updateAuthStatus(false);
+    showMessage('API key cleared', 'info');
+}
+
+/**
+ * Update authentication status indicator
+ */
+function updateAuthStatus(authenticated) {
+    const status = document.getElementById('authStatus');
+    if (!status) return;
+
+    if (authenticated) {
+        status.textContent = '✓ Authenticated';
+        status.className = 'auth-status authenticated';
+    } else {
+        status.textContent = '✗ Not authenticated';
+        status.className = 'auth-status not-authenticated';
+    }
+}
+
+/**
+ * Show a temporary message to the user
+ */
+function showMessage(message, type = 'info') {
+    // Create message element
+    const messageEl = document.createElement('div');
+    messageEl.className = `message message-${type}`;
+    messageEl.textContent = message;
+    messageEl.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 24px;
+        background: ${type === 'success' ? '#27ae60' : type === 'error' ? '#e74c3c' : '#3498db'};
+        color: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+    `;
+
+    document.body.appendChild(messageEl);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+        messageEl.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => messageEl.remove(), 300);
+    }, 3000);
+}
+
+// ===== Theme Functions =====
+
 /**
  * Initialize theme on page load
  * Reads theme preference from localStorage or falls back to system preference
@@ -184,15 +268,32 @@ async function submitProgram(programName) {
     }
 
     try {
+        // Get API key from localStorage
+        const apiKey = localStorage.getItem('dspy_api_key');
+
+        // Build headers
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        // Add API key header if available
+        if (apiKey) {
+            headers['X-API-Key'] = apiKey;
+        }
+
         const response = await fetch(`/${programName}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: headers,
             body: JSON.stringify(data)
         });
 
         if (!response.ok) {
+            // Handle 401 specifically
+            if (response.status === 401) {
+                showMessage('Authentication failed. Please check your API key.', 'error');
+                updateAuthStatus(false);
+            }
+
             let errorMessage = 'Request failed';
             try {
                 const errorData = await response.json();
@@ -641,3 +742,9 @@ function initCheckboxes() {
         });
     });
 }
+
+// Initialize auth status on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const apiKey = localStorage.getItem('dspy_api_key');
+    updateAuthStatus(!!apiKey);
+});

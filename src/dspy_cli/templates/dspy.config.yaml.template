@@ -2,6 +2,14 @@
 # Define your language models and their settings here
 
 app_id: {app_id}
+
+# Authentication (optional - disabled by default)
+# Enable this to protect your API with API keys
+auth:
+  enabled: false  # Set to true to enable API key authentication
+  key_header: "X-API-Key"  # Header name for API key
+  allow_bearer: true  # Also accept "Authorization: Bearer <key>" format
+
 models:
   # The default model to use if no per-program override is specified
   default: {default_model_alias}

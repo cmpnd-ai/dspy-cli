@@ -904,3 +904,126 @@ footer code {
         max-width: 100%;
     }
 }
+
+/* ===== Authentication Styles ===== */
+
+.auth-section {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+}
+
+.auth-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.auth-container label {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.auth-container input[type="password"] {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-primary);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.auth-container input[type="password"]:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+}
+
+.auth-container button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#saveKeyBtn {
+    background: var(--accent-primary);
+    color: white;
+}
+
+#saveKeyBtn:hover {
+    background: var(--accent-hover);
+}
+
+#clearKeyBtn {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-primary);
+}
+
+#clearKeyBtn:hover {
+    background: var(--bg-secondary);
+}
+
+.auth-status {
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+}
+
+.auth-status.authenticated {
+    color: var(--success-color);
+    background: var(--bg-success);
+}
+
+.auth-status.not-authenticated {
+    color: var(--text-quaternary);
+    background: var(--bg-tertiary);
+}
+
+.auth-help {
+    margin: 0.75rem 0 0 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.auth-help code {
+    background: var(--bg-code);
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 0.85em;
+}
+
+/* Message animations */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
