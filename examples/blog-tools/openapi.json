@@ -103,6 +103,43 @@
         }
       }
     },
+    "/TaggerCoT/stream": {
+      "post": {
+        "summary": "Run Program Streaming",
+        "description": "Execute the DSPy program with Server-Sent Events for real-time updates.",
+        "operationId": "run_program_streaming_TaggerCoT_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaggerCoTRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/SummarizerPredict": {
       "post": {
         "summary": "Run Program",
@@ -144,6 +181,43 @@
         }
       }
     },
+    "/SummarizerPredict/stream": {
+      "post": {
+        "summary": "Run Program Streaming",
+        "description": "Execute the DSPy program with Server-Sent Events for real-time updates.",
+        "operationId": "run_program_streaming_SummarizerPredict_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummarizerPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/HeadlineGeneratorPredict": {
       "post": {
         "summary": "Run Program",
@@ -167,6 +241,43 @@
                 "schema": {
                   "$ref": "#/components/schemas/HeadlineGeneratorPredictResponse"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/HeadlineGeneratorPredict/stream": {
+      "post": {
+        "summary": "Run Program Streaming",
+        "description": "Execute the DSPy program with Server-Sent Events for real-time updates.",
+        "operationId": "run_program_streaming_HeadlineGeneratorPredict_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeadlineGeneratorPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -224,6 +335,43 @@
         }
       }
     },
+    "/ImageHeadlineGeneratorPredict/stream": {
+      "post": {
+        "summary": "Run Program Streaming",
+        "description": "Execute the DSPy program with Server-Sent Events for real-time updates.",
+        "operationId": "run_program_streaming_ImageHeadlineGeneratorPredict_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageHeadlineGeneratorPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ImageDescriptionGeneratorPredict": {
       "post": {
         "summary": "Run Program",
@@ -249,6 +397,43 @@
                   "type": "object",
                   "title": "Response Run Program Imagedescriptiongeneratorpredict Post"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ImageDescriptionGeneratorPredict/stream": {
+      "post": {
+        "summary": "Run Program Streaming",
+        "description": "Execute the DSPy program with Server-Sent Events for real-time updates.",
+        "operationId": "run_program_streaming_ImageDescriptionGeneratorPredict_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageDescriptionGeneratorPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -306,6 +491,43 @@
         }
       }
     },
+    "/TweetExtractorPredict/stream": {
+      "post": {
+        "summary": "Run Program Streaming",
+        "description": "Execute the DSPy program with Server-Sent Events for real-time updates.",
+        "operationId": "run_program_streaming_TweetExtractorPredict_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TweetExtractorPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/SpellCheckerPredict": {
       "post": {
         "summary": "Run Program",
@@ -331,6 +553,43 @@
                   "type": "object",
                   "title": "Response Run Program Spellcheckerpredict Post"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/SpellCheckerPredict/stream": {
+      "post": {
+        "summary": "Run Program Streaming",
+        "description": "Execute the DSPy program with Server-Sent Events for real-time updates.",
+        "operationId": "run_program_streaming_SpellCheckerPredict_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpellCheckerPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -388,6 +647,43 @@
         }
       }
     },
+    "/TaggerPredict/stream": {
+      "post": {
+        "summary": "Run Program Streaming",
+        "description": "Execute the DSPy program with Server-Sent Events for real-time updates.",
+        "operationId": "run_program_streaming_TaggerPredict_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaggerPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/programs": {
       "get": {
         "summary": "List Programs",
@@ -399,6 +695,113 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Index",
+        "description": "Render the index page with a list of all programs.",
+        "operationId": "index__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ui/{program_name}": {
+      "get": {
+        "summary": "Program Page",
+        "description": "Render the program detail page.",
+        "operationId": "program_page_ui__program_name__get",
+        "parameters": [
+          {
+            "name": "program_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Program Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logs/{program_name}": {
+      "get": {
+        "summary": "Get Logs",
+        "description": "Get recent logs for a program.",
+        "operationId": "get_logs_api_logs__program_name__get",
+        "parameters": [
+          {
+            "name": "program_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Program Name"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }

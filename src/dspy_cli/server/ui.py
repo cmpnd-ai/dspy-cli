@@ -61,6 +61,59 @@ def get_recent_logs(logs_dir: Path, program_name: str, limit: int = 50) -> List[
     return logs
 
 
+def _detect_module_type(module: Any) -> str:
+    """Detect the type of DSPy module (ChainOfThought, Predict, ReAct, etc.).
+
+    Args:
+        module: DiscoveredModule object
+
+    Returns:
+        Module type string (e.g., 'ChainOfThought', 'Predict', 'ReAct')
+    """
+    try:
+        # Instantiate the module to inspect its structure
+        instance = module.instantiate()
+
+        # Check for common predictor types
+        if hasattr(instance, 'predictor'):
+            predictor = instance.predictor
+            predictor_class_name = predictor.__class__.__name__
+
+            # Map predictor class names to types
+            if 'ChainOfThought' in predictor_class_name or 'CoT' in predictor_class_name:
+                return 'ChainOfThought'
+            elif 'ReAct' in predictor_class_name:
+                return 'ReAct'
+            elif 'ProgramOfThought' in predictor_class_name or 'PoT' in predictor_class_name:
+                return 'ProgramOfThought'
+            elif 'Refine' in predictor_class_name:
+                return 'Refine'
+            elif 'MultiChainComparison' in predictor_class_name:
+                return 'MultiChainComparison'
+            elif 'Predict' in predictor_class_name:
+                return 'Predict'
+
+        # Fallback: check module class name for hints
+        module_class_name = module.class_obj.__name__
+        if 'CoT' in module_class_name or 'ChainOfThought' in module_class_name:
+            return 'ChainOfThought'
+        elif 'ReAct' in module_class_name:
+            return 'ReAct'
+        elif 'PoT' in module_class_name or 'ProgramOfThought' in module_class_name:
+            return 'ProgramOfThought'
+        elif 'Refine' in module_class_name:
+            return 'Refine'
+        elif 'MultiChain' in module_class_name:
+            return 'MultiChainComparison'
+
+        # Default to Predict if unknown
+        return 'Predict'
+
+    except Exception as e:
+        logger.warning(f"Failed to detect module type for {module.name}: {e}")
+        return 'Predict'
+
+
 def create_ui_routes(app, modules: List[Any], config: Dict, logs_dir: Path):
     """Create UI routes for the FastAPI application.
 
@@ -91,7 +144,10 @@ def create_ui_routes(app, modules: List[Any], config: Dict, logs_dir: Path):
         if not module:
             raise HTTPException(status_code=404, detail=f"Program '{program_name}' not found")
 
-        html = render_program(module, config, program_name)
+        # Detect module type for auto-streaming detection
+        module_type = _detect_module_type(module)
+
+        html = render_program(module, config, program_name, module_type)
         return HTMLResponse(content=html)
 
     @app.get("/api/logs/{program_name}")

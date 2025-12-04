@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from dspy_cli.config import get_model_config, get_program_model
 from dspy_cli.discovery import discover_modules
 from dspy_cli.server.logging import setup_logging
-from dspy_cli.server.routes import create_program_routes
+from dspy_cli.server.routes import create_program_routes, create_program_streaming_route
 from dspy_cli.utils.openapi import enhance_openapi_metadata, create_openapi_extensions
 
 logger = logging.getLogger(__name__)
@@ -113,9 +113,13 @@ def create_app(
         model_alias = get_program_model(config, module.name)
         model_config = get_model_config(config, model_alias)
 
+        # Create sync endpoint
         create_program_routes(app, module, lm, model_config, config)
 
-        logger.info(f"Registered program: {module.name} (model: {model_alias})")
+        # Create streaming endpoint
+        create_program_streaming_route(app, module, lm, model_config, config)
+
+        logger.info(f"Registered program: {module.name} (model: {model_alias}, streaming: enabled)")
 
     # Add programs list endpoint
     @app.get("/programs")

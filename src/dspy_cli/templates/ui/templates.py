@@ -154,13 +154,14 @@ def render_index(modules: List[Any], config: Dict) -> str:
 </html>"""
 
 
-def render_program(module: Any, config: Dict, program_name: str) -> str:
+def render_program(module: Any, config: Dict, program_name: str, module_type: str = "Predict") -> str:
     """Render the program detail page with form and logs.
 
     Args:
         module: DiscoveredModule object
         config: Configuration dictionary
         program_name: Name of the program
+        module_type: Type of DSPy module (for streaming auto-detection)
 
     Returns:
         HTML string for the program page
@@ -362,6 +363,21 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
                         </div>
                     </form>
 
+                    <div class="streaming-controls">
+                        <label class="toggle-container">
+                            <input type="checkbox" id="streamingToggle" />
+                            <span class="toggle-label">Enable real-time updates</span>
+                            <span class="toggle-hint">(Auto-enabled for complex modules like ChainOfThought, ReAct)</span>
+                        </label>
+                    </div>
+
+                    <div id="streamingContainer" style="display: none;">
+                        <h3>Execution Steps</h3>
+                        <div id="streamingEvents" class="streaming-events">
+                            <!-- Events appended here dynamically -->
+                        </div>
+                    </div>
+
                     <div id="result" class="result-box" style="display: none;">
                         <h3>Result</h3>
                         <div id="resultContent"></div>
@@ -393,7 +409,8 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
 
         // Initialize the program page
         const programName = "{program_name}";
-        initProgramPage(programName);
+        const moduleType = "{module_type}";
+        initProgramPage(programName, moduleType);
     </script>
 </body>
 </html>"""

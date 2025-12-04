@@ -138,23 +138,60 @@ function updateThemeIcon() {
 /**
  * Initialize the program page with event handlers and log loading
  */
-function initProgramPage(programName) {
+function initProgramPage(programName, moduleType = 'Predict') {
     // Load logs on page load
     loadLogs(programName);
+
+    // Auto-enable streaming based on module type
+    // Complex modules: ChainOfThought, ReAct, ProgramOfThought, Refine, MultiChainComparison
+    const complexModules = ['ChainOfThought', 'ReAct', 'ProgramOfThought', 'Refine', 'MultiChainComparison'];
+    const autoEnableStreaming = complexModules.includes(moduleType);
+
+    // Check localStorage override or use auto-detection
+    const streamingEnabled = localStorage.getItem('streamingEnabled') !== null
+        ? localStorage.getItem('streamingEnabled') === 'true'
+        : autoEnableStreaming;
+
+    // Set toggle state
+    const streamingToggle = document.getElementById('streamingToggle');
+    if (streamingToggle) {
+        streamingToggle.checked = streamingEnabled;
+
+        // Listen for toggle changes
+        streamingToggle.addEventListener('change', (e) => {
+            localStorage.setItem('streamingEnabled', e.target.checked);
+        });
+    }
 
     // Set up form submission
     const form = document.getElementById('programForm');
     if (form) {
         form.addEventListener('submit', (e) => {
             e.preventDefault();
-            submitProgram(programName);
+
+            // Check if streaming is enabled
+            const currentStreamingSetting = streamingToggle ? streamingToggle.checked : false;
+
+            if (currentStreamingSetting) {
+                submitProgramStreaming(programName);
+            } else {
+                submitProgram(programName);
+            }
         });
 
         // Add keyboard shortcut: Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux)
         form.addEventListener('keydown', (e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                 e.preventDefault();
-                submitProgram(programName);
+
+                // Check if streaming is enabled
+                const currentStreamingSetting = streamingToggle ? streamingToggle.checked : false;
+
+                if (currentStreamingSetting) {
+                    submitProgramStreaming(programName);
+                } else {
+                    submitProgram(programName);
+                }
             }
         });
     }
@@ -741,6 +778,528 @@ function initCheckboxes() {
             label.textContent = this.checked ? 'True' : 'False';
         });
     });
+}
+
+// ===== Streaming Functions =====
+
+/**
+ * Submit the program with real-time streaming updates via SSE
+ */
+async function submitProgramStreaming(programName) {
+    const form = document.getElementById('programForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const resultBox = document.getElementById('result');
+    const errorBox = document.getElementById('error');
+    const streamingContainer = document.getElementById('streamingContainer');
+    const streamingEvents = document.getElementById('streamingEvents');
+
+    // Hide previous results
+    resultBox.style.display = 'none';
+    errorBox.style.display = 'none';
+
+    // Clear and show streaming container
+    streamingEvents.innerHTML = '';
+    streamingContainer.style.display = 'block';
+
+    // Clear module stack for new request
+    moduleStack.length = 0;
+
+    // Disable submit button
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Running...';
+
+    // Collect form data (reuse logic from submitProgram)
+    const data = collectFormData(form);
+    if (data === null) {
+        // Missing required fields - error already displayed
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Run Program';
+        streamingContainer.style.display = 'none';
+        return;
+    }
+
+    try {
+        // Get API key from localStorage
+        const apiKey = localStorage.getItem('dspy_api_key');
+
+        // Build headers
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream'
+        };
+
+        // Add API key header if available
+        if (apiKey) {
+            headers['X-API-Key'] = apiKey;
+        }
+
+        const response = await fetch(`/${programName}/stream`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            // Handle errors same as sync
+            if (response.status === 401) {
+                showMessage('Authentication failed. Please check your API key.', 'error');
+                updateAuthStatus(false);
+            }
+
+            let errorMessage = 'Request failed';
+            try {
+                const errorData = await response.json();
+                if (typeof errorData.detail === 'string') {
+                    errorMessage = errorData.detail;
+                } else if (Array.isArray(errorData.detail)) {
+                    const errors = errorData.detail.map(err => {
+                        const field = err.loc ? err.loc.slice(1).join('.') : 'unknown';
+                        const message = err.msg || 'Invalid value';
+                        return `  • ${field}: ${message}`;
+                    }).join('\n');
+                    errorMessage = `Validation Error:\n\n${errors}`;
+                }
+            } catch (e) {
+                errorMessage = `Request failed: ${response.statusText || response.status}`;
+            }
+            throw new Error(errorMessage);
+        }
+
+        // Process streaming response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop(); // Keep incomplete line in buffer
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+
+                const jsonStr = line.replace('data: ', '');
+                try {
+                    const event = JSON.parse(jsonStr);
+                    console.log('[Streaming] Received event:', event.type, event);
+
+                    if (event.type === 'stream_start') {
+                        console.log('[Streaming] Stream connected');
+                        continue;
+                    }
+
+                    handleStreamingEvent(event, streamingEvents);
+
+                    if (event.type === 'complete') {
+                        // Display final result
+                        document.getElementById('resultContent').textContent = JSON.stringify(event.result, null, 2);
+                        resultBox.style.display = 'block';
+                        resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+                        // Reload logs
+                        setTimeout(() => loadLogs(programName), 500);
+                    } else if (event.type === 'error') {
+                        throw new Error(event.error);
+                    }
+                } catch (e) {
+                    console.error('Failed to parse SSE event:', e, 'Line:', line);
+                }
+            }
+        }
+
+    } catch (error) {
+        // Display error
+        document.getElementById('errorContent').textContent = error.message;
+        errorBox.style.display = 'block';
+        errorBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } finally {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Run Program';
+    }
+}
+
+/**
+ * Handle a streaming event by creating and appending UI element
+ */
+// Track module hierarchy for nesting
+const moduleStack = [];
+
+function handleStreamingEvent(event, container) {
+    if (event.type === 'module_start') {
+        handleModuleStart(event, container);
+    } else if (event.type === 'module_end') {
+        handleModuleEnd(event, container);
+    } else {
+        // All other events go into the current module's content
+        const eventDiv = createEventElement(event);
+        if (eventDiv) {
+            const currentModule = moduleStack.length > 0 ? moduleStack[moduleStack.length - 1] : null;
+            if (currentModule) {
+                currentModule.contentContainer.appendChild(eventDiv);
+            } else {
+                // No active module, append to main container
+                container.appendChild(eventDiv);
+            }
+            container.scrollTop = container.scrollHeight; // Auto-scroll
+        }
+    }
+}
+
+function handleModuleStart(event, container) {
+    // Create module start event item
+    const startDiv = document.createElement('div');
+    startDiv.className = 'event-item module-start';
+
+    startDiv.innerHTML = `
+        <div class="event-content-inline">
+            <span>📦 Module started: <strong>${escapeHtml(event.module_name)}</strong></span>
+        </div>
+    `;
+
+    // Append to current module's content or main container
+    const currentModule = moduleStack.length > 0 ? moduleStack[moduleStack.length - 1] : null;
+    if (currentModule) {
+        currentModule.contentContainer.appendChild(startDiv);
+    } else {
+        container.appendChild(startDiv);
+    }
+
+    // Create a container for child events of this module
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'module-events-container';
+    contentDiv.dataset.callId = event.call_id;
+
+    if (currentModule) {
+        currentModule.contentContainer.appendChild(contentDiv);
+    } else {
+        container.appendChild(contentDiv);
+    }
+
+    // Push to stack
+    moduleStack.push({
+        callId: event.call_id,
+        contentContainer: contentDiv,
+        startTime: event.timestamp
+    });
+
+    container.scrollTop = container.scrollHeight; // Auto-scroll
+}
+
+function handleModuleEnd(event, container) {
+    // Find the matching module_start in the stack
+    const moduleIndex = moduleStack.findIndex(m => m.callId === event.call_id);
+
+    if (moduleIndex === -1) {
+        console.warn('module_end without matching module_start:', event.call_id);
+        return;
+    }
+
+    const module = moduleStack[moduleIndex];
+
+    // Calculate duration
+    const duration = ((event.timestamp - module.startTime) * 1000).toFixed(0);
+
+    // Create module end event item
+    const endDiv = document.createElement('div');
+    endDiv.className = 'event-item module-end';
+
+    // Build the content based on success/failure
+    if (event.success === false) {
+        endDiv.innerHTML = `
+            <div class="event-content-inline">
+                <span>❌ Module failed: <strong>${duration}ms</strong></span>
+            </div>
+        `;
+    } else if (event.outputs) {
+        // Module completed with outputs
+        const eventId = `module-output-${event.call_id}`;
+
+        // Try to parse outputs
+        let parsedOutputs = event.outputs;
+        if (typeof event.outputs === 'string') {
+            try {
+                parsedOutputs = JSON.parse(event.outputs);
+            } catch (e) {
+                parsedOutputs = event.outputs;
+            }
+        }
+
+        const outputStr = typeof parsedOutputs === 'string'
+            ? parsedOutputs
+            : JSON.stringify(parsedOutputs);
+        const preview = truncate(outputStr, 80);
+
+        endDiv.innerHTML = `
+            <div class="event-content-inline">
+                <span>✅ Module completed: <strong>${duration}ms</strong> • Output: <code>${escapeHtml(preview)}</code></span>
+                <button class="expand-btn-inline" onclick="toggleDetails('${eventId}')">expand</button>
+            </div>
+            <div id="${eventId}" class="event-details" style="display: none;">
+                <pre>${escapeHtml(typeof parsedOutputs === 'string' ? parsedOutputs : JSON.stringify(parsedOutputs, null, 2))}</pre>
+            </div>
+        `;
+    } else {
+        // Module completed without outputs
+        endDiv.innerHTML = `
+            <div class="event-content-inline">
+                <span>✅ Module completed: <strong>${duration}ms</strong></span>
+            </div>
+        `;
+    }
+
+    // Append to current module's content or main container
+    module.contentContainer.appendChild(endDiv);
+
+    // Remove from stack
+    moduleStack.splice(moduleIndex, 1);
+
+    container.scrollTop = container.scrollHeight; // Auto-scroll
+}
+
+
+/**
+ * Create a DOM element for a streaming event
+ */
+function createEventElement(event) {
+    const div = document.createElement('div');
+    div.className = `event-item event-${event.type}`;
+    const eventId = `event-${event.call_id}-${Date.now()}`;
+
+    switch (event.type) {
+        case 'module_start':
+            // Module start is now handled in handleModuleStart
+            return null;
+
+        case 'lm_start':
+            const msgCount = Array.isArray(event.messages) ? event.messages.length : 1;
+            const preview = getMessagePreview(event.messages);
+            div.innerHTML = `
+                <div class="event-content-inline">
+                    <span>🤖 LM: <code>${escapeHtml(event.model)}</code> • "${escapeHtml(preview)}"</span>
+                    <button class="expand-btn-inline" onclick="toggleDetails('${eventId}')">prompt</button>
+                </div>
+                <div id="${eventId}" class="event-details" style="display: none;">${formatMessages(event.messages)}</div>
+            `;
+            break;
+
+        case 'lm_end':
+            const responsePreview = getOutputPreview(event.outputs);
+            const tokenInfo = event.token_count ? ` • ${event.token_count} tokens` : '';
+            div.innerHTML = `
+                <div class="event-content-inline">
+                    <span>✅ Response: "${escapeHtml(responsePreview)}"${escapeHtml(tokenInfo)}</span>
+                    <button class="expand-btn-inline" onclick="toggleDetails('${eventId}')">expand</button>
+                </div>
+                <div id="${eventId}" class="event-details" style="display: none;"><pre>${escapeHtml(String(event.outputs))}</pre></div>
+            `;
+            break;
+
+        case 'tool_start':
+            const argPreview = getArgumentPreview(event.args);
+            div.innerHTML = `
+                <div class="event-content-inline">
+                    <span>🔧 Tool: <code>${escapeHtml(event.tool_name)}</code> • ${escapeHtml(argPreview)}</span>
+                    <button class="expand-btn-inline" onclick="toggleDetails('${eventId}')">expand</button>
+                </div>
+                <div id="${eventId}" class="event-details" style="display: none;"><pre>${escapeHtml(JSON.stringify(event.args, null, 2))}</pre></div>
+            `;
+            break;
+
+        case 'tool_end':
+            div.innerHTML = `
+                <div class="event-content-inline">
+                    <span>✅ Tool result</span>
+                    <button class="expand-btn-inline" onclick="toggleDetails('${eventId}')">expand</button>
+                </div>
+                <div id="${eventId}" class="event-details" style="display: none;"><pre>${escapeHtml(JSON.stringify(event.outputs, null, 2))}</pre></div>
+            `;
+            break;
+
+        case 'module_end':
+            // Module end is now handled in handleModuleEnd
+            return null;
+
+        case 'adapter_format_start':
+        case 'adapter_format_end':
+        case 'adapter_parse_start':
+        case 'adapter_parse_end':
+            // Filter out adapter events - they add noise and aren't useful to users
+            return null;
+
+        default:
+            // Skip unknown event types
+            return null;
+    }
+
+    return div;
+}
+
+/**
+ * Toggle expanded details visibility
+ */
+function toggleDetails(elementId, evt) {
+    const details = document.getElementById(elementId);
+    const btn = evt ? evt.target : event.target;
+
+    if (details.style.display === 'none') {
+        details.style.display = 'block';
+        btn.textContent = 'collapse';
+    } else {
+        details.style.display = 'none';
+        btn.textContent = 'expand';
+    }
+}
+
+/**
+ * Helper: Get input field names (not full values)
+ */
+function getInputFieldNames(inputs) {
+    return Object.keys(inputs).join(', ');
+}
+
+/**
+ * Helper: Get message preview (first 50 chars)
+ */
+function getMessagePreview(messages) {
+    if (Array.isArray(messages)) {
+        const firstContent = messages[0]?.content || '';
+        return truncate(firstContent, 50);
+    }
+    return truncate(String(messages), 50);
+}
+
+/**
+ * Helper: Get output preview (first 50 chars)
+ */
+function getOutputPreview(outputs) {
+    const str = typeof outputs === 'string' ? outputs : JSON.stringify(outputs);
+    return truncate(str, 50);
+}
+
+/**
+ * Helper: Truncate text to max length
+ */
+function truncate(text, maxLen) {
+    return text.length > maxLen ? text.substring(0, maxLen) + '...' : text;
+}
+
+/**
+ * Helper: Generate smart preview for tool arguments
+ * Shows actual values for primitives, type info for complex types
+ */
+function getArgumentPreview(args) {
+    const previews = [];
+
+    for (const [key, value] of Object.entries(args)) {
+        let preview;
+
+        if (value === null || value === undefined) {
+            preview = `${key}=${value}`;
+        } else if (typeof value === 'string') {
+            // For strings: show first 30 chars with char count if truncated
+            const truncated = truncate(value, 30);
+            const charInfo = value.length > 30 ? ` (${value.length} chars)` : '';
+            preview = `${key}="${truncated}"${charInfo}`;
+        } else if (typeof value === 'number') {
+            // For numbers: show full value
+            preview = `${key}=${value}`;
+        } else if (typeof value === 'boolean') {
+            // For booleans: show full value
+            preview = `${key}=${value}`;
+        } else if (Array.isArray(value)) {
+            // For arrays: show type and count
+            preview = `${key}=[Array with ${value.length} item${value.length !== 1 ? 's' : ''}]`;
+        } else if (typeof value === 'object') {
+            // For objects: show type and key count
+            const keyCount = Object.keys(value).length;
+            preview = `${key}={Object with ${keyCount} key${keyCount !== 1 ? 's' : ''}}`;
+        } else {
+            // Fallback for other types
+            preview = `${key}=(${typeof value})`;
+        }
+
+        previews.push(preview);
+    }
+
+    return previews.join(', ');
+}
+
+/**
+ * Helper: Format messages array as HTML
+ */
+function formatMessages(messages) {
+    if (Array.isArray(messages)) {
+        return messages.map(m => {
+            const role = escapeHtml(m.role || 'unknown');
+            const content = escapeHtml(m.content || '');
+            return `<div class="message-${role}"><strong>${role}:</strong> ${content}</div>`;
+        }).join('');
+    }
+    return `<pre>${escapeHtml(String(messages))}</pre>`;
+}
+
+/**
+ * Helper: Collect form data with validation (reusable)
+ */
+function collectFormData(form) {
+    const formData = new FormData(form);
+    const data = {};
+    const missingFields = [];
+
+    // Handle checkboxes explicitly
+    const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+    const checkboxNames = new Set();
+    checkboxes.forEach(checkbox => {
+        checkboxNames.add(checkbox.name);
+        data[checkbox.name] = checkbox.checked;
+    });
+
+    for (const [key, value] of formData.entries()) {
+        if (checkboxNames.has(key)) continue;
+
+        const trimmedValue = typeof value === 'string' ? value.trim() : value;
+        const inputElement = form.querySelector(`[name="${key}"]`);
+        const isOptional = inputElement && inputElement.hasAttribute('data-optional');
+
+        if (!trimmedValue && trimmedValue !== false) {
+            if (!isOptional) {
+                missingFields.push(key);
+            }
+            continue;
+        }
+
+        // Try to parse as JSON for arrays/objects
+        if (typeof value === 'string' && (value.trim().startsWith('[') || value.trim().startsWith('{'))) {
+            try {
+                data[key] = JSON.parse(value);
+            } catch (e) {
+                data[key] = value;
+            }
+        } else if (value === 'true') {
+            data[key] = true;
+        } else if (value === 'false') {
+            data[key] = false;
+        } else {
+            data[key] = value;
+        }
+    }
+
+    // Check for missing required fields
+    if (missingFields.length > 0) {
+        const fieldList = missingFields.join(', ');
+        const errorBox = document.getElementById('error');
+        document.getElementById('errorContent').textContent =
+            `Missing required input${missingFields.length > 1 ? 's' : ''}: ${fieldList}\n\nPlease provide a value for ${missingFields.length > 1 ? 'these fields' : 'this field'} before running the program.`;
+        errorBox.style.display = 'block';
+        errorBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return null;
+    }
+
+    return data;
 }
 
 // Initialize auth status on page load

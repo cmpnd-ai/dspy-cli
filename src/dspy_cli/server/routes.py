@@ -1,18 +1,23 @@
 """Dynamic route generation for DSPy programs."""
 
+import asyncio
 import base64
 import logging
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
+from queue import Queue
 from typing import Any, Dict
 
 import dspy
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, create_model
 
 from dspy_cli.discovery import DiscoveredModule
 from dspy_cli.server.logging import log_inference
+from dspy_cli.server.streaming import StreamingCallback, event_stream_generator
 
 logger = logging.getLogger(__name__)
 
@@ -378,3 +383,179 @@ def _create_response_model_from_forward(module: DiscoveredModule) -> type:
     # Create dynamic Pydantic model
     model_name = f"{module.name}Response"
     return create_model(model_name, **fields)
+
+
+def create_program_streaming_route(
+    app: FastAPI,
+    module: DiscoveredModule,
+    lm: dspy.LM,
+    model_config: Dict,
+    config: Dict
+):
+    """Create streaming SSE route for a DSPy program with real-time callback updates.
+
+    Args:
+        app: FastAPI application
+        module: Discovered module information
+        lm: Language model instance for this program
+        model_config: Model configuration for this program
+        config: Full configuration dictionary
+    """
+    program_name = module.name
+    model_name = model_config.get("model", "unknown")
+
+    # Instantiate the module once during route creation
+    instance = module.instantiate()
+
+    # Create request model (reuse same logic as sync endpoint)
+    if module.is_forward_typed:
+        try:
+            request_model = _create_request_model_from_forward(module)
+        except Exception as e:
+            logger.warning(f"Could not create models from forward types for {program_name}: {e}")
+            request_model = Dict[str, Any]
+    else:
+        request_model = Dict[str, Any]
+
+    # Create POST /{program}/stream endpoint
+    @app.post(f"/{program_name}/stream")
+    async def run_program_streaming(request: request_model):
+        """Execute the DSPy program with Server-Sent Events for real-time updates."""
+        start_time = time.time()
+
+        # Create event queue and callback
+        event_queue = Queue()
+        callback = StreamingCallback(event_queue)
+        logger.info(f"[Streaming] Created StreamingCallback instance")
+
+        # Define async execution task
+        async def execute_with_callbacks():
+            try:
+                # Convert request to dict if it's a Pydantic model
+                if isinstance(request, BaseModel):
+                    inputs = request.model_dump()
+                else:
+                    inputs = request
+
+                # Convert dspy types (Image, Audio, etc.) from strings to objects
+                inputs = _convert_dspy_types(inputs, module)
+
+                # Execute the program with callbacks enabled
+                logger.info(f"[Streaming] Executing {program_name} with inputs: {inputs}")
+
+                # Copy the existing LM (don't add callbacks to avoid duplicates)
+                # Note: We can't recreate the LM because reasoning models have special validation
+                # that expects max_tokens but stores max_completion_tokens in kwargs
+                streaming_lm = lm.copy()
+                logger.info(f"[Streaming] Created LM copy: {streaming_lm.model}")
+
+                # Use dspy.context to set LM and callbacks for this execution
+                # Register callbacks globally for ALL events (module, LM, tool, adapter)
+                # DSPy's @with_callbacks decorator will combine global + instance callbacks,
+                # so we only register in ONE place to avoid duplicates
+                logger.info(f"[Streaming] Using dspy.context with LM and callbacks")
+
+                # Log main thread info
+                logger.info(f"[Streaming] Main thread ID: {threading.current_thread().ident}")
+                logger.info(f"[Streaming] Context established with LM: {streaming_lm.model}")
+
+                # Execute with context - this is the async-safe way
+                with dspy.context(lm=streaming_lm, callbacks=[callback]):
+                    logger.info(f"[Streaming] Inside context - executing module")
+
+                    # Check what callbacks are actually active
+                    active_lm = dspy.settings.get('lm')
+                    active_callbacks = dspy.settings.get('callbacks')
+                    logger.info(f"[Streaming] Active LM in context: {active_lm.model if active_lm else None}")
+                    logger.info(f"[Streaming] Active callbacks in settings: {active_callbacks}")
+                    logger.info(f"[Streaming] Active LM callbacks: {active_lm.callbacks if active_lm else None}")
+
+                    if hasattr(instance, 'aforward'):
+                        logger.info(f"[Streaming] Calling async aforward")
+                        result = await instance.acall(**inputs)
+                    else:
+                        # Run sync module in thread executor to avoid blocking event loop
+                        # This allows SSE generator to yield events in real-time
+                        logger.info(f"[Streaming] Calling sync forward in thread executor")
+
+                        def run_sync_with_context():
+                            # Re-establish DSPy context in worker thread
+                            logger.info(f"[Streaming] Worker thread ID: {threading.current_thread().ident}")
+                            with dspy.context(lm=streaming_lm):
+                                logger.info(f"[Streaming] Worker thread - context established")
+                                return instance(**inputs)
+
+                        # Execute in thread pool - unblocks event loop
+                        result = await asyncio.to_thread(run_sync_with_context)
+                        logger.info(f"[Streaming] Thread execution completed")
+
+                # Convert result to dict
+                if isinstance(result, dspy.Prediction):
+                    output = result.toDict()
+                elif hasattr(result, '__dict__'):
+                    output = vars(result)
+                elif isinstance(result, dict):
+                    output = result
+                else:
+                    # Simple return value
+                    if module.is_forward_typed and module.forward_output_fields:
+                        field_names = list(module.forward_output_fields.keys())
+                        if len(field_names) == 1:
+                            output = {field_names[0]: result}
+                        else:
+                            output = {"result": result}
+                    else:
+                        output = {"result": result}
+
+                # Calculate duration
+                duration_ms = (time.time() - start_time) * 1000
+
+                # Serialize and log inference
+                serialized_inputs = _serialize_for_logging(inputs, app.state.logs_dir, program_name)
+                serialized_outputs = _serialize_for_logging(output, app.state.logs_dir, program_name)
+
+                log_inference(
+                    logs_dir=app.state.logs_dir,
+                    program_name=program_name,
+                    model=model_name,
+                    inputs=serialized_inputs,
+                    outputs=serialized_outputs,
+                    duration_ms=duration_ms
+                )
+
+                logger.info(f"[Streaming] Program {program_name} completed successfully")
+                return output
+
+            except Exception as e:
+                duration_ms = (time.time() - start_time) * 1000
+
+                # Log the failed inference
+                raw_inputs = inputs if 'inputs' in locals() else {}
+                serialized_inputs = _serialize_for_logging(raw_inputs, app.state.logs_dir, program_name)
+
+                log_inference(
+                    logs_dir=app.state.logs_dir,
+                    program_name=program_name,
+                    model=model_name,
+                    inputs=serialized_inputs,
+                    outputs={},
+                    duration_ms=duration_ms,
+                    error=str(e)
+                )
+
+                logger.error(f"[Streaming] Error executing {program_name}: {e}", exc_info=True)
+                raise
+
+        # Start execution task
+        execution_task = asyncio.create_task(execute_with_callbacks())
+
+        # Return streaming response
+        return StreamingResponse(
+            event_stream_generator(event_queue, execution_task),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",  # Disable nginx buffering
+                "Connection": "keep-alive",
+            }
+        )
