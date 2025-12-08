@@ -28,7 +28,7 @@ flyctl auth login
 
 # Launch and configure
 flyctl launch
-flyctl secrets set OPENAI_API_KEY=sk-proj-...
+flyctl secrets set OPENAI_API_KEY=sk-proj-... DSPY_API_KEY=your-api-key
 flyctl deploy
 ```
 
@@ -38,7 +38,9 @@ Verify:
 
 ```bash
 curl -X POST "https://your-app.fly.dev/SummarizerPredict" \
-  -d '{"blog_post": "Test"}' -H "Content-Type: application/json"
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{"blog_post": "Test"}'
 ```
 
 ## Docker Deployment
@@ -49,8 +51,13 @@ Compatible with any platform that can serve arbitrary dockerfiles.
 
 ```bash
 docker build -t my-app:latest .
-docker run -p 8000:8000 -e OPENAI_API_KEY=sk-... my-app:latest
+docker run -p 8000:8000 \
+  -e OPENAI_API_KEY=sk-... \
+  -e DSPY_API_KEY=your-api-key \
+  my-app:latest
 ```
+
+> The generated Dockerfile runs `dspy-cli serve --auth` by default, so `DSPY_API_KEY` is required.
 
 ### Push to Registry
 
@@ -89,7 +96,7 @@ gcloud run deploy my-app \
   --source . \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars OPENAI_API_KEY=sk-proj-...
+  --set-env-vars OPENAI_API_KEY=sk-proj-...,DSPY_API_KEY=your-api-key
 ```
 
 ## Environment Variables
@@ -104,6 +111,7 @@ Use `.env` file (auto-loaded by `dspy-cli serve`, excluded via `.gitignore`):
 # .env - Do not commit
 OPENAI_API_KEY=sk-proj-...
 ANTHROPIC_API_KEY=sk-ant-...
+DSPY_API_KEY=your-api-key  # Optional: required when running with --auth
 ```
 
 ### Production Secrets
@@ -115,6 +123,10 @@ Configure via platform secret managers:
 | **Fly.io** | `flyctl secrets set KEY=value` |
 | **Google Cloud Run** | `--set-env-vars KEY=value` or Secret Manager |
 | **AWS** | Systems Manager Parameter Store / Secrets Manager |
+
+When you first create a project, if you do not have a `DSPY_API_KEY`, one will be generated and you can see it in the logs.
+
+It is recommended to change this key immediately after deployment to a secure value via your secret manager.
 
 ### Secrets Best Practices
 
@@ -137,8 +149,10 @@ Configure via platform secret managers:
 Verify service availability:
 
 ```bash
-curl https://my-app.fly.dev/openapi.json
+curl https://my-app.fly.dev/health
 ```
+
+When authentication is enabled, use `/health` (always open) or include `Authorization: Bearer <DSPY_API_KEY>` for other endpoints.
 
 ## Logs
 

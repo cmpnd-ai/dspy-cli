@@ -86,7 +86,7 @@ Or use interactive UI at `http://localhost:8000`.
 
 ## 5. Deploy
 
-See [Deployment Guide](deployment.md) for Fly.io, Docker, AWS, GCP, and more.
+See [Deployment Guide](deployment.md) for Fly.io, Docker, AWS, GCP, and more. Production Docker deployments enable authentication by default; set `DSPY_API_KEY` in your environment and use `Authorization: Bearer <key>` when calling your API.
 
 ## Development
 
