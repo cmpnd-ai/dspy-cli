@@ -472,6 +472,26 @@ section h3 {
     opacity: 0.85;
 }
 
+.copy-btn-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.auth-hint {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.auth-hint code {
+    background: var(--bg-code);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.7rem;
+}
+
 .refresh-btn {
     background: var(--bg-secondary);
     color: var(--text-primary);

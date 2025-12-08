@@ -61,7 +61,7 @@ def get_recent_logs(logs_dir: Path, program_name: str, limit: int = 50) -> List[
     return logs
 
 
-def create_ui_routes(app, modules: List[Any], config: Dict, logs_dir: Path):
+def create_ui_routes(app, modules: List[Any], config: Dict, logs_dir: Path, auth_enabled: bool = False):
     """Create UI routes for the FastAPI application.
 
     Args:
@@ -69,6 +69,7 @@ def create_ui_routes(app, modules: List[Any], config: Dict, logs_dir: Path):
         modules: List of DiscoveredModule objects
         config: Configuration dictionary
         logs_dir: Directory containing log files
+        auth_enabled: Whether authentication is enabled
     """
     from dspy_cli.templates.ui.templates import render_index, render_program
 
@@ -91,7 +92,7 @@ def create_ui_routes(app, modules: List[Any], config: Dict, logs_dir: Path):
         if not module:
             raise HTTPException(status_code=404, detail=f"Program '{program_name}' not found")
 
-        html = render_program(module, config, program_name)
+        html = render_program(module, config, program_name, auth_enabled=auth_enabled)
         return HTMLResponse(content=html)
 
     @app.get("/api/logs/{program_name}")

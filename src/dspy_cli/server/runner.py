@@ -260,7 +260,7 @@ def main(
         click.echo(f"    • {Path.cwd() / 'dspy.config.yaml'}")
         click.echo()
     if auth:
-        token = os.environ.get("DSPY_API_TOKEN")
+        token = os.environ.get("DSPY_API_KEY")
         if token:
             click.echo(click.style("Authentication: ENABLED", fg="green"))
             click.echo("  API clients: Authorization: Bearer <token>")

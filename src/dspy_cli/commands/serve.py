@@ -101,7 +101,7 @@ def _exec_clean(target_python: Path, args: list[str]) -> NoReturn:
 @click.option(
     "--auth/--no-auth",
     default=False,
-    help="Enable API authentication via DSPY_API_TOKEN (default: disabled)",
+    help="Enable API authentication via DSPY_API_KEY (default: disabled)",
 )
 def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, system, mcp, auth):
     """Start an HTTP API server that exposes your DSPy programs.

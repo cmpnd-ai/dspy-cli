@@ -360,7 +360,13 @@ async function copyApiCall(programName) {
     // Generate curl command
     const url = `${window.location.protocol}//${window.location.host}/${programName}`;
     const jsonData = JSON.stringify(data, null, 2);
-    const curlCommand = `curl -X POST ${url} \\\n  -H "Content-Type: application/json" \\\n  -d '${jsonData}'`;
+    
+    // Include Authorization header placeholder if auth is enabled
+    let headers = '-H "Content-Type: application/json"';
+    if (typeof authEnabled !== 'undefined' && authEnabled) {
+        headers += ' \\\n  -H "Authorization: Bearer <DSPY_API_KEY>"';
+    }
+    const curlCommand = `curl -X POST ${url} \\\n  ${headers} \\\n  -d '${jsonData}'`;
 
     // Copy to clipboard with fallback
     try {

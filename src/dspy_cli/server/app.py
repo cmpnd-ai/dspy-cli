@@ -33,7 +33,7 @@ def create_app(
         package_name: Python package name for modules
         logs_dir: Directory for log files
         enable_ui: Whether to enable the web UI (always True, kept for compatibility)
-        enable_auth: Whether to enable API authentication via DSPY_API_TOKEN
+        enable_auth: Whether to enable API authentication via DSPY_API_KEY
 
     Returns:
         Configured FastAPI application
@@ -187,7 +187,7 @@ def create_app(
         logger.warning(f"Static directory not found: {static_dir}")
 
     # Create UI routes
-    create_ui_routes(app, modules, config, logs_dir)
+    create_ui_routes(app, modules, config, logs_dir, auth_enabled=enable_auth)
     logger.info("UI routes registered")
 
     # Setup authentication if enabled
@@ -204,11 +204,11 @@ def create_app(
             # Auto-generate a token and log it (Jupyter-style)
             token = generate_token()
             import os as os_module
-            os_module.environ["DSPY_API_TOKEN"] = token
+            os_module.environ["DSPY_API_KEY"] = token
             logger.warning("=" * 60)
-            logger.warning("DSPY_API_TOKEN not set. Generated temporary token:")
+            logger.warning("DSPY_API_KEY not set. Generated temporary token:")
             logger.warning(f"  {token}")
-            logger.warning("Set DSPY_API_TOKEN as an environment secret for a persistent token.")
+            logger.warning("Set DSPY_API_KEY as an environment secret for a persistent token.")
             logger.warning("=" * 60)
 
         # Add auth routes (login/logout)

@@ -9,8 +9,6 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 COPY . .
 RUN uv sync --no-dev
 
-RUN uv tool install dspy-cli
-
 EXPOSE 8000
 
-CMD ["uv", "run", "dspy-cli", "serve", "--host", "0.0.0.0", "--port", "8000", "--auth"]
+CMD ["uv", "run", "dspy-cli", "serve", "--host", "0.0.0.0", "--port", "8000", "--auth", "--no-reload"]

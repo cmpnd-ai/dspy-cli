@@ -1,7 +1,7 @@
 """Authentication module for DSPy API server.
 
 Provides lightweight bearer token + session cookie authentication.
-- API clients use: Authorization: Bearer <DSPY_API_TOKEN>
+- API clients use: Authorization: Bearer <DSPY_API_KEY>
 - Browser UI uses: Login form -> signed HttpOnly session cookie
 """
 
@@ -23,7 +23,7 @@ COOKIE_NAME = "dspy_session"
 SESSION_MAX_AGE = 7 * 24 * 3600  # 7 days
 
 # Environment variable names
-ENV_API_TOKEN = "DSPY_API_TOKEN"
+ENV_API_TOKEN = "DSPY_API_KEY"
 ENV_AUTH_ENABLED = "DSPY_CLI_AUTH_ENABLED"
 
 # Paths that don't require authentication
@@ -244,11 +244,11 @@ def create_auth_routes(token: str):
         {error_html}
         <form method="post">
             <label for="token">API Token</label>
-            <input type="password" id="token" name="token" placeholder="Enter DSPY_API_TOKEN" autofocus required>
+            <input type="password" id="token" name="token" placeholder="Enter DSPY_API_KEY" autofocus required>
             <button type="submit">Login</button>
         </form>
         <div class="help">
-            <p>The token is set via the <code>DSPY_API_TOKEN</code> environment variable.</p>
+            <p>The token is set via the <code>DSPY_API_KEY</code> environment variable.</p>
         </div>
     </div>
 </body>

@@ -155,13 +155,14 @@ def render_index(modules: List[Any], config: Dict) -> str:
 </html>"""
 
 
-def render_program(module: Any, config: Dict, program_name: str) -> str:
+def render_program(module: Any, config: Dict, program_name: str, auth_enabled: bool = False) -> str:
     """Render the program detail page with form and logs.
 
     Args:
         module: DiscoveredModule object
         config: Configuration dictionary
         program_name: Name of the program
+        auth_enabled: Whether authentication is enabled
 
     Returns:
         HTML string for the program page
@@ -340,7 +341,10 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
                         {form_fields}
                         <div class="button-row">
                             <button type="submit" class="submit-btn">Run Program</button>
-                            <button type="button" class="copy-btn" id="copyApiBtn">Copy API Call</button>
+                            <span class="copy-btn-wrapper">
+                                <button type="button" class="copy-btn" id="copyApiBtn">Copy API Call</button>
+                                {'<span class="auth-hint">Replace <code>&lt;DSPY_API_KEY&gt;</code> with your API key</span>' if auth_enabled else ''}
+                            </span>
                         </div>
                     </form>
 
@@ -398,6 +402,7 @@ def render_program(module: Any, config: Dict, program_name: str) -> str:
 
         // Initialize the program page
         const programName = "{program_name}";
+        const authEnabled = {'true' if auth_enabled else 'false'};
         initProgramPage(programName);
     </script>
 </body>
