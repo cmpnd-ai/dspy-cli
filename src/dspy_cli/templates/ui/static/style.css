@@ -473,23 +473,50 @@ section h3 {
 }
 
 .copy-btn-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
+    position: relative;
+    display: inline-block;
 }
 
 .auth-hint {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    background: var(--text-heading);
+    color: var(--bg-primary);
     font-size: 0.75rem;
-    color: var(--text-tertiary);
+    white-space: nowrap;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: opacity 0.2s, visibility 0.2s;
+    z-index: 100;
+}
+
+.auth-hint::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--text-heading);
 }
 
 .auth-hint code {
-    background: var(--bg-code);
+    background: rgba(255, 255, 255, 0.15);
     padding: 1px 4px;
     border-radius: 3px;
     font-family: monospace;
     font-size: 0.7rem;
+}
+
+.copy-btn-wrapper:hover .auth-hint {
+    visibility: visible;
+    opacity: 1;
 }
 
 .refresh-btn {
