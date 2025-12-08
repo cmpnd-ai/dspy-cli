@@ -22,7 +22,8 @@ def create_app(
     package_path: Path,
     package_name: str,
     logs_dir: Path,
-    enable_ui: bool = True
+    enable_ui: bool = True,
+    enable_auth: bool = False,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -32,6 +33,7 @@ def create_app(
         package_name: Python package name for modules
         logs_dir: Directory for log files
         enable_ui: Whether to enable the web UI (always True, kept for compatibility)
+        enable_auth: Whether to enable API authentication via DSPY_API_TOKEN
 
     Returns:
         Configured FastAPI application
@@ -187,6 +189,35 @@ def create_app(
     # Create UI routes
     create_ui_routes(app, modules, config, logs_dir)
     logger.info("UI routes registered")
+
+    # Setup authentication if enabled
+    if enable_auth:
+        from dspy_cli.server.auth import (
+            AuthMiddleware,
+            create_auth_routes,
+            generate_token,
+            get_api_token,
+        )
+
+        token = get_api_token()
+        if not token:
+            # Auto-generate a token and log it (Jupyter-style)
+            token = generate_token()
+            import os as os_module
+            os_module.environ["DSPY_API_TOKEN"] = token
+            logger.warning("=" * 60)
+            logger.warning("DSPY_API_TOKEN not set. Generated temporary token:")
+            logger.warning(f"  {token}")
+            logger.warning("Set DSPY_API_TOKEN as an environment secret for a persistent token.")
+            logger.warning("=" * 60)
+
+        # Add auth routes (login/logout)
+        auth_router = create_auth_routes(token)
+        app.include_router(auth_router)
+
+        # Add auth middleware (must be added after routes)
+        app.add_middleware(AuthMiddleware, token=token)
+        logger.info("Authentication enabled")
 
     return app
 

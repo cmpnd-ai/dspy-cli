@@ -122,6 +122,7 @@ def test_cli_e2e_smoke(runner, tmp_cwd, monkeypatch):
         "save_openapi": True,
         "openapi_format": "yaml",
         "mcp": False,
+        "auth": False,
     }
 
 

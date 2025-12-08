@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 MCP_DEFAULT_PATH = "/mcp"
 ENV_ENABLE_MCP = "DSPY_CLI_ENABLE_MCP"
 ENV_LOGS_DIR = "DSPY_CLI_LOGS_DIR"
+ENV_AUTH_ENABLED = "DSPY_CLI_AUTH_ENABLED"
 
 
 def _maybe_mount_mcp(app, enable: bool, *, path: str = MCP_DEFAULT_PATH, notify=None) -> bool:
@@ -84,6 +85,7 @@ def create_app_instance():
     # Get parameters from environment (set by main() before reload)
     logs_dir = os.environ.get(ENV_LOGS_DIR, "./logs")
     enable_mcp = os.environ.get(ENV_ENABLE_MCP, "false").lower() == "true"
+    enable_auth = os.environ.get(ENV_AUTH_ENABLED, "false").lower() == "true"
 
     # Validate project structure
     if not validate_project_structure():
@@ -115,6 +117,7 @@ def create_app_instance():
         package_name=f"{package_name}.modules",
         logs_dir=logs_path,
         enable_ui=True,
+        enable_auth=enable_auth,
     )
 
     # Mount MCP if enabled
@@ -131,6 +134,7 @@ def main(
     save_openapi: bool = True,
     openapi_format: str = "json",
     mcp: bool = False,
+    auth: bool = False,
 ):
     """Main server execution logic.
 
@@ -142,6 +146,7 @@ def main(
         save_openapi: Whether to save OpenAPI spec to file
         openapi_format: Format for OpenAPI spec (json or yaml)
         mcp: Whether to enable MCP server at /mcp
+        auth: Whether to enable API authentication
     """
     click.echo("Starting DSPy API server...")
     click.echo()
@@ -186,6 +191,7 @@ def main(
             package_name=f"{package_name}.modules",
             logs_dir=logs_path,
             enable_ui=True,
+            enable_auth=auth,
         )
 
         # Mount MCP if enabled
@@ -253,6 +259,13 @@ def main(
         click.echo(f"    • {modules_path}")
         click.echo(f"    • {Path.cwd() / 'dspy.config.yaml'}")
         click.echo()
+    if auth:
+        token = os.environ.get("DSPY_API_TOKEN")
+        if token:
+            click.echo(click.style("Authentication: ENABLED", fg="green"))
+            click.echo("  API clients: Authorization: Bearer <token>")
+            click.echo("  Browser: Visit /login to authenticate")
+            click.echo()
     click.echo("Press Ctrl+C to stop the server")
     click.echo()
 
@@ -261,6 +274,7 @@ def main(
             # Set environment variables for create_app_instance()
             os.environ[ENV_LOGS_DIR] = str(logs_path)
             os.environ[ENV_ENABLE_MCP] = str(mcp).lower()
+            os.environ[ENV_AUTH_ENABLED] = str(auth).lower()
 
             # Get project root and src directory for watching
             project_root = Path.cwd()
@@ -303,6 +317,7 @@ if __name__ == "__main__":
     parser.add_argument("--save-openapi", action="store_true", default=True)
     parser.add_argument("--openapi-format", choices=["json", "yaml"], default="json")
     parser.add_argument("--mcp", action="store_true", help="Enable MCP server at /mcp")
+    parser.add_argument("--auth", action="store_true", help="Enable API authentication")
     args = parser.parse_args()
 
     main(
@@ -313,4 +328,5 @@ if __name__ == "__main__":
         save_openapi=args.save_openapi,
         openapi_format=args.openapi_format,
         mcp=args.mcp,
+        auth=args.auth,
     )

@@ -98,7 +98,12 @@ def _exec_clean(target_python: Path, args: list[str]) -> NoReturn:
     is_flag=True,
     help="Enable Model Context Protocol server at /mcp",
 )
-def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, system, mcp):
+@click.option(
+    "--auth/--no-auth",
+    default=False,
+    help="Enable API authentication via DSPY_API_TOKEN (default: disabled)",
+)
+def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, system, mcp, auth):
     """Start an HTTP API server that exposes your DSPy programs.
 
     This command:
@@ -120,7 +125,8 @@ def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, sy
             reload=reload,
             save_openapi=save_openapi,
             openapi_format=openapi_format,
-            mcp=mcp
+            mcp=mcp,
+            auth=auth,
         )
         return
     
@@ -184,6 +190,8 @@ def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, sy
         args.extend(["--openapi-format", openapi_format])
         if mcp:
             args.append("--mcp")
+        if auth:
+            args.append("--auth")
 
         _exec_clean(target_python, args)
     else:
@@ -194,5 +202,6 @@ def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, sy
             reload=reload,
             save_openapi=save_openapi,
             openapi_format=openapi_format,
-            mcp=mcp
+            mcp=mcp,
+            auth=auth,
         )
