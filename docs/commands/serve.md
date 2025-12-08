@@ -38,6 +38,7 @@ Starts an HTTP server for local testing or production deployment. Discovers DSPy
 | `--python` | auto-detect | Path to Python interpreter |
 | `--system` | disabled | Use system Python instead of venv |
 | `--mcp` | disabled | Enable MCP server at `/mcp` |
+| `--auth` | disabled | Require API authentication via `DSPY_API_KEY` |
 
 ## Auto-Discovery
 
@@ -56,6 +57,8 @@ Every deployment provides:
 | `/<ModuleName>` | POST | Execute module with JSON request body |
 | `/programs` | GET | List all discovered modules and their schemas |
 | `/openapi.json` | GET | OpenAPI specification |
+| `/login` | GET/POST | Browser login (when `--auth` enabled) |
+| `/health` | GET | Health check (always open, even with `--auth`) |
 
 With `--mcp` enabled:
 
@@ -98,10 +101,19 @@ Response:
 ### Production Mode
 
 ```bash
-dspy-cli serve --no-reload --host 0.0.0.0 --port 8000
+dspy-cli serve --no-reload --host 0.0.0.0 --port 8000 --auth
 ```
 
 Disables hot reload and binds to all network interfaces for production deployment.
+
+With `--auth` enabled:
+
+- Set `DSPY_API_KEY` in the environment.
+- API clients must send `Authorization: Bearer <DSPY_API_KEY>`.
+- The browser UI uses `/login` with the same key.
+- `/health` remains open for health checks.
+
+If `DSPY_API_KEY` is not set, a temporary key is generated and logged at startup.
 
 ## Error Responses
 

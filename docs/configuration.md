@@ -59,6 +59,7 @@ In `.env`:
 ```bash
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
+DSPY_API_KEY=your-api-key  # Optional: HTTP auth when running `dspy-cli serve --auth`
 ```
 
 Reference in config:
