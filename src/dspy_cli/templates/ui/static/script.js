@@ -954,10 +954,30 @@ function handleModuleStart(event, container) {
     const startDiv = document.createElement('div');
     startDiv.className = 'event-item module-start';
 
+    // Extract signature if available and truncate for display
+    const signature = event.attributes?.signature || '';
+    const eventId = `module-sig-${event.call_id}`;
+
+    let sigDisplay = '';
+    if (signature) {
+        const sigPreview = truncate(signature, 40);
+        const needsExpand = signature.length > 40;
+
+        if (needsExpand) {
+            sigDisplay = `
+                <span class="signature">${escapeHtml(sigPreview)}</span>
+                <button class="expand-btn-inline" data-label="signature" onclick="toggleDetails('${eventId}')">signature</button>
+            `;
+        } else {
+            sigDisplay = ` <span class="signature">${escapeHtml(signature)}</span>`;
+        }
+    }
+
     startDiv.innerHTML = `
         <div class="event-content-inline">
-            <span>📦 Module started: <strong>${escapeHtml(event.module_name)}</strong></span>
+            <span>📦 <strong>${escapeHtml(event.module_name)}</strong>${sigDisplay}</span>
         </div>
+        ${signature && signature.length > 40 ? `<div id="${eventId}" class="event-details" style="display: none;"><pre>${escapeHtml(signature)}</pre></div>` : ''}
     `;
 
     // Append to current module's content or main container
@@ -983,7 +1003,8 @@ function handleModuleStart(event, container) {
     moduleStack.push({
         callId: event.call_id,
         contentContainer: contentDiv,
-        startTime: event.timestamp
+        startTime: event.timestamp,
+        moduleName: event.module_name
     });
 
     container.scrollTop = container.scrollHeight; // Auto-scroll
@@ -999,9 +1020,21 @@ function handleModuleEnd(event, container) {
     }
 
     const module = moduleStack[moduleIndex];
+    const moduleName = module.moduleName || 'Module';
 
     // Calculate duration
     const duration = ((event.timestamp - module.startTime) * 1000).toFixed(0);
+
+    // Build token usage display
+    let tokenDisplay = '';
+    if (event.token_usage) {
+        const u = event.token_usage;
+        if (u.total_input_tokens !== undefined) {
+            tokenDisplay = ` • 📊 ${u.total_input_tokens}→${u.total_output_tokens} tokens`;
+        } else if (u.input_tokens !== undefined) {
+            tokenDisplay = ` • 📊 ${u.input_tokens}→${u.output_tokens} tokens`;
+        }
+    }
 
     // Create module end event item
     const endDiv = document.createElement('div');
@@ -1009,9 +1042,10 @@ function handleModuleEnd(event, container) {
 
     // Build the content based on success/failure
     if (event.success === false) {
+        const errorInfo = event.error ? `: ${escapeHtml(truncate(event.error, 60))}` : '';
         endDiv.innerHTML = `
             <div class="event-content-inline">
-                <span>❌ Module failed: <strong>${duration}ms</strong></span>
+                <span>❌ <strong>${escapeHtml(moduleName)}</strong> failed: <strong>${duration}ms</strong>${tokenDisplay}${errorInfo}</span>
             </div>
         `;
     } else if (event.outputs) {
@@ -1035,7 +1069,7 @@ function handleModuleEnd(event, container) {
 
         endDiv.innerHTML = `
             <div class="event-content-inline">
-                <span>✅ Module completed: <strong>${duration}ms</strong> • Output: <code>${escapeHtml(preview)}</code></span>
+                <span>✅ <strong>${escapeHtml(moduleName)}</strong> completed: <strong>${duration}ms</strong>${tokenDisplay} • Output: <code>${escapeHtml(preview)}</code></span>
                 <button class="expand-btn-inline" onclick="toggleDetails('${eventId}')">expand</button>
             </div>
             <div id="${eventId}" class="event-details" style="display: none;">
@@ -1046,7 +1080,7 @@ function handleModuleEnd(event, container) {
         // Module completed without outputs
         endDiv.innerHTML = `
             <div class="event-content-inline">
-                <span>✅ Module completed: <strong>${duration}ms</strong></span>
+                <span>✅ <strong>${escapeHtml(moduleName)}</strong> completed: <strong>${duration}ms</strong>${tokenDisplay}</span>
             </div>
         `;
     }
@@ -1076,11 +1110,13 @@ function createEventElement(event) {
 
         case 'lm_start':
             const msgCount = Array.isArray(event.messages) ? event.messages.length : 1;
+            const roleBreakdown = getRoleBreakdown(event.messages);
             const preview = getMessagePreview(event.messages);
+            const modelType = event.model_type ? `<span class="model-type">${escapeHtml(event.model_type)}</span> ` : '';
             div.innerHTML = `
                 <div class="event-content-inline">
-                    <span>🤖 LM: <code>${escapeHtml(event.model)}</code> • "${escapeHtml(preview)}"</span>
-                    <button class="expand-btn-inline" onclick="toggleDetails('${eventId}')">prompt</button>
+                    <span>🤖 LM: ${modelType}<code>${escapeHtml(event.model)}</code> • ${msgCount} msgs ${roleBreakdown} • "${escapeHtml(preview)}"</span>
+                    <button class="expand-btn-inline" data-label="prompt" onclick="toggleDetails('${eventId}')">prompt</button>
                 </div>
                 <div id="${eventId}" class="event-details" style="display: none;">${formatMessages(event.messages)}</div>
             `;
@@ -1088,10 +1124,21 @@ function createEventElement(event) {
 
         case 'lm_end':
             const responsePreview = getOutputPreview(event.outputs);
-            const tokenInfo = event.token_count ? ` • ${event.token_count} tokens` : '';
+            // Extract token usage (fix: was checking event.token_count which doesn't exist)
+            let tokenInfo = '';
+            if (event.token_usage) {
+                const u = event.token_usage;
+                tokenInfo = ` • ${u.input_tokens}→${u.output_tokens} tokens`;
+                // Add tokens/second if we have duration
+                if (event.duration_ms && u.output_tokens) {
+                    const tps = Math.round(u.output_tokens / (event.duration_ms / 1000));
+                    tokenInfo += ` (${tps} tok/s)`;
+                }
+            }
+            const durationInfo = event.duration_ms ? ` • ${Math.round(event.duration_ms)}ms` : '';
             div.innerHTML = `
                 <div class="event-content-inline">
-                    <span>✅ Response: "${escapeHtml(responsePreview)}"${escapeHtml(tokenInfo)}</span>
+                    <span>✅ Response${durationInfo}${tokenInfo}: "${escapeHtml(responsePreview)}"</span>
                     <button class="expand-btn-inline" onclick="toggleDetails('${eventId}')">expand</button>
                 </div>
                 <div id="${eventId}" class="event-details" style="display: none;"><pre>${escapeHtml(String(event.outputs))}</pre></div>
@@ -1099,20 +1146,24 @@ function createEventElement(event) {
             break;
 
         case 'tool_start':
-            const argPreview = getArgumentPreview(event.args);
+            const toolArgs = event.inputs || event.args || {};
+            const argPreview = getArgumentPreview(toolArgs);
+            const toolDesc = event.description ? ` - ${truncate(event.description, 40)}` : '';
             div.innerHTML = `
                 <div class="event-content-inline">
-                    <span>🔧 Tool: <code>${escapeHtml(event.tool_name)}</code> • ${escapeHtml(argPreview)}</span>
+                    <span>🔧 <code>${escapeHtml(event.tool_name)}</code>${toolDesc} • ${escapeHtml(argPreview)}</span>
                     <button class="expand-btn-inline" onclick="toggleDetails('${eventId}')">expand</button>
                 </div>
-                <div id="${eventId}" class="event-details" style="display: none;"><pre>${escapeHtml(JSON.stringify(event.args, null, 2))}</pre></div>
+                <div id="${eventId}" class="event-details" style="display: none;"><pre>${escapeHtml(JSON.stringify(toolArgs, null, 2))}</pre></div>
             `;
             break;
 
         case 'tool_end':
+            const toolDuration = event.duration_ms ? `${Math.round(event.duration_ms)}ms • ` : '';
+            const toolSuccess = event.success === false ? '❌' : '✅';
             div.innerHTML = `
                 <div class="event-content-inline">
-                    <span>✅ Tool result</span>
+                    <span>${toolSuccess} Tool result ${toolDuration}</span>
                     <button class="expand-btn-inline" onclick="toggleDetails('${eventId}')">expand</button>
                 </div>
                 <div id="${eventId}" class="event-details" style="display: none;"><pre>${escapeHtml(JSON.stringify(event.outputs, null, 2))}</pre></div>
@@ -1126,9 +1177,25 @@ function createEventElement(event) {
         case 'adapter_format_start':
         case 'adapter_format_end':
         case 'adapter_parse_start':
-        case 'adapter_parse_end':
-            // Filter out adapter events - they add noise and aren't useful to users
+            // Filter out adapter format events - they add noise
             return null;
+
+        case 'adapter_parse_end':
+            // Show parsed structured outputs from the LLM response
+            if (event.outputs) {
+                const parsedPreview = getOutputPreview(JSON.stringify(event.outputs));
+                div.innerHTML = `
+                    <div class="event-content-inline">
+                        <span>📋 Parsed: <code>${escapeHtml(parsedPreview)}</code></span>
+                        <button class="expand-btn-inline" onclick="toggleDetails('${eventId}')">expand</button>
+                    </div>
+                    <div id="${eventId}" class="event-details" style="display: none;"><pre>${escapeHtml(JSON.stringify(event.outputs, null, 2))}</pre></div>
+                `;
+            } else {
+                // No outputs, skip displaying
+                return null;
+            }
+            break;
 
         default:
             // Skip unknown event types
@@ -1140,6 +1207,7 @@ function createEventElement(event) {
 
 /**
  * Toggle expanded details visibility
+ * Preserves the original button label (e.g., 'prompt', 'signature') when collapsing
  */
 function toggleDetails(elementId, evt) {
     const details = document.getElementById(elementId);
@@ -1150,7 +1218,8 @@ function toggleDetails(elementId, evt) {
         btn.textContent = 'collapse';
     } else {
         details.style.display = 'none';
-        btn.textContent = 'expand';
+        // Use data-label attribute if set, otherwise default to 'expand'
+        btn.textContent = btn.dataset.label || 'expand';
     }
 }
 
@@ -1170,6 +1239,22 @@ function getMessagePreview(messages) {
         return truncate(firstContent, 50);
     }
     return truncate(String(messages), 50);
+}
+
+/**
+ * Helper: Get role breakdown for messages (e.g., "1S/2U/1A")
+ */
+function getRoleBreakdown(messages) {
+    if (!Array.isArray(messages)) return '';
+    const counts = { system: 0, user: 0, assistant: 0 };
+    messages.forEach(m => {
+        if (m.role && counts[m.role] !== undefined) counts[m.role]++;
+    });
+    const parts = [];
+    if (counts.system) parts.push(`${counts.system}S`);
+    if (counts.user) parts.push(`${counts.user}U`);
+    if (counts.assistant) parts.push(`${counts.assistant}A`);
+    return parts.length ? `(${parts.join('/')})` : '';
 }
 
 /**

@@ -121,3 +121,31 @@ def get_program_model(config: Dict[str, Any], program_name: str) -> str:
 
     # Fall back to default
     return config["models"]["default"]
+
+
+def get_trace_config(config: Dict[str, Any], program_name: Optional[str] = None) -> Dict[str, Any]:
+    """Get trace configuration for a program or globally.
+
+    Args:
+        config: Loaded configuration dictionary
+        program_name: Optional program name for program-specific overrides
+
+    Returns:
+        Dictionary with trace settings (enabled, store_in_logs, max_trace_depth)
+    """
+    # Default trace configuration
+    defaults = {"enabled": True, "store_in_logs": True, "max_trace_depth": 50}
+
+    # Get global trace settings
+    global_tracing = config.get("tracing", {})
+    trace_config = {**defaults, **global_tracing}
+
+    # Check for program-specific override
+    if program_name:
+        program_tracing = config.get("program_tracing", {})
+        if program_name in program_tracing:
+            program_override = program_tracing[program_name]
+            # Program-specific settings override global settings
+            trace_config.update(program_override)
+
+    return trace_config

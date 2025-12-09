@@ -22,3 +22,14 @@ models:
 # Optional: Override the model for specific programs
 # program_models:
 #   MySpecialProgram: {default_model_alias}
+
+# Tracing configuration - controls execution trace capture and logging
+tracing:
+  enabled: true             # Enable/disable tracing globally
+  store_in_logs: true       # Store traces in log files
+  max_trace_depth: 50       # Maximum call stack depth (prevent infinite recursion)
+
+# Optional: Override tracing for specific programs
+# program_tracing:
+#   ExpensiveProgram:
+#     enabled: false        # Disable tracing for performance-critical programs

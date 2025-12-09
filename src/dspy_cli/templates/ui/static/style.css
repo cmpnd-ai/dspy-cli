@@ -1076,7 +1076,7 @@ footer code {
 /* Individual event items */
 .event-item {
     padding: 0.5rem 0.75rem;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
     background: var(--bg-primary);
     border-radius: 4px;
     border-left: 2px solid var(--border-secondary);
@@ -1206,4 +1206,56 @@ footer code {
 .streaming-events::-webkit-scrollbar-thumb:hover,
 .event-details::-webkit-scrollbar-thumb:hover {
     background: var(--text-quaternary);
+}
+
+/* Signature display in module start */
+.signature {
+    color: var(--text-tertiary);
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 0.85em;
+    background: var(--bg-tertiary);
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    margin-left: 0.5rem;
+}
+
+/* Model type badge in LM events */
+.model-type {
+    background: var(--bg-code);
+    color: var(--text-tertiary);
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    font-size: 0.75em;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-right: 0.25rem;
+}
+
+/* Module start styling */
+.event-item.module-start {
+    border-left-color: var(--accent-primary);
+    background: var(--bg-secondary);
+}
+
+/* Module end styling */
+.event-item.module-end {
+    border-left-color: var(--success-color);
+}
+
+/* Event type specific left border colors */
+.event-item.event-lm_start,
+.event-item.event-lm_end {
+    border-left-color: var(--adapter-openai);
+}
+
+.event-item.event-tool_start,
+.event-item.event-tool_end {
+    border-left-color: var(--adapter-ollama);
+}
+
+/* Adapter parse event - shows structured outputs */
+.event-item.event-adapter_parse_end {
+    border-left-color: var(--adapter-anthropic);
+    background: var(--bg-success);
 }

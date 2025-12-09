@@ -16,7 +16,8 @@ def log_inference(
     inputs: Dict[str, Any],
     outputs: Dict[str, Any],
     duration_ms: float,
-    error: Optional[str] = None
+    error: Optional[str] = None,
+    trace: Optional[Dict[str, Any]] = None
 ):
     """Log a DSPy inference trace to a per-program log file.
 
@@ -31,6 +32,7 @@ def log_inference(
         outputs: Output fields from the program
         duration_ms: Execution duration in milliseconds
         error: Optional error message if inference failed
+        trace: Optional hierarchical execution trace from TraceBuilder
     """
     # Create log entry with inference trace
     log_entry = {
@@ -47,6 +49,10 @@ def log_inference(
         log_entry["success"] = False
     else:
         log_entry["success"] = True
+
+    # Add hierarchical trace if available
+    if trace:
+        log_entry["trace"] = trace
 
     # Write to per-program log file
     log_file = logs_dir / f"{program_name}.log"

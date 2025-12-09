@@ -18,6 +18,7 @@ from pydantic import BaseModel, create_model
 from dspy_cli.discovery import DiscoveredModule
 from dspy_cli.server.logging import log_inference
 from dspy_cli.server.streaming import StreamingCallback, event_stream_generator
+from dspy_cli.server.trace_builder import TraceBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -236,6 +237,25 @@ def create_program_routes(
         """Execute the DSPy program with given inputs."""
         start_time = time.time()
 
+        # Get trace configuration for this program
+        from dspy_cli.config.loader import get_trace_config
+
+        trace_config = get_trace_config(config, program_name)
+        tracing_enabled = trace_config.get("enabled", True)
+        logger.info(f"[TRACE] Config for {program_name}: enabled={tracing_enabled}")
+
+        # Initialize trace collection if enabled
+        trace_builder = None
+        callback = None
+        event_queue = None
+
+        if tracing_enabled:
+            event_queue = Queue()
+            max_depth = trace_config.get("max_trace_depth", 50)
+            callback = StreamingCallback(event_queue, max_depth=max_depth)
+            trace_builder = TraceBuilder()
+            logger.info(f"[TRACE] Initialized tracing for {program_name}")
+
         try:
             # Convert request to dict if it's a Pydantic model
             if isinstance(request, BaseModel):
@@ -247,13 +267,34 @@ def create_program_routes(
             # Note: This only works if forward types include proper dspy type annotations
             inputs = _convert_dspy_types(inputs, module)
 
-            # Execute the program with the program-specific LM via context
+            # Create a fresh LM copy for this request to ensure isolated history
+            # This prevents data leakage between concurrent requests
+            request_lm = lm.copy()
+
+            # Execute the program with the program-specific LM and callbacks
             logger.info(f"Executing {program_name} with inputs: {inputs}")
-            with dspy.context(lm=lm):
-                if hasattr(instance, 'aforward'):
+            callbacks = [callback] if callback else []
+
+            if hasattr(instance, 'aforward'):
+                # Async module - run directly with context
+                with dspy.context(lm=request_lm, callbacks=callbacks):
                     result = await instance.acall(**inputs)
-                else:
-                    result = instance(**inputs)
+            else:
+                # Sync module - run in thread pool to avoid blocking event loop
+                # Re-establish context in worker thread since contextvars don't
+                # automatically propagate to threads created by asyncio.to_thread()
+                def run_sync_with_context():
+                    with dspy.context(lm=request_lm, callbacks=callbacks):
+                        return instance(**inputs)
+
+                result = await asyncio.to_thread(run_sync_with_context)
+
+            # Collect trace events if enabled
+            # Use collected_events from callback (thread-safe, independent of queue)
+            if trace_builder and callback:
+                for event in callback.collected_events:
+                    trace_builder.add_event(event)
+                logger.info(f"[TRACE] Collected {len(callback.collected_events)} events")
 
             # Convert result to dict
             if isinstance(result, dspy.Prediction):
@@ -284,6 +325,12 @@ def create_program_routes(
             serialized_inputs = _serialize_for_logging(inputs, app.state.logs_dir, program_name)
             serialized_outputs = _serialize_for_logging(output, app.state.logs_dir, program_name)
 
+            # Build trace if enabled
+            trace_data = None
+            if trace_builder and trace_config.get("store_in_logs", True):
+                trace_data = trace_builder.build()
+                logger.info(f"[TRACE] Built trace with {trace_data.get('span_count', 0)} spans")
+
             # Log the inference trace
             log_inference(
                 logs_dir=app.state.logs_dir,
@@ -291,7 +338,8 @@ def create_program_routes(
                 model=model_name,
                 inputs=serialized_inputs,
                 outputs=serialized_outputs,
-                duration_ms=duration_ms
+                duration_ms=duration_ms,
+                trace=trace_data
             )
 
             logger.info(f"Program {program_name} completed successfully. Response: {output}")
@@ -304,6 +352,13 @@ def create_program_routes(
             raw_inputs = inputs if 'inputs' in locals() else {}
             serialized_inputs = _serialize_for_logging(raw_inputs, app.state.logs_dir, program_name)
 
+            # Build trace from collected events (even on error)
+            trace_data = None
+            if trace_builder and callback:
+                for event in callback.collected_events:
+                    trace_builder.add_event(event)
+                trace_data = trace_builder.build()
+
             # Log the failed inference
             log_inference(
                 logs_dir=app.state.logs_dir,
@@ -312,7 +367,8 @@ def create_program_routes(
                 inputs=serialized_inputs,
                 outputs={},
                 duration_ms=duration_ms,
-                error=str(e)
+                error=str(e),
+                trace=trace_data
             )
 
             logger.error(f"Error executing {program_name}: {e}", exc_info=True)
@@ -423,10 +479,19 @@ def create_program_streaming_route(
         """Execute the DSPy program with Server-Sent Events for real-time updates."""
         start_time = time.time()
 
+        # Get trace configuration for this program
+        from dspy_cli.config.loader import get_trace_config
+        trace_config = get_trace_config(config, program_name)
+        tracing_enabled = trace_config.get("enabled", True)
+
         # Create event queue and callback
         event_queue = Queue()
-        callback = StreamingCallback(event_queue)
+        max_depth = trace_config.get("max_trace_depth", 50)
+        callback = StreamingCallback(event_queue, max_depth=max_depth)
         logger.info(f"[Streaming] Created StreamingCallback instance")
+
+        # Initialize trace builder if enabled
+        trace_builder = TraceBuilder() if tracing_enabled else None
 
         # Define async execution task
         async def execute_with_callbacks():
@@ -514,13 +579,23 @@ def create_program_streaming_route(
                 serialized_inputs = _serialize_for_logging(inputs, app.state.logs_dir, program_name)
                 serialized_outputs = _serialize_for_logging(output, app.state.logs_dir, program_name)
 
+                # Build trace from collected callback events
+                trace_data = None
+                if trace_builder and trace_config.get("store_in_logs", True):
+                    # Use events collected by the callback (independent of queue)
+                    for event in callback.collected_events:
+                        trace_builder.add_event(event)
+                    trace_data = trace_builder.build()
+                    logger.info(f"[Streaming] Built trace with {trace_data.get('span_count', 0)} spans")
+
                 log_inference(
                     logs_dir=app.state.logs_dir,
                     program_name=program_name,
                     model=model_name,
                     inputs=serialized_inputs,
                     outputs=serialized_outputs,
-                    duration_ms=duration_ms
+                    duration_ms=duration_ms,
+                    trace=trace_data
                 )
 
                 logger.info(f"[Streaming] Program {program_name} completed successfully")
@@ -533,6 +608,13 @@ def create_program_streaming_route(
                 raw_inputs = inputs if 'inputs' in locals() else {}
                 serialized_inputs = _serialize_for_logging(raw_inputs, app.state.logs_dir, program_name)
 
+                # Build trace from collected callback events (even on error)
+                trace_data = None
+                if trace_builder and trace_config.get("store_in_logs", True):
+                    for event in callback.collected_events:
+                        trace_builder.add_event(event)
+                    trace_data = trace_builder.build()
+
                 log_inference(
                     logs_dir=app.state.logs_dir,
                     program_name=program_name,
@@ -540,7 +622,8 @@ def create_program_streaming_route(
                     inputs=serialized_inputs,
                     outputs={},
                     duration_ms=duration_ms,
-                    error=str(e)
+                    error=str(e),
+                    trace=trace_data
                 )
 
                 logger.error(f"[Streaming] Error executing {program_name}: {e}", exc_info=True)
