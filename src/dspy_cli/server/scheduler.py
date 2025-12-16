@@ -51,7 +51,10 @@ class GatewayScheduler:
                 return
 
             for raw_inputs in inputs_list:
-                inputs = _convert_dspy_types(raw_inputs, module)
+                # Strip _meta from inputs before passing to pipeline
+                # _meta is used by gateway.on_complete() but not by forward()
+                pipeline_inputs = {k: v for k, v in raw_inputs.items() if not k.startswith("_")}
+                inputs = _convert_dspy_types(pipeline_inputs, module)
                 try:
                     output = await execute_pipeline(
                         module=module,
@@ -68,7 +71,15 @@ class GatewayScheduler:
 
         trigger = CronTrigger.from_crontab(gateway.schedule)
         job_id = f"cron_{program_name}"
-        self.scheduler.add_job(execute_job, trigger, id=job_id)
+        # max_instances=1: Don't start a new run if previous is still running
+        # coalesce=True: If multiple runs were missed, only run once
+        self.scheduler.add_job(
+            execute_job,
+            trigger,
+            id=job_id,
+            max_instances=1,
+            coalesce=True,
+        )
         self._jobs[program_name] = job_id
         logger.info(f"Registered cron gateway: {program_name} schedule={gateway.schedule}")
 

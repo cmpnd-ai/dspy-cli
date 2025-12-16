@@ -44,7 +44,11 @@ class ClassifyJobPosting(dspy.Module):
 
 
 class JobPostingSignature(dspy.Signature):
-    """Classify a Discord message and determine moderation action."""
+    """Classify a Discord message and determine moderation action.
+    
+    A Job posting or job seeking message will explicitly state:
+    1. A user's resume/openness to work
+    2. A user's availability to hire (e.g. "I'm looking for a software engineer to hire immediately")"""
 
     message: str = dspy.InputField(desc="The Discord message content")
     author: str = dspy.InputField(desc="The message author's username")
