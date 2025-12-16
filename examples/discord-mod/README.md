@@ -56,23 +56,35 @@ src/discord_mod/
 
 2. **Configure environment variables** in `.env`:
    ```bash
-   # Discord bot token
-   DISCORD_BOT_TOKEN=your-bot-token
+   # Required
+   DISCORD_BOT_TOKEN=your-bot-token           # Bot authentication token
+   DISCORD_CHANNEL_IDS=123456789,987654321    # Channels to monitor (comma-separated)
+   DISCORD_JOBS_CHANNEL_ID=111222333          # Channel to move job posts to
+   OPENAI_API_KEY=your-openai-key             # LLM API key
 
-   # Channels to monitor (comma-separated)
-   DISCORD_CHANNEL_IDS=123456789,987654321
+   DISCORD_AUDIT_CHANNEL_ID=444555666         # Channel for moderation audit logs
 
-   # Channel to move job posts to
-   DISCORD_JOBS_CHANNEL_ID=111222333
-
-   # LLM API key
-   OPENAI_API_KEY=your-openai-key
+   # Optional
+   DRY_RUN=true                               # Log actions without executing (default: true)
+   USE_SAMPLE_DATA=true                       # Use sample messages instead of Discord API
    ```
 
 3. **Install dependencies**:
    ```bash
    uv sync
    ```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DISCORD_BOT_TOKEN` | ✅ | Bot authentication token from Discord Developer Portal |
+| `DISCORD_CHANNEL_IDS` | ✅ | Comma-separated channel IDs to monitor |
+| `DISCORD_JOBS_CHANNEL_ID` | ✅ | Channel ID where job posts are moved to |
+| `OPENAI_API_KEY` | ✅ | OpenAI API key for LLM classification |
+| `DISCORD_AUDIT_CHANNEL_ID` | ✅ | Channel for audit logs (move/flag/delete actions) |
+| `DRY_RUN` | ❌ | Set to `false` to execute real actions (default: `true`) |
+| `USE_SAMPLE_DATA` | ❌ | Set to `true` to use sample messages for testing |
 
 ## Running
 
