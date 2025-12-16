@@ -32,9 +32,6 @@ def create_program_routes(
     program_name = module.name
     model_name = model_config.get("model", "unknown")
 
-    # Instantiate the module once during route creation
-    instance = module.instantiate()
-
     # Create request/response models based on forward types
     if module.is_forward_typed:
         try:
@@ -63,6 +60,9 @@ def create_program_routes(
 
             # Convert dspy types (Image, Audio, etc.) from strings to objects
             inputs = _convert_dspy_types(inputs, module)
+
+            # Instantiate module per call to avoid shared state across concurrent requests
+            instance = module.instantiate()
 
             # Execute via shared pipeline executor
             output = await execute_pipeline(
