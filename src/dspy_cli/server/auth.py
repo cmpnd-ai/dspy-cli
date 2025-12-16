@@ -26,8 +26,8 @@ SESSION_MAX_AGE = 7 * 24 * 3600  # 7 days
 ENV_API_TOKEN = "DSPY_API_KEY"
 ENV_AUTH_ENABLED = "DSPY_CLI_AUTH_ENABLED"
 
-# Paths that don't require authentication
-OPEN_PATHS = {"/login", "/health", "/favicon.ico"}
+# Paths that don't require authentication (defaults)
+DEFAULT_OPEN_PATHS = {"/login", "/health", "/favicon.ico"}
 
 
 def get_api_token() -> str | None:
@@ -96,15 +96,16 @@ def check_auth(request: Request, token: str) -> bool:
 class AuthMiddleware(BaseHTTPMiddleware):
     """Middleware that enforces authentication on all routes except open paths."""
 
-    def __init__(self, app, token: str):
+    def __init__(self, app, token: str, open_paths: set[str] | None = None):
         super().__init__(app)
         self.token = token
+        self.open_paths = open_paths if open_paths is not None else DEFAULT_OPEN_PATHS
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         path = request.url.path.rstrip("/") or "/"
         
         # Allow open paths without auth
-        if path in OPEN_PATHS or path == "/login":
+        if path in self.open_paths or path == "/login":
             return await call_next(request)
 
         # Allow static files

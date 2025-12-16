@@ -193,6 +193,7 @@ def create_app(
     # Setup authentication if enabled
     if enable_auth:
         from dspy_cli.server.auth import (
+            DEFAULT_OPEN_PATHS,
             AuthMiddleware,
             create_auth_routes,
             generate_token,
@@ -215,8 +216,13 @@ def create_app(
         auth_router = create_auth_routes(token)
         app.include_router(auth_router)
 
+        # Combine default open paths with gateway public paths (requires_auth=False)
+        open_paths = set(DEFAULT_OPEN_PATHS)
+        if hasattr(app.state, "public_paths"):
+            open_paths.update(app.state.public_paths)
+
         # Add auth middleware (must be added after routes)
-        app.add_middleware(AuthMiddleware, token=token)
+        app.add_middleware(AuthMiddleware, token=token, open_paths=open_paths)
         logger.info("Authentication enabled")
 
     return app
