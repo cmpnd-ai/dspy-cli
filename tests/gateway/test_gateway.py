@@ -63,7 +63,7 @@ class TestIdentityGateway:
         assert gateway.response_model is None
         assert gateway.path is None
         assert gateway.method == "POST"
-        assert gateway.requires_auth is False
+        assert gateway.requires_auth is True
 
 
 class TestAPIGateway:

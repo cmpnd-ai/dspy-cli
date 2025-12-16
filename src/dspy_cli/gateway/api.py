@@ -33,7 +33,7 @@ class APIGateway(Gateway):
     response_model: Optional[Type[BaseModel]] = None
     path: Optional[str] = None
     method: str = "POST"
-    requires_auth: bool = False
+    requires_auth: bool = True
 
     def to_pipeline_inputs(self, request: Any) -> Dict[str, Any]:
         """Transform HTTP request to forward() kwargs.

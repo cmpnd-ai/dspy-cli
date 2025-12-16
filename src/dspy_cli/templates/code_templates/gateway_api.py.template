@@ -1,0 +1,51 @@
+"""API Gateway for {module_name}."""
+
+from typing import Any, Dict
+
+from dspy_cli.gateway import APIGateway
+
+
+class {class_name}(APIGateway):
+    """Transform HTTP requests/responses for {module_name}.
+    
+    Customize this gateway to:
+    - Transform incoming webhook payloads to pipeline inputs
+    - Wrap pipeline outputs in API-specific response formats
+    - Set custom paths, methods, or authentication requirements
+    """
+
+    path = "{path}"
+    method = "POST"
+    requires_auth = {requires_auth}
+
+    def to_pipeline_inputs(self, request: Any) -> Dict[str, Any]:
+        """Transform HTTP request to forward() kwargs.
+        
+        Args:
+            request: The HTTP request body (dict or Pydantic model)
+            
+        Returns:
+            Dictionary of kwargs to pass to the module's forward()
+        """
+        # Example: Extract from nested payload
+        # return {{"text": request["data"]["content"]}}
+        
+        # Default: pass through unchanged
+        if hasattr(request, "model_dump"):
+            return request.model_dump()
+        return dict(request) if request else {{}}
+
+    def from_pipeline_output(self, output: Any) -> Any:
+        """Transform pipeline output to HTTP response.
+        
+        Args:
+            output: The normalized output dict from the pipeline
+            
+        Returns:
+            The HTTP response body (will be serialized to JSON)
+        """
+        # Example: Wrap in response envelope
+        # return {{"status": "success", "result": output}}
+        
+        # Default: pass through unchanged
+        return output
