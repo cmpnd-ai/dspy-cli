@@ -1,0 +1,20 @@
+# DSPy Configuration
+# Define your language models and their settings here
+
+app_id: discord-mod
+models:
+  # The default model to use if no per-program override is specified
+  default: openai:gpt-5-mini
+
+  # Model registry - define all available models here
+  registry:
+    openai:gpt-5-mini:
+      model: openai/gpt-5-mini
+      model_type: chat
+      max_tokens: 16000
+      temperature: 1.0
+      env: OPENAI_API_KEY
+
+# Optional: Override the model for specific programs
+# program_models:
+#   MySpecialProgram: openai:gpt-5-mini
