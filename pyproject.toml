@@ -30,6 +30,7 @@ dependencies = [
     "requests>=2.28",
     "fastmcp>=2.0.0",
     "asgi-lifespan>=2.0.0",
+    "apscheduler>=3.10.0",
 ]
 
 [project.optional-dependencies]

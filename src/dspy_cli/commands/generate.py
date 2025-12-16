@@ -8,6 +8,19 @@ from dspy_cli.config.validator import find_package_directory, validate_project_s
 from dspy_cli.utils.signature_utils import parse_signature_string, to_class_name, build_forward_components
 from dspy_cli.utils.constants import MODULE_TYPES
 
+GATEWAY_TYPES = {
+    "api": {
+        "template": "gateway_api.py.template",
+        "suffix": "gateway",
+        "description": "HTTP request/response transformation",
+    },
+    "cron": {
+        "template": "gateway_cron.py.template",
+        "suffix": "cron_gateway",
+        "description": "Scheduled background execution",
+    },
+}
+
 
 @click.group(name="generate")
 def generate():
@@ -281,6 +294,166 @@ def module(program_name, module):
     except Exception as e:
         click.echo(click.style(f"Error creating module: {e}", fg="red"))
         raise click.Abort()
+
+
+@generate.command()
+@click.argument("name")
+@click.option(
+    "--type",
+    "-t",
+    "gateway_type",
+    default="api",
+    help=f"Gateway type. Available: {', '.join(GATEWAY_TYPES.keys())} (default: api)",
+)
+@click.option(
+    "--path",
+    "-p",
+    default=None,
+    help="Custom HTTP path for API gateway (default: /{Name})",
+)
+@click.option(
+    "--schedule",
+    "-s",
+    default="0 * * * *",
+    help="Cron schedule for cron gateway (default: hourly)",
+)
+@click.option(
+    "--public/--private",
+    default=False,
+    help="Whether the endpoint requires authentication (default: private/requires auth)",
+)
+def gateway(name, gateway_type, path, schedule, public):
+    """Generate a new gateway file.
+
+    Creates a gateway file in src/<package>/gateways/ for transforming
+    HTTP requests/responses or scheduling background jobs.
+
+    Examples:
+        # Create API gateway with default settings
+        dspy-cli g gateway webhook
+
+        # Create API gateway with custom path
+        dspy-cli g gateway slack -p /webhooks/slack
+
+        # Create public API gateway (no auth required)
+        dspy-cli g gateway health --public
+
+        # Create cron gateway for scheduled execution
+        dspy-cli g gateway moderator -t cron -s "*/5 * * * *"
+    """
+    click.echo(f"Generating gateway: {name}")
+    click.echo()
+
+    # Validate we're in a DSPy project
+    if not validate_project_structure():
+        click.echo(click.style("Error: Not in a valid DSPy project directory", fg="red"))
+        click.echo()
+        click.echo("Make sure you're in a directory created with 'dspy-cli new'")
+        click.echo("Required files: dspy.config.yaml, src/")
+        raise click.Abort()
+
+    # Validate gateway type
+    if gateway_type not in GATEWAY_TYPES:
+        click.echo(click.style(f"Error: Unknown gateway type '{gateway_type}'", fg="red"))
+        click.echo()
+        click.echo(f"Available gateway types: {', '.join(GATEWAY_TYPES.keys())}")
+        raise click.Abort()
+
+    # Find package directory
+    package_dir = find_package_directory()
+    if not package_dir:
+        click.echo(click.style("Error: Could not find package in src/", fg="red"))
+        raise click.Abort()
+
+    package_name = package_dir.name
+
+    # Convert dashes to underscores for valid Python identifier
+    original_name = name
+    name = name.replace("-", "_")
+
+    if original_name != name:
+        click.echo(f"  Note: Converted '{original_name}' to '{name}' for Python compatibility")
+
+    # Validate name is valid Python identifier
+    if not name.replace("_", "").isalnum() or name[0].isdigit():
+        click.echo(click.style(f"Error: Gateway name '{name}' is not a valid Python identifier", fg="red"))
+        raise click.Abort()
+
+    gateway_info = GATEWAY_TYPES[gateway_type]
+    click.echo(f"  Type: {gateway_type} ({gateway_info['description']})")
+    click.echo(f"  Package: {package_name}")
+
+    if gateway_type == "api":
+        effective_path = path if path else f"/{to_class_name(name)}"
+        click.echo(f"  Path: {effective_path}")
+        click.echo(f"  Auth required: {not public}")
+    else:
+        click.echo(f"  Schedule: {schedule}")
+
+    click.echo()
+
+    try:
+        _create_gateway_file(package_dir, name, gateway_type, path, schedule, public)
+
+        click.echo(click.style("✓ Gateway created successfully!", fg="green"))
+        click.echo()
+        file_name = f"{name.lower()}_{gateway_info['suffix']}.py"
+        click.echo(f"File created: gateways/{file_name}")
+        click.echo()
+        click.echo("Next steps:")
+        click.echo("  1. Edit the gateway file to implement your transformation logic")
+        click.echo("  2. Add 'gateway = YourGateway' to your module class")
+
+    except Exception as e:
+        click.echo(click.style(f"Error creating gateway: {e}", fg="red"))
+        raise click.Abort()
+
+
+def _create_gateway_file(package_dir, name, gateway_type, path, schedule, public):
+    """Create a gateway file."""
+    from dspy_cli.templates import code_templates
+
+    templates_dir = Path(code_templates.__file__).parent
+    gateway_info = GATEWAY_TYPES[gateway_type]
+
+    # Ensure gateways directory exists
+    gateways_dir = package_dir / "gateways"
+    gateways_dir.mkdir(exist_ok=True)
+
+    # Create __init__.py if it doesn't exist
+    init_file = gateways_dir / "__init__.py"
+    if not init_file.exists():
+        init_file.write_text('"""Gateway definitions."""\n')
+
+    # Generate file path
+    file_name = f"{name.lower()}_{gateway_info['suffix']}.py"
+    gateway_file_path = gateways_dir / file_name
+
+    # Check if file already exists
+    if gateway_file_path.exists():
+        click.echo(click.style(f"Warning: Gateway file already exists: {gateway_file_path}", fg="yellow"))
+        if not click.confirm("Overwrite?"):
+            raise click.Abort()
+
+    # Generate class name
+    class_name = to_class_name(name) + "Gateway"
+    module_name = to_class_name(name)
+
+    # Default path if not specified
+    effective_path = path if path else f"/{module_name}"
+
+    # Load and format template
+    template = (templates_dir / gateway_info["template"]).read_text()
+    content = template.format(
+        module_name=module_name,
+        class_name=class_name,
+        path=effective_path,
+        schedule=schedule,
+        requires_auth=str(not public),
+    )
+
+    gateway_file_path.write_text(content)
+    click.echo(f"  Created: gateways/{file_name}")
 
 
 def _create_signature_file(package_dir, program_name, signature_str, signature_fields):

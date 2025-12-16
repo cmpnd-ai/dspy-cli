@@ -9,9 +9,12 @@ from fastapi import FastAPI
 
 from dspy_cli.config import get_model_config, get_program_model
 from dspy_cli.discovery import discover_modules
+from dspy_cli.discovery.gateway_finder import get_gateway_for_module, is_cron_gateway
+from dspy_cli.gateway import APIGateway, CronGateway
 from dspy_cli.server.logging import setup_logging
 from dspy_cli.server.metrics import get_all_metrics, get_program_metrics_cached
 from dspy_cli.server.routes import create_program_routes
+from dspy_cli.server.scheduler import GatewayScheduler
 from dspy_cli.utils.openapi import enhance_openapi_metadata, create_openapi_extensions
 
 logger = logging.getLogger(__name__)
@@ -89,6 +92,10 @@ def create_app(
 
         logger.info(f"Created LM for program: {module.name} (model: {model_alias})")
 
+    # Initialize scheduler for cron gateways
+    scheduler = GatewayScheduler(logs_dir)
+    app.state.scheduler = scheduler
+
     # Create routes for each discovered module
     for module in modules:
         # Get the LM instance for this program
@@ -96,9 +103,23 @@ def create_app(
         model_alias = get_program_model(config, module.name)
         model_config = get_model_config(config, model_alias)
 
-        create_program_routes(app, module, lm, model_config, config)
+        # Get gateway and route by type
+        gateway = get_gateway_for_module(module)
 
-        logger.info(f"Registered program: {module.name} (model: {model_alias})")
+        if is_cron_gateway(gateway):
+            # Register with scheduler instead of creating HTTP route
+            scheduler.register_cron_gateway(
+                module=module,
+                gateway=gateway,
+                lm=lm,
+                model_name=model_config.get("model", "unknown"),
+            )
+            logger.info(f"Registered cron program: {module.name} (schedule: {gateway.schedule})")
+        elif isinstance(gateway, APIGateway):
+            create_program_routes(app, module, lm, model_config, config, gateway=gateway)
+            logger.info(f"Registered program: {module.name} (model: {model_alias})")
+        else:
+            logger.warning(f"Unknown gateway type for {module.name}: {type(gateway)}")
 
     # Add programs list endpoint
     @app.get("/programs")
@@ -224,6 +245,16 @@ def create_app(
         # Add auth middleware (must be added after routes)
         app.add_middleware(AuthMiddleware, token=token, open_paths=open_paths)
         logger.info("Authentication enabled")
+
+    # Add scheduler lifecycle events if any cron jobs registered
+    if scheduler.job_count > 0:
+        @app.on_event("startup")
+        async def _start_scheduler():
+            scheduler.start()
+
+        @app.on_event("shutdown")
+        async def _stop_scheduler():
+            scheduler.shutdown()
 
     return app
 

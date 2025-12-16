@@ -99,6 +99,7 @@ nav:
       - new: commands/new.md
       - serve: commands/serve.md
       - generate: commands/generate.md
+  - Gateways: gateways.md
   - Deployment: deployment.md
   - Configuration: configuration.md
   - Use Cases:

@@ -1,0 +1,50 @@
+"""Cron Gateway for {module_name}."""
+
+from typing import Any, Dict, List
+
+from dspy_cli.gateway import CronGateway
+
+
+class {class_name}(CronGateway):
+    """Schedule periodic execution of {module_name}.
+    
+    This gateway fetches data from external sources on a schedule
+    and processes it through the pipeline.
+    """
+
+    schedule = "{schedule}"  # Cron expression: minute hour day-of-month month day-of-week
+
+    async def get_pipeline_inputs(self) -> List[Dict[str, Any]]:
+        """Fetch data to process from external source.
+        
+        Called on each scheduled execution. Returns a list of input
+        dictionaries, each processed separately through the pipeline.
+        
+        Returns:
+            List of input dicts, each passed to the module's forward()
+        """
+        # Example: Fetch from an API
+        # messages = await fetch_pending_messages()
+        # return [
+        #     {{"text": m["content"], "_meta": {{"id": m["id"]}}}}
+        #     for m in messages
+        # ]
+        
+        # Placeholder implementation
+        return []
+
+    async def on_complete(self, inputs: Dict[str, Any], output: Any) -> None:
+        """Handle pipeline output after processing.
+        
+        Called once per input after successful pipeline execution.
+        Use this to update external systems, send notifications, etc.
+        
+        Args:
+            inputs: The original input dict (including any _meta keys)
+            output: The pipeline output dict
+        """
+        # Example: Update external system based on output
+        # if output.get("action") == "flag":
+        #     await flag_message(inputs["_meta"]["id"])
+        
+        pass
