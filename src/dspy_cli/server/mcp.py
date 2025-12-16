@@ -1,20 +1,16 @@
 """MCP (Model Context Protocol) integration for DSPy programs."""
 
 import logging
-import time
 from typing import Any, Dict
 
-import dspy
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 from dspy_cli.config import get_model_config, get_program_model
-from dspy_cli.server.logging import log_inference
+from dspy_cli.server.execution import _convert_dspy_types, execute_pipeline
 from dspy_cli.server.routes import (
-    _convert_dspy_types,
     _create_request_model_from_forward,
     _create_response_model_from_forward,
-    _serialize_for_logging,
 )
 
 logger = logging.getLogger(__name__)
@@ -90,92 +86,36 @@ def _register_program_tool(mcp_server: "FastMCP", app: FastAPI, module):
     # Create tool execution logic
     async def execute_program(**kwargs) -> Dict[str, Any]:
         """Execute the DSPy program with given parameters."""
-        start_time = time.time()
+        # Validate with request model if available
+        if has_types and _is_pydantic_model(RequestModel):
+            validated = RequestModel(**kwargs)
+            inputs = validated.model_dump()
+        else:
+            inputs = kwargs
 
-        try:
-            # Validate with request model if available
-            if has_types and _is_pydantic_model(RequestModel):
-                validated = RequestModel(**kwargs)
-                inputs = validated.model_dump()
-            else:
-                inputs = kwargs
+        # Convert dspy types (Image, Audio, etc.)
+        inputs = _convert_dspy_types(inputs, module)
 
-            # Convert dspy types (Image, Audio, etc.)
-            inputs = _convert_dspy_types(inputs, module)
+        # Instantiate module per call to avoid shared state across concurrent requests
+        instance = module.instantiate()
 
-            # Instantiate module per call to avoid shared state across concurrent requests
-            instance = module.instantiate()
+        # Execute via shared pipeline executor
+        output = await execute_pipeline(
+            module=module,
+            instance=instance,
+            lm=lm,
+            model_name=model_name,
+            program_name=program_name,
+            inputs=inputs,
+            logs_dir=app.state.logs_dir,
+        )
 
-            # Execute with program-specific LM
-            logger.info(f"MCP: Executing {program_name} with inputs: {inputs}")
-            with dspy.context(lm=lm):
-                if hasattr(instance, "aforward"):
-                    result = await instance.acall(**inputs)
-                else:
-                    result = instance(**inputs)
+        # Validate response if model available
+        if has_types and _is_pydantic_model(ResponseModel):
+            validated_output = ResponseModel(**output)
+            return validated_output.model_dump()
 
-            # Convert result to dict
-            if isinstance(result, dspy.Prediction):
-                output = result.toDict()
-            elif hasattr(result, "__dict__"):
-                output = vars(result)
-            elif isinstance(result, dict):
-                output = result
-            else:
-                # Simple value - wrap in expected field name
-                if module.is_forward_typed and module.forward_output_fields:
-                    field_names = list(module.forward_output_fields.keys())
-                    output = {field_names[0]: result} if len(field_names) == 1 else {"result": result}
-                else:
-                    output = {"result": result}
-
-            duration_ms = (time.time() - start_time) * 1000
-
-            # Log inference
-            serialized_inputs = _serialize_for_logging(inputs, app.state.logs_dir, program_name)
-            serialized_outputs = _serialize_for_logging(output, app.state.logs_dir, program_name)
-
-            log_inference(
-                logs_dir=app.state.logs_dir,
-                program_name=program_name,
-                model=model_name,
-                inputs=serialized_inputs,
-                outputs=serialized_outputs,
-                duration_ms=duration_ms,
-            )
-
-            logger.info(f"MCP: Program {program_name} completed in {duration_ms:.0f}ms")
-
-            # Validate response if model available
-            if has_types and _is_pydantic_model(ResponseModel):
-                validated_output = ResponseModel(**output)
-                return validated_output.model_dump()
-
-            return output
-
-        except Exception as e:
-            duration_ms = (time.time() - start_time) * 1000
-
-            # Log failed inference
-            try:
-                serialized_inputs = _serialize_for_logging(
-                    inputs if "inputs" in locals() else kwargs, app.state.logs_dir, program_name
-                )
-            except Exception:
-                serialized_inputs = {}
-
-            log_inference(
-                logs_dir=app.state.logs_dir,
-                program_name=program_name,
-                model=model_name,
-                inputs=serialized_inputs,
-                outputs={},
-                duration_ms=duration_ms,
-                error=str(e),
-            )
-
-            logger.exception(f"MCP: Error executing {program_name}")
-            raise
+        return output
 
     # Register tool with explicit fields if typed, else generic params
     if has_types and _is_pydantic_model(RequestModel):
