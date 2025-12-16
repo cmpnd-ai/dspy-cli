@@ -8,6 +8,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, create_model
 
 from dspy_cli.discovery import DiscoveredModule
+from dspy_cli.discovery.gateway_finder import get_gateway_for_module
+from dspy_cli.gateway import APIGateway
 from dspy_cli.server.execution import _convert_dspy_types, execute_pipeline
 
 logger = logging.getLogger(__name__)
@@ -18,7 +20,8 @@ def create_program_routes(
     module: DiscoveredModule,
     lm: dspy.LM,
     model_config: Dict,
-    config: Dict
+    config: Dict,
+    gateway: APIGateway | None = None,
 ):
     """Create API routes for a DSPy program.
 
@@ -28,57 +31,78 @@ def create_program_routes(
         lm: Language model instance for this program
         model_config: Model configuration for this program
         config: Full configuration dictionary
+        gateway: Optional APIGateway instance (if None, will be discovered)
     """
     program_name = module.name
     model_name = model_config.get("model", "unknown")
 
-    # Create request/response models based on forward types
-    if module.is_forward_typed:
-        try:
-            request_model = _create_request_model_from_forward(module)
-            response_model = _create_response_model_from_forward(module)
-        except Exception as e:
-            logger.warning(f"Could not create models from forward types for {program_name}: {e}")
-            request_model = Dict[str, Any]
-            response_model = Dict[str, Any]
-    else:
-        # No typed forward method - use generic dict models (no validation)
-        logger.warning(f"Module {program_name} does not have typed forward() method - API will have no validation")
-        request_model = Dict[str, Any]
-        response_model = Dict[str, Any]
+    if gateway is None:
+        gateway = get_gateway_for_module(module)
+        if not isinstance(gateway, APIGateway):
+            logger.warning(f"Module {program_name} has non-API gateway, skipping route creation")
+            return
 
-    # Create POST /{program} endpoint
-    @app.post(f"/{program_name}", response_model=response_model)
+    request_model = gateway.request_model
+    response_model = gateway.response_model
+
+    if request_model is None:
+        if module.is_forward_typed:
+            try:
+                request_model = _create_request_model_from_forward(module)
+            except Exception as e:
+                logger.warning(f"Could not create request model from forward types for {program_name}: {e}")
+                request_model = Dict[str, Any]
+        else:
+            logger.warning(f"Module {program_name} does not have typed forward() method - API will have no validation")
+            request_model = Dict[str, Any]
+
+    if response_model is None:
+        if module.is_forward_typed:
+            try:
+                response_model = _create_response_model_from_forward(module)
+            except Exception as e:
+                logger.warning(f"Could not create response model from forward types for {program_name}: {e}")
+                response_model = Dict[str, Any]
+        else:
+            response_model = Dict[str, Any]
+
+    route_path = gateway.path if gateway.path else f"/{program_name}"
+
     async def run_program(request: request_model):
         """Execute the DSPy program with given inputs."""
         try:
-            # Convert request to dict if it's a Pydantic model
-            if isinstance(request, BaseModel):
-                inputs = request.model_dump()
-            else:
-                inputs = request
+            pipeline_inputs = gateway.to_pipeline_inputs(request)
 
-            # Convert dspy types (Image, Audio, etc.) from strings to objects
-            inputs = _convert_dspy_types(inputs, module)
+            pipeline_inputs = _convert_dspy_types(pipeline_inputs, module)
 
-            # Instantiate module per call to avoid shared state across concurrent requests
             instance = module.instantiate()
 
-            # Execute via shared pipeline executor
             output = await execute_pipeline(
                 module=module,
                 instance=instance,
                 lm=lm,
                 model_name=model_name,
                 program_name=program_name,
-                inputs=inputs,
+                inputs=pipeline_inputs,
                 logs_dir=app.state.logs_dir,
             )
 
-            return output
+            return gateway.from_pipeline_output(output)
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+
+    app.add_api_route(
+        route_path,
+        run_program,
+        methods=[gateway.method],
+        response_model=response_model,
+    )
+
+    if not gateway.requires_auth:
+        if not hasattr(app.state, "public_paths"):
+            app.state.public_paths = set()
+        app.state.public_paths.add(route_path)
 
 
 def _create_request_model_from_forward(module: DiscoveredModule) -> type:
