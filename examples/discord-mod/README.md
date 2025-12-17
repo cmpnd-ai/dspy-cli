@@ -99,6 +99,20 @@ The `ClassifyJobPosting` module uses a `CronGateway` with `schedule = "*/5 * * *
 2. Classify each new message
 3. Take the appropriate moderation action
 
+
+## Deployment:
+fly scale count 1
+fly deploy --ha=false
+
+fly secrets set \
+  DISCORD_BOT_TOKEN="<Your token>" \
+  DISCORD_CHANNEL_IDS="<>" \
+  DISCORD_JOBS_CHANNEL_ID="<>" \
+  DISCORD_AUDIT_CHANNEL_ID="<Channel Id to send notifications to>" \
+  OPENAI_API_KEY="<Your openai key>" \
+  DRY_RUN="false"
+
+
 ## How It Works
 
 ### The Module (Pure LLM Logic)
