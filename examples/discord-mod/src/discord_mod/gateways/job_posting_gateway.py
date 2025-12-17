@@ -29,7 +29,7 @@ class JobPostingGateway(CronGateway):
         DRY_RUN: Set to "true" to log actions without executing them
     """
 
-    schedule = "* * * * *"  # Every minute (testing)
+    schedule = "*/5 * * * *"  # Every 5 minutes
 
     def __init__(self):
         # Validate required environment variables
@@ -43,13 +43,11 @@ class JobPostingGateway(CronGateway):
         if not os.environ.get("DISCORD_AUDIT_CHANNEL_ID"):
             missing.append("DISCORD_AUDIT_CHANNEL_ID")
         
-        if missing and not os.environ.get("USE_SAMPLE_DATA", "").lower() == "true":
+        if missing:
             logger.error(f"Missing required environment variables: {', '.join(missing)}")
-            logger.error("Set these variables or use USE_SAMPLE_DATA=true for testing")
+            logger.error("Set these variables")
             raise SystemExit(1)
 
-        # USE_SAMPLE_DATA: Use sample messages instead of fetching from Discord
-        self.use_sample_data = os.environ.get("USE_SAMPLE_DATA", "").lower() == "true"
         # DRY_RUN: Log actions instead of executing them
         self.dry_run = os.environ.get("DRY_RUN", "true").lower() == "true"
         
@@ -60,16 +58,11 @@ class JobPostingGateway(CronGateway):
         self.jobs_channel_id = os.environ.get("DISCORD_JOBS_CHANNEL_ID")
         self.audit_channel_id = os.environ.get("DISCORD_AUDIT_CHANNEL_ID")
         
-        if self.use_sample_data:
-            logger.info("USE_SAMPLE_DATA mode - using sample messages")
         if self.dry_run:
             logger.info("DRY_RUN mode - actions will be logged, not executed")
 
     async def get_pipeline_inputs(self) -> List[Dict[str, Any]]:
         """Fetch recent unprocessed messages from monitored channels."""
-        if self.use_sample_data:
-            return self._get_sample_inputs()
-
         inputs = []
 
         for channel_id in self.channel_ids:
@@ -98,37 +91,6 @@ class JobPostingGateway(CronGateway):
 
         logger.info(f"Fetched {len(inputs)} messages to classify")
         return inputs
-
-    def _get_sample_inputs(self) -> List[Dict[str, Any]]:
-        """Return sample messages for dry run testing."""
-        samples = [
-            {
-                "message": "Hey everyone, we're hiring a senior Python developer! Remote OK, competitive salary. DM me for details.",
-                "author": "recruiter_jane",
-                "channel_name": "general",
-                "_meta": {"message_id": "sample_1", "channel_id": "123", "author_id": "u1"},
-            },
-            {
-                "message": "Anyone know a good coffee shop near downtown?",
-                "author": "coffee_lover",
-                "channel_name": "general",
-                "_meta": {"message_id": "sample_2", "channel_id": "123", "author_id": "u2"},
-            },
-            {
-                "message": "Looking for work! 5 years of React experience, open to contract or full-time.",
-                "author": "dev_looking",
-                "channel_name": "general",
-                "_meta": {"message_id": "sample_3", "channel_id": "123", "author_id": "u3"},
-            },
-            {
-                "message": "🚀🚀🚀 MAKE $10K/WEEK FROM HOME!!! Click here: spam.link 🚀🚀🚀",
-                "author": "totally_not_spam",
-                "channel_name": "general",
-                "_meta": {"message_id": "sample_4", "channel_id": "123", "author_id": "u4"},
-            },
-        ]
-        logger.info(f"[DRY RUN] Using {len(samples)} sample messages")
-        return samples
 
     async def on_complete(self, inputs: Dict[str, Any], output: Any) -> None:
         """Take moderation action based on classification result."""
@@ -189,7 +151,8 @@ class JobPostingGateway(CronGateway):
             )
             await self.client.send_dm(
                 user_id=meta["author_id"],
-                content=f"Your message was removed: {reason}",
+                content=f"Your message was removed: {reason}\n\n"
+                        f"If you believe this was a false positive, please let us know.",
             )
             logger.info(f"Deleted message {message_id}")
             await self._send_audit_log(action, inputs, output, dry_run=False)
