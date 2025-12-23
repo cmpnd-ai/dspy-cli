@@ -92,10 +92,18 @@ def create_program_routes(
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-    app.add_api_route(
-        route_path,
-        run_program,
-        methods=[gateway.method],
+    # Initialize gateway lifecycle
+    gateway.setup()
+    
+    # Register shutdown hook with FastAPI
+    if not hasattr(app.state, "_gateway_shutdowns"):
+        app.state._gateway_shutdowns = []
+    app.state._gateway_shutdowns.append(gateway.shutdown)
+
+    gateway.configure_route(
+        app=app,
+        route_path=route_path,
+        endpoint=run_program,
         response_model=response_model,
     )
 

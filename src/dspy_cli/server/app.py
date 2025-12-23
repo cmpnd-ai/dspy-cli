@@ -1,6 +1,7 @@
 """FastAPI application factory."""
 
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict
 
@@ -48,7 +49,8 @@ def create_app(
     app = FastAPI(
         title="DSPy API",
         description="Automatically generated API for DSPy programs",
-        version="0.1.0"
+        version="0.1.0",
+        lifespan=lifespan,
     )
 
     # Store logs directory and metrics cache in app state
@@ -246,17 +248,28 @@ def create_app(
         app.add_middleware(AuthMiddleware, token=token, open_paths=open_paths)
         logger.info("Authentication enabled")
 
-    # Add scheduler lifecycle events if any cron jobs registered
-    if scheduler.job_count > 0:
-        @app.on_event("startup")
-        async def _start_scheduler():
-            scheduler.start()
-
-        @app.on_event("shutdown")
-        async def _stop_scheduler():
-            scheduler.shutdown()
-
     return app
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup/shutdown events."""
+    # Startup
+    scheduler = getattr(app.state, "scheduler", None)
+    if scheduler and scheduler.job_count > 0:
+        scheduler.start()
+    
+    yield
+    
+    # Shutdown
+    if scheduler and scheduler.job_count > 0:
+        scheduler.shutdown()
+    
+    for shutdown_fn in getattr(app.state, "_gateway_shutdowns", []):
+        try:
+            shutdown_fn()
+        except Exception as e:
+            logger.warning(f"Gateway shutdown error: {e}")
 
 
 def _create_lm_instance(model_config: Dict) -> dspy.LM:

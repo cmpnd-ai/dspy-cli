@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict, List, Tuple
 
 import dspy
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -10,7 +10,11 @@ from apscheduler.triggers.cron import CronTrigger
 
 from dspy_cli.discovery import DiscoveredModule
 from dspy_cli.gateway import CronGateway
-from dspy_cli.server.execution import _convert_dspy_types, execute_pipeline
+from dspy_cli.server.execution import (
+    _convert_dspy_types,
+    execute_pipeline,
+    execute_pipeline_batch,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +26,7 @@ class GatewayScheduler:
         self.logs_dir = logs_dir
         self.scheduler = AsyncIOScheduler()
         self._jobs: Dict[str, str] = {}
+        self._gateways: List[CronGateway] = []
 
     def register_cron_gateway(
         self,
@@ -40,6 +45,8 @@ class GatewayScheduler:
         """
         program_name = module.name
 
+        gateway.setup()
+
         async def execute_job():
             logger.info(f"CronGateway: executing {program_name}")
             instance = module.instantiate()
@@ -50,24 +57,30 @@ class GatewayScheduler:
                 logger.error(f"CronGateway error fetching inputs for {program_name}: {e}", exc_info=True)
                 return
 
-            for raw_inputs in inputs_list:
-                # Strip _meta from inputs before passing to pipeline
-                # _meta is used by gateway.on_complete() but not by forward()
-                pipeline_inputs = {k: v for k, v in raw_inputs.items() if not k.startswith("_")}
-                inputs = _convert_dspy_types(pipeline_inputs, module)
-                try:
-                    output = await execute_pipeline(
-                        module=module,
-                        instance=instance,
-                        lm=lm,
-                        model_name=model_name,
-                        program_name=program_name,
-                        inputs=inputs,
-                        logs_dir=self.logs_dir,
-                    )
-                    await gateway.on_complete(raw_inputs, output)
-                except Exception as e:
-                    logger.error(f"CronGateway error for {program_name}: {e}", exc_info=True)
+            if not inputs_list:
+                logger.debug(f"CronGateway: no inputs for {program_name}")
+                return
+
+            if gateway.use_batch:
+                await self._execute_batch(
+                    module=module,
+                    instance=instance,
+                    gateway=gateway,
+                    lm=lm,
+                    model_name=model_name,
+                    program_name=program_name,
+                    inputs_list=inputs_list,
+                )
+            else:
+                await self._execute_sequential(
+                    module=module,
+                    instance=instance,
+                    gateway=gateway,
+                    lm=lm,
+                    model_name=model_name,
+                    program_name=program_name,
+                    inputs_list=inputs_list,
+                )
 
         trigger = CronTrigger.from_crontab(gateway.schedule)
         job_id = f"cron_{program_name}"
@@ -81,7 +94,85 @@ class GatewayScheduler:
             coalesce=True,
         )
         self._jobs[program_name] = job_id
-        logger.info(f"Registered cron gateway: {program_name} schedule={gateway.schedule}")
+        self._gateways.append(gateway)
+        batch_info = f" batch={gateway.use_batch}" if gateway.use_batch else ""
+        threads_info = f" threads={gateway.num_threads}" if gateway.use_batch and gateway.num_threads else ""
+        logger.info(f"Registered cron gateway: {program_name} schedule={gateway.schedule}{batch_info}{threads_info}")
+
+    async def _execute_sequential(
+        self,
+        *,
+        module: DiscoveredModule,
+        instance: dspy.Module,
+        gateway: CronGateway,
+        lm: dspy.LM,
+        model_name: str,
+        program_name: str,
+        inputs_list: List[Dict[str, Any]],
+    ):
+        """Execute pipeline sequentially for each input."""
+        for raw_inputs in inputs_list:
+            pipeline_inputs = gateway.extract_pipeline_kwargs(raw_inputs)
+            inputs = _convert_dspy_types(pipeline_inputs, module)
+            try:
+                output = await execute_pipeline(
+                    module=module,
+                    instance=instance,
+                    lm=lm,
+                    model_name=model_name,
+                    program_name=program_name,
+                    inputs=inputs,
+                    logs_dir=self.logs_dir,
+                )
+                await gateway.on_complete(raw_inputs, output)
+            except Exception as e:
+                logger.error(f"CronGateway error for {program_name}: {e}", exc_info=True)
+                try:
+                    await gateway.on_error(raw_inputs, e)
+                except Exception as hook_err:
+                    logger.error(f"CronGateway on_error hook failed for {program_name}: {hook_err}", exc_info=True)
+
+    async def _execute_batch(
+        self,
+        *,
+        module: DiscoveredModule,
+        instance: dspy.Module,
+        gateway: CronGateway,
+        lm: dspy.LM,
+        model_name: str,
+        program_name: str,
+        inputs_list: List[Dict[str, Any]],
+    ):
+        """Execute pipeline in batch mode using DSPy's module.batch()."""
+        logger.info(
+            f"CronGateway: batch processing {len(inputs_list)} inputs "
+            f"for {program_name} (threads={gateway.num_threads or 'default'})"
+        )
+
+        results = await execute_pipeline_batch(
+            module=module,
+            instance=instance,
+            lm=lm,
+            model_name=model_name,
+            program_name=program_name,
+            inputs_list=inputs_list,
+            logs_dir=self.logs_dir,
+            num_threads=gateway.num_threads,
+            max_errors=gateway.max_errors,
+        )
+
+        for raw_inputs, output, error in results:
+            if error:
+                logger.error(f"CronGateway batch error for {program_name}: {error}", exc_info=False)
+                try:
+                    await gateway.on_error(raw_inputs, error)
+                except Exception as hook_err:
+                    logger.error(f"CronGateway on_error hook failed for {program_name}: {hook_err}", exc_info=True)
+                continue
+            try:
+                await gateway.on_complete(raw_inputs, output)
+            except Exception as e:
+                logger.error(f"CronGateway on_complete error for {program_name}: {e}", exc_info=True)
 
     def start(self):
         """Start the scheduler."""
@@ -90,7 +181,13 @@ class GatewayScheduler:
             logger.info("GatewayScheduler started")
 
     def shutdown(self):
-        """Shutdown the scheduler."""
+        """Shutdown the scheduler and all gateways."""
+        for gateway in self._gateways:
+            try:
+                gateway.shutdown()
+            except Exception as e:
+                logger.error(f"Gateway shutdown error: {e}", exc_info=True)
+
         if self.scheduler.running:
             self.scheduler.shutdown(wait=False)
             logger.info("GatewayScheduler shutdown")

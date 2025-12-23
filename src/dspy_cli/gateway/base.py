@@ -9,4 +9,25 @@ class Gateway(ABC):
     A gateway controls how data flows into and out of a DSPy pipeline.
     Subclasses define specific input/output transformation patterns.
     """
-    pass
+
+    def setup(self) -> None:
+        """Optional initialization hook.
+        
+        Called once when the gateway is registered. Use for:
+        - Validating configuration
+        - Creating clients
+        - Reading environment variables
+        
+        Raise an exception to indicate setup failure.
+        """
+        pass
+
+    def shutdown(self) -> None:
+        """Optional cleanup hook.
+        
+        Called when the server is shutting down. Use for:
+        - Closing connections
+        - Flushing buffers
+        - Releasing resources
+        """
+        pass
