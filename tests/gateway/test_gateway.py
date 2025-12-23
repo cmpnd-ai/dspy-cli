@@ -143,6 +143,66 @@ class TestCronGateway:
         gateway = ValidCronGateway()
         assert gateway.schedule == "*/5 * * * *"
 
+    def test_extract_pipeline_kwargs(self):
+        """extract_pipeline_kwargs should strip _-prefixed keys."""
+        class TestGateway(CronGateway):
+            schedule = "0 * * * *"
+            async def get_pipeline_inputs(self) -> List[Dict[str, Any]]:
+                return []
+            async def on_complete(self, inputs: Dict[str, Any], output: Any) -> None:
+                pass
+
+        gateway = TestGateway()
+        raw_inputs = {
+            "text": "hello",
+            "count": 5,
+            "_meta": {"id": 123},
+            "_internal": "data",
+        }
+        
+        result = gateway.extract_pipeline_kwargs(raw_inputs)
+        
+        assert result == {"text": "hello", "count": 5}
+        assert "_meta" not in result
+        assert "_internal" not in result
+
+    def test_on_error_default_noop(self):
+        """Default on_error should be a no-op."""
+        class TestGateway(CronGateway):
+            schedule = "0 * * * *"
+            async def get_pipeline_inputs(self) -> List[Dict[str, Any]]:
+                return []
+            async def on_complete(self, inputs: Dict[str, Any], output: Any) -> None:
+                pass
+
+        gateway = TestGateway()
+        error = RuntimeError("test error")
+        
+        # Should not raise
+        run_async(gateway.on_error({"text": "test"}, error))
+
+    def test_on_error_can_be_overridden(self):
+        """Subclass can override on_error to handle failures."""
+        errors_received = []
+
+        class ErrorTrackingGateway(CronGateway):
+            schedule = "0 * * * *"
+            async def get_pipeline_inputs(self) -> List[Dict[str, Any]]:
+                return []
+            async def on_complete(self, inputs: Dict[str, Any], output: Any) -> None:
+                pass
+            async def on_error(self, inputs: Dict[str, Any], error: Exception) -> None:
+                errors_received.append((inputs, error))
+
+        gateway = ErrorTrackingGateway()
+        error = ValueError("something failed")
+        
+        run_async(gateway.on_error({"id": 42}, error))
+        
+        assert len(errors_received) == 1
+        assert errors_received[0][0] == {"id": 42}
+        assert isinstance(errors_received[0][1], ValueError)
+
     def test_abstract_methods_required(self):
         """Cannot instantiate CronGateway without implementing abstract methods."""
         class IncompleteCronGateway(CronGateway):
@@ -191,6 +251,71 @@ class TestCronGateway:
         
         assert received["inputs"]["_meta"]["msg_id"] == 123
         assert received["output"] == {"result": "done"}
+
+
+class TestGatewayLifecycle:
+    """Tests for Gateway lifecycle hooks (setup/shutdown)."""
+
+    def test_setup_default_noop(self):
+        """Default setup() should be a no-op."""
+        gateway = IdentityGateway()
+        # Should not raise
+        gateway.setup()
+
+    def test_shutdown_default_noop(self):
+        """Default shutdown() should be a no-op."""
+        gateway = IdentityGateway()
+        # Should not raise
+        gateway.shutdown()
+
+    def test_setup_can_be_overridden(self):
+        """Subclass can override setup for initialization."""
+        setup_called = []
+
+        class SetupGateway(APIGateway):
+            def setup(self) -> None:
+                setup_called.append(True)
+
+        gateway = SetupGateway()
+        gateway.setup()
+        
+        assert len(setup_called) == 1
+
+    def test_setup_can_raise_to_indicate_failure(self):
+        """setup() can raise to indicate configuration error."""
+        class FailingGateway(APIGateway):
+            def setup(self) -> None:
+                raise RuntimeError("Missing required config")
+
+        gateway = FailingGateway()
+        
+        with pytest.raises(RuntimeError, match="Missing required config"):
+            gateway.setup()
+
+    def test_cron_gateway_lifecycle(self):
+        """CronGateway can use lifecycle hooks for resource management."""
+        events = []
+
+        class ResourceGateway(CronGateway):
+            schedule = "0 * * * *"
+            
+            def setup(self) -> None:
+                events.append("setup")
+            
+            def shutdown(self) -> None:
+                events.append("shutdown")
+            
+            async def get_pipeline_inputs(self) -> List[Dict[str, Any]]:
+                return []
+            
+            async def on_complete(self, inputs: Dict[str, Any], output: Any) -> None:
+                pass
+
+        gateway = ResourceGateway()
+        gateway.setup()
+        gateway.shutdown()
+        
+        assert events == ["setup", "shutdown"]
 
 
 class TestGatewayInheritance:

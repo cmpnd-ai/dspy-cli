@@ -9,10 +9,13 @@ Gateways separate HTTP endpoint concerns from DSPy pipeline logic:
 from dspy_cli.gateway.api import APIGateway, IdentityGateway
 from dspy_cli.gateway.base import Gateway
 from dspy_cli.gateway.cron import CronGateway
+from dspy_cli.gateway.types import PipelineInputs, PipelineOutput
 
 __all__ = [
     "Gateway",
     "APIGateway",
     "IdentityGateway",
     "CronGateway",
+    "PipelineOutput",
+    "PipelineInputs",
 ]

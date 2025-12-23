@@ -1,10 +1,16 @@
 """API Gateway for HTTP request/response transformation."""
 
-from typing import Any, Dict, Optional, Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Type
 
 from pydantic import BaseModel
 
 from dspy_cli.gateway.base import Gateway
+from dspy_cli.gateway.types import PipelineOutput
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 
 class APIGateway(Gateway):
@@ -48,7 +54,7 @@ class APIGateway(Gateway):
             return request.model_dump()
         return dict(request) if request else {}
 
-    def from_pipeline_output(self, output: Any) -> Any:
+    def from_pipeline_output(self, output: PipelineOutput) -> Any:
         """Transform pipeline output to HTTP response.
         
         Args:
@@ -58,6 +64,31 @@ class APIGateway(Gateway):
             The HTTP response body (will be serialized to JSON)
         """
         return output
+
+    def configure_route(
+        self,
+        app: FastAPI,
+        route_path: str,
+        endpoint: Callable[..., Any],
+        response_model: Optional[Type[Any]] = None,
+    ) -> None:
+        """Configure the FastAPI route for this gateway.
+        
+        Override to customize route registration, add dependencies,
+        custom responses, tags, rate limiting, etc.
+        
+        Args:
+            app: The FastAPI application instance
+            route_path: The URL path for this endpoint
+            endpoint: The async function to handle requests
+            response_model: Optional Pydantic model for response validation
+        """
+        app.add_api_route(
+            route_path,
+            endpoint,
+            methods=[self.method],
+            response_model=response_model,
+        )
 
 
 class IdentityGateway(APIGateway):

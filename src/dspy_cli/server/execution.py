@@ -5,7 +5,7 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 import dspy
 
@@ -328,3 +328,158 @@ async def execute_pipeline(
 
         logger.error(f"Error executing {program_name}: {e}", exc_info=True)
         raise
+
+
+async def execute_pipeline_batch(
+    *,
+    module: DiscoveredModule,
+    instance: dspy.Module,
+    lm: dspy.LM,
+    model_name: str,
+    program_name: str,
+    inputs_list: List[Dict[str, Any]],
+    logs_dir: Path,
+    num_threads: Optional[int] = None,
+    max_errors: Optional[int] = None,
+) -> List[Tuple[Dict[str, Any], Optional[Dict[str, Any]], Optional[Exception]]]:
+    """Run a DSPy module in batch mode using module.batch().
+
+    This processes multiple inputs in parallel using DSPy's built-in
+    batch processing with thread pooling.
+
+    Args:
+        module: DiscoveredModule metadata
+        instance: Instantiated DSPy module
+        lm: Language model instance
+        model_name: Model name for logging
+        program_name: Program name for logging
+        inputs_list: List of raw input dictionaries (may contain _meta)
+        logs_dir: Directory for log files
+        num_threads: Number of threads for batch (None = DSPy default)
+        max_errors: Maximum errors before stopping (None = no limit)
+
+    Returns:
+        List of tuples: (raw_inputs, output_dict or None, error or None)
+    """
+    start_time = time.time()
+    request_lm = lm.copy()
+
+    prepared_inputs = []
+    for raw_inputs in inputs_list:
+        pipeline_inputs = {k: v for k, v in raw_inputs.items() if not k.startswith("_")}
+        converted = _convert_dspy_types(pipeline_inputs, module)
+        prepared_inputs.append((raw_inputs, converted))
+
+    examples = [
+        dspy.Example(**converted).with_inputs(*converted.keys())
+        for _, converted in prepared_inputs
+    ]
+
+    logger.info(
+        f"Batch executing {program_name} with {len(examples)} inputs "
+        f"(threads={num_threads or 'default'})"
+    )
+
+    results: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]], Optional[Exception]]] = []
+
+    try:
+        with dspy.context(lm=request_lm):
+            batch_kwargs = {
+                "return_failed_examples": True,
+                "provide_traceback": True,
+            }
+            if num_threads is not None:
+                batch_kwargs["num_threads"] = num_threads
+            if max_errors is not None:
+                batch_kwargs["max_errors"] = max_errors
+
+            batch_result = instance.batch(examples, **batch_kwargs)
+
+            if isinstance(batch_result, tuple) and len(batch_result) == 3:
+                successful, failed_examples, exceptions = batch_result
+            else:
+                successful = batch_result
+                failed_examples = []
+                exceptions = []
+
+        duration_ms = (time.time() - start_time) * 1000
+
+        failed_map = {}
+        used_indices: set[int] = set()
+        for i, (failed_ex, exc) in enumerate(zip(failed_examples, exceptions)):
+            for j, (raw_inputs, converted) in enumerate(prepared_inputs):
+                if j not in used_indices and _examples_match(failed_ex, converted):
+                    failed_map[j] = exc
+                    used_indices.add(j)
+                    break
+
+        success_idx = 0
+        for i, (raw_inputs, converted) in enumerate(prepared_inputs):
+            if i in failed_map:
+                results.append((raw_inputs, None, failed_map[i]))
+
+                try:
+                    serialized_inputs = _serialize_for_logging(converted, logs_dir, program_name)
+                except Exception:
+                    serialized_inputs = {}
+
+                log_inference(
+                    logs_dir=logs_dir,
+                    program_name=program_name,
+                    model=model_name,
+                    inputs=serialized_inputs,
+                    outputs={},
+                    duration_ms=0,
+                    error=str(failed_map[i]),
+                    tokens=None,
+                    cost_usd=None,
+                    lm_calls=None,
+                )
+            else:
+                if success_idx < len(successful):
+                    result = successful[success_idx]
+                    output = _normalize_output(result, module)
+                    results.append((raw_inputs, output, None))
+
+                    try:
+                        serialized_inputs = _serialize_for_logging(converted, logs_dir, program_name)
+                        serialized_outputs = _serialize_for_logging(output, logs_dir, program_name)
+                    except Exception:
+                        serialized_inputs = {}
+                        serialized_outputs = {}
+
+                    log_inference(
+                        logs_dir=logs_dir,
+                        program_name=program_name,
+                        model=model_name,
+                        inputs=serialized_inputs,
+                        outputs=serialized_outputs,
+                        duration_ms=duration_ms / len(inputs_list),
+                        tokens=None,
+                        cost_usd=None,
+                        lm_calls=None,
+                    )
+                    success_idx += 1
+
+        logger.info(
+            f"Batch {program_name} completed: {len(successful)} succeeded, "
+            f"{len(failed_examples)} failed in {duration_ms:.0f}ms"
+        )
+
+    except Exception as e:
+        logger.error(f"Batch execution error for {program_name}: {e}", exc_info=True)
+        for raw_inputs, _ in prepared_inputs:
+            results.append((raw_inputs, None, e))
+
+    return results
+
+
+def _examples_match(example: dspy.Example, inputs: Dict[str, Any]) -> bool:
+    """Check if a DSPy Example matches the given inputs dict."""
+    try:
+        for key, value in inputs.items():
+            if getattr(example, key, None) != value:
+                return False
+        return True
+    except Exception:
+        return False
