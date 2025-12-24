@@ -1,5 +1,3 @@
-"""Job posting classifier module - pure LLM logic, no Discord API knowledge."""
-
 from typing import Literal
 
 import dspy
@@ -8,11 +6,7 @@ from discord_mod.gateways.job_posting_gateway import JobPostingGateway
 
 
 class ClassifyJobPosting(dspy.Module):
-    """Classify Discord messages as job postings, job-seeking, or general chat.
-    
-    This module contains only the LLM classification logic.
-    The gateway handles Discord API interactions (fetching messages, taking actions).
-    """
+    """Classify Discord messages as job postings, job-seeking, or general chat."""
 
     gateway = JobPostingGateway
 
@@ -26,16 +20,6 @@ class ClassifyJobPosting(dspy.Module):
         author: str,
         channel_name: str,
     ) -> dspy.Prediction:
-        """Classify a message and determine the appropriate action.
-        
-        Args:
-            message: The Discord message content
-            author: The message author's username
-            channel_name: The channel where the message was posted
-            
-        Returns:
-            Prediction with intent, action, and reason fields
-        """
         return self.classifier(
             message=message,
             author=author,
@@ -46,9 +30,7 @@ class ClassifyJobPosting(dspy.Module):
 class JobPostingSignature(dspy.Signature):
     """Classify a Discord message and determine moderation action.
     
-    A Job posting or job seeking message will explicitly state:
-    1. A user's resume/openness to work
-    2. A user's availability to hire (e.g. "I'm looking for a software engineer to hire immediately")"""
+    A job posting or job seeking message will express the primary intent of introducing the user, their qualifications/openness to work, and their availability for hire, or availability to hire others"""
 
     message: str = dspy.InputField(desc="The Discord message content")
     author: str = dspy.InputField(desc="The message author's username")
