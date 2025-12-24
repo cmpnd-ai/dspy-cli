@@ -12,7 +12,7 @@ import logging
 import os
 from typing import Any, Dict, List
 
-from dspy_cli.gateway import CronGateway
+from dspy_cli.gateway import CronGateway, PipelineOutput
 
 from discord_mod.utils.discord_client import DiscordClient
 
@@ -32,7 +32,14 @@ class JobPostingGateway(CronGateway):
     schedule = "*/5 * * * *"  # Every 5 minutes
 
     def __init__(self):
-        # Validate required environment variables
+        self.dry_run = os.environ.get("DRY_RUN", "true").lower() == "true"
+        self.client: DiscordClient | None = None
+        self.channel_ids: List[str] = []
+        self.jobs_channel_id: str | None = None
+        self.audit_channel_id: str | None = None
+
+    def setup(self) -> None:
+        """Validate configuration and create Discord client."""
         missing = []
         if not os.environ.get("DISCORD_BOT_TOKEN"):
             missing.append("DISCORD_BOT_TOKEN")
@@ -44,13 +51,10 @@ class JobPostingGateway(CronGateway):
             missing.append("DISCORD_AUDIT_CHANNEL_ID")
         
         if missing:
-            logger.error(f"Missing required environment variables: {', '.join(missing)}")
-            logger.error("Set these variables")
-            raise SystemExit(1)
+            msg = f"Missing required environment variables: {', '.join(missing)}"
+            logger.error(msg)
+            raise RuntimeError(msg)
 
-        # DRY_RUN: Log actions instead of executing them
-        self.dry_run = os.environ.get("DRY_RUN", "true").lower() == "true"
-        
         self.client = DiscordClient(
             token=os.environ.get("DISCORD_BOT_TOKEN", ""),
         )
@@ -63,6 +67,7 @@ class JobPostingGateway(CronGateway):
 
     async def get_pipeline_inputs(self) -> List[Dict[str, Any]]:
         """Fetch recent unprocessed messages from monitored channels."""
+        assert self.client is not None, "setup() must be called before get_pipeline_inputs()"
         inputs = []
 
         for channel_id in self.channel_ids:
@@ -92,7 +97,7 @@ class JobPostingGateway(CronGateway):
         logger.info(f"Fetched {len(inputs)} messages to classify")
         return inputs
 
-    async def on_complete(self, inputs: Dict[str, Any], output: Any) -> None:
+    async def on_complete(self, inputs: Dict[str, Any], output: PipelineOutput) -> None:
         """Take moderation action based on classification result."""
         meta = inputs.get("_meta", {})
         message_id = meta.get("message_id")
@@ -158,7 +163,7 @@ class JobPostingGateway(CronGateway):
             await self._send_audit_log(action, inputs, output, dry_run=False)
 
     async def _send_audit_log(
-        self, action: str, inputs: Dict[str, Any], output: Any, dry_run: bool
+        self, action: str, inputs: Dict[str, Any], output: PipelineOutput, dry_run: bool
     ) -> None:
         """Send audit log to moderator channel."""
         if not self.audit_channel_id:
@@ -195,7 +200,7 @@ class JobPostingGateway(CronGateway):
             logger.warning(f"Failed to send audit log: {e}")
 
     async def _log_dry_run_action(
-        self, action: str, inputs: Dict[str, Any], output: Any
+        self, action: str, inputs: Dict[str, Any], output: PipelineOutput
     ) -> None:
         """Log what would happen without executing."""
         meta = inputs.get("_meta", {})
