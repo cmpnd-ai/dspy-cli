@@ -15,6 +15,7 @@ from typing import Any, Dict, List
 from dspy_cli.gateway import CronGateway, PipelineOutput
 
 from discord_mod.utils.discord_client import DiscordClient
+from discord_mod.utils.processed_store import ProcessedMessageStore
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ class JobPostingGateway(CronGateway):
         self.channel_ids: List[str] = []
         self.jobs_channel_id: str | None = None
         self.audit_channel_id: str | None = None
+        self.processed_store: ProcessedMessageStore | None = None
 
     def setup(self) -> None:
         """Validate configuration and create Discord client."""
@@ -61,9 +63,15 @@ class JobPostingGateway(CronGateway):
         self.channel_ids = os.environ.get("DISCORD_CHANNEL_IDS", "").split(",")
         self.jobs_channel_id = os.environ.get("DISCORD_JOBS_CHANNEL_ID")
         self.audit_channel_id = os.environ.get("DISCORD_AUDIT_CHANNEL_ID")
+        self.processed_store = ProcessedMessageStore()
         
         if self.dry_run:
             logger.info("DRY_RUN mode - actions will be logged, not executed")
+
+    def shutdown(self) -> None:
+        """Flush processed messages to disk on shutdown."""
+        if self.processed_store:
+            self.processed_store.flush()
 
     async def get_pipeline_inputs(self) -> List[Dict[str, Any]]:
         """Fetch recent unprocessed messages from monitored channels."""
@@ -81,6 +89,9 @@ class JobPostingGateway(CronGateway):
 
             for msg in messages:
                 if msg.get("author", {}).get("bot", False):
+                    continue
+                
+                if self.processed_store.is_processed(msg["id"]):
                     continue
 
                 inputs.append({
@@ -112,6 +123,9 @@ class JobPostingGateway(CronGateway):
             f"Message {message_id} from {author}: "
             f"intent={intent}, action={action}, reason={reason}"
         )
+
+        if message_id:
+            self.processed_store.mark_processed(message_id)
 
         if action == "allow":
             return
