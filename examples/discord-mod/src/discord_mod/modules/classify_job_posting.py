@@ -29,6 +29,8 @@ class ClassifyJobPosting(dspy.Module):
 
 class JobPostingSignature(dspy.Signature):
     """Classify a Discord message and determine moderation action.
+
+    The subject of the Discord server is DSPy, the framework for building and optimizing LLM applications. The server has nothing to do with blockchain, crypto, or NFTs, and these are generally spam.
     
     A job posting or job seeking message will express the primary intent of introducing the user, their qualifications/openness to work, and their availability for hire, or availability to hire others"""
 
