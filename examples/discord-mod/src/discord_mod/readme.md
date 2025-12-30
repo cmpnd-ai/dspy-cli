@@ -1,38 +1,49 @@
-## TODO
-- [ ] Proofread and adjust for structure.
+# Moderating Discord with DSPy
 
----
+There is a common annoyance among every Discord moderator: people posting in the wrong channels.
 
-# Building a Discord moderation bot with DSPy
-
-## The Problem
-
-I am one of the mods for the DSPy community discord. One of the most common things that happens is that people end up posting jobs in the #general channel. We want people to post jobs! But we do not want the main channel to be cluttered with intros or people advertising.
+In the DSPy community Discord, this happens most frequently with job related postings: people looking to hire and people looking to be hired. To be clear: we like job posts! We just don't want listings and resumes cluttering the main channel.
 
 It doesn't take long to delete the message and send a DM asking them to move it, but it certainly gets annoying.
 
-The good news is that classifying whether something is a job posting is pretty easy. We can expect most modern LLMs to do a good job at this.
+The good news is that getting AI to detect and take the action is pretty easy. 
 
-Like a REALLY good job. So I expect any errors to come from underspecification rather than LLM errors.
+## Specifying our task
 
-For instance:
-> Oh yeah I see why GEPA is cool. In my last job, I used MIPRO to improve our LLM-as-a-judge for insurance document relevance inside a chat by 20%, and my manager + our customers were very happy. Ultimately, I’m now looking for the next challenge and I’m excited about applying GEPA to whatever my next problem is (P.S. pls DM if you’d like to chat about hiring me!).
-
-The primary intent of the message is to say that GEPA is cool, validate that they've used it at a company, and share the project they worked on. Getting hired is secondary. As a team we talked about this, and it's about the primary intent, rather than the presence of anything hiring-related.
-
-## Designing the LLM pipeline
+We expect most modern LLMs to do a good job at this. Like a REALLY good job. So I expect any errors to come from underspecification rather than LLM errors.
 
 This bot isn't meant to ban users or be a catch-all spam detector. If it happens to catch and delete a stray non-job spam message, that's upside, but really the use case is about moving job postings into the correct channel.
 
 ### Sketching out the shape
 
-So what do we want this system to do? We want it to detect if the primary intent of a message is job-related or not, and suggest an action. We also want to be notified as mods if there is an action taken, so that we can be aware if things start to break.
+The main goal of this system is to **detect the primary intent of a message**. The intent can be job posting, job seeking, or neither. We also want the system to suggest an action, between deleting, moving, flagging, or allowing, depending on context.
 
-Our pipeline starts to look something like:
+We also want to be notified as mods if there is an action taken, so that we can be aware if things start to break.
+
+#### Where There's Nuance
+
+Primary intent is a fuzzy line to draw. There are messages that have self-promotion in them, but the primary intent is not to promote. This line was chosen by talking to the team during the creation of this project.
+
+For example:
+> Oh yeah I see why GEPA is cool. In my last job, I used MIPRO to improve our LLM-as-a-judge for insurance document relevance inside a chat by 20%, and my manager + our customers were very happy. Ultimately, I’m now looking for the next challenge and I’m excited about applying GEPA to whatever my next problem is (P.S. pls DM if you’d like to chat about hiring me!).
+
+In this case, The primary intent of the message is to validate that they've used GEPA at a company, and share the project they worked on. Getting hired is secondary. As a team we talked about this, and it's about the primary intent, rather than the presence of anything hiring-related.
+
+We will want to use in the message, author, and the channel it was posted in. All of these could provide relevant information. If a user named `dm_me_for_free_crypto` sends a sketchy message, the LLM should take the username into account. Same with channel.
+
+In `#help-channel`, if someone is struggling with a problem that requires a lot of extra help, it's totally fine for them to ask for help and offer compensation. It's only when someone posts exclusively in `#help-channel` saying they're looking for an AI engineer that we want to flag it.
+
+It's because of this contextual nuance that things look a little fuzzy, rather than the purer of `message: str -> is_job_related: bool` pipeline.
+
+Or the simpler pipeline: `if 'hiring' or 'job' in message: return True`
+
+#### Defining it as a signature
+
+Our task, inputs, and outputs for the LLM starts to look something like:
 
 ```
 TASK:
-Determine if a discord message is either a job posting, looking for a job, or neither. If it is in the wrong channel, move it.
+Determine if a discord message is either a job posting, looking for a job, or neither.
 
 INPUTS:
 - message: str
@@ -42,7 +53,7 @@ OUTPUTS:
 - internal_model_reasoning: str
 - intent: POST, SEEK or NEITHER
 - action: MOVE, FLAG, DELETE, ALLOW
-- action_reason: str
+- action_reason: str (user facing)
 ```
 
 ### Convert to DSPy
@@ -69,12 +80,6 @@ class JobPostingSignature(dspy.Signature):
         desc="Brief explanation of the classification and recommended action"
     )
 ```
-
-We pass in the message, author, and the channel it was posted in. All of these could provide relevant information. If a user named `dm_me_for_free_crypto` sends a sketchy message, the LLM should take the username into account. Same with channel.
-
-In `#help-channel`, if someone is struggling with a problem that requires a lot of extra help, it's totally fine for them to ask for help and offer compensation. It's only when someone posts exclusively in `#help-channel` saying they're looking for an AI engineer that we want to flag it.
-
-It's because of this contextual nuance that things look a little fuzzy, rather than the purer classification of `message -> job_posting: bool` pipeline.
 
 Note that there are two reasoning fields. This is a design choice. 
 
@@ -106,7 +111,7 @@ Then the only thing I need around this is the Discord network code. It's like 8 
 
 ## Building the gateway
 
-The most complex part is integrating with Discord.
+The most complex part is integrating with Discord and implementing the business logic for taking actions based on the LLM outputs.
 
 There are two main ways that we can build this bot:
 1. Realtime streaming
@@ -117,46 +122,28 @@ We opt for (2) the cron approach. Mostly because the realtime streaming requires
 If we instead just build something that checks the last 20 messages every 5 minutes, it's totally fine. If a job posting is live on the server for 5 minutes, no one cares. This constraint would be different for different servers, but these are the constraints of the problem I'm solving without overengineering.
 
 The behavior will be as follows:
-Every 5 minutes:
+
+Every 5 minutes
 1. Gather the last 20 messages
 2. Skip any that have already been processed
 3. Classify as "move", "flag", "delete", or "allow"
 4. Take the relevant action for "move", "flag", "delete", and send an audit message into the moderator only channel
-- "move" moves the message into the #jobs channel,
+- "move" moves the message into the #jobs channel, and sends a message to the user
 - "flag" adds an emoji reaction and sends an audit message for the mods to review, 
-- "delete", well, deletes the message 
+- "delete", deletes the message, and sends a message to the user
 - "allow" does nothing
 
 To implement this, I use `dspy-cli` to handle the routing and scheduling.
 
-### dspy-cli explanation
+### Intro to dspy-cli
 
 [`dspy-cli`](https://github.com/cmpnd-ai/dspy-cli) is a command line tool to help you create, scaffold, and deploy dspy applications. You can serve a `dspy-cli` created project by running `dspy-cli serve`, and it will bring up a local endpoint for you that you can test against. It is also what created our initial project directory structure.
 
-The default serve endpoint has your modules as named endpoints so you can send a POST request to `/{ModuleName}`. In this case, your post requests would directly have the inputs that you want for your `Module.forward` method.
+There are a few different kinds entry points you may want for any DSPy application. The two that `dspy-cli` currently supports are **API-based** and **cron-based**.
 
-There are a few different kinds of alternative entry points you may want for any DSPy application. The two that `dspy-cli` currently supports are **API-based** and **cron-based**.
+For this case, we want to gather a bunch of inputs every so often, and run batch inference over them, so `CronGateway` makes more sense. We will subclass it to implement the loading logic.
 
-**API-based**
-
-For some cases, you want a layer to sit in between the calling api and your LLM logic. `APIGateway` makes sense here for your LLM logic.
-
-If you were to create a PR review bot, you might want a webhook setup. Your endpoint takes in a webhook payload from GitHub, extracts some data from it, uses that to fetch the code of the PR that triggered the webhook, and passes that code into your module. 
-
-Your DSPy code might look like: `dspy.ReAct("files: Dict[str, str] -> review", tools=[file_search, web_search, run_code, ...])` 
-
-In order to call this, you need a loading step to get all of the files and put them into whatever format makes sense. 
-
-
-**cron-based**
-
-`CronGateway` is what you use when your trigger is periodic rather than based on a call.
-
-For this discord case, we want to gather a bunch of inputs every so often, and run batch inference over them, so `CronGateway` makes more sense. We will subclass it to implement the loading logic.
-
-### JobPostingGateway
-
-`JobPostingGateway` subclasses `CronGateway`. This is how you specify your data loading behavior. In our case, it loads the data and takes actions afterward.
+`CronGateway` is what you use when your trigger is periodic rather than based on a call. 
 
 `CronGateway` is an ABC with two core methods:
 
@@ -165,6 +152,10 @@ For this discord case, we want to gather a bunch of inputs every so often, and r
 2. **`on_complete`**: Runs after each successful pipeline execution. This is where you take action based on the LLM's output. It receives both the original inputs (including `_meta`) and the pipeline output.
 
 There's also an optional `on_error` method for handling failures.
+
+### JobPostingGateway
+
+`JobPostingGateway` subclasses `CronGateway`. This is how you specify your data loading behavior. In our case, it loads the data and takes actions afterward.
 
 Here's a simplified version of our gateway:
 
@@ -225,7 +216,42 @@ class JobPostingGateway(CronGateway):
             await self.client.send_dm(meta["author_id"], output.get("reason", ""))
 ```
 
-## Production considerations
+## Deploying our app
+
+We deploy this onto Fly.io. We want a single permanently running machine that triggers itself every 5 minutes.
+
+You can trigger the first deploy using `fly launch`.
+
+### Scaling Configuration
+
+Fly automatically scales your workload to 2 machines and will pause if there is not enough external traffic. For this deployment, there will by definition be 0 API-based traffic, so we need to turn off auto-scaling while keeping a minimum of one machine running.
+
+
+#### Setting the minimum
+
+You can add a line to your `fly.toml` to get the pausing behavior we want:
+
+```toml
+auto_stop_machines = false
+auto_start_machines = true
+min_machines_running = 1
+```
+
+If our one machine goes down, we do want it to start another one. We don't want it to stop a machine because of no activity, so we turn off `auto_stop_machines`.
+
+#### Setting the maximum
+
+We also don't want more than one machine: (1) I don't want to pay for that, and (2) we haven't built in any deduplication mechanisms. If there are two machines running, they might both pick up the same messages.
+
+You can set the number of machines to one and turn off `ha` (horizontal autoscaling).
+```bash
+fly scale count 1
+fly deploy --ha=false
+```
+
+`fly scale` should remove one of the two default machines if you already ran `fly launch`. This was a bit finicky when I was setting it up, so you may also need to run `fly machine kill` to manually remove one.
+
+### Production Considerations
 
 "production" is a loose word here because of the small scale, but this is deployed live, and actively affecting DSPy discord users.
 
@@ -233,13 +259,9 @@ Because this is such a small project, there wasn't a great dev environment nor w
 
 One other consideration: while it would be annoying for people to get messages falsely moved for a case that isn't specified, it's not the end of the world. A fine developer workflow is to notice a new error case, adjust the bot, and redeploy. Any change does not need to be thoroughly tested, because the stakes are quite low so long as it doesn't delete the whole Discord server.
 
-We also notify users via DM after their message is moved—a small thing, but important from a UX perspective.
-
-## Fly.io
-
 ### Persistence
 
-We create a file to store all of the IDs that we have processed. Losing this isn't a big deal—at most you're redoing 20 calls—but if you were to expand this system, you'd certainly want to change it.
+We create a file to store all of the IDs that we have processed. Losing this isn't a big deal—at most you're redoing 20 call. If you were to expand this system, you'd certainly want to change it.
 
 `fly volumes create dspy_discord_data --size 1`
 
@@ -267,66 +289,51 @@ fly secrets set \
 
 You can set the `DRY_RUN` environment variable to `true` if you want to only send audit logs without taking actions, to verify it's working properly.
 
-### Deployment
+## Conclusion
 
-We deploy this onto Fly.io. We want a single permanently running machine that triggers itself every 5 minutes via the Python process.
+### Learnings
 
-You can trigger the first deploy using `fly launch`.
+Fly.io + [`dspy-cli`](https://github.com/cmpnd-ai/dspy-cli) make it REALLY easy to deploy hobbyist DSPy usecases. This example was the first problem that I had that I wanted to use it to solve.
 
-Fly automatically scales your workload to 2 machines and will pause if there is not enough external traffic. For this deployment, there will by definition be 0 API-based traffic, so we need to turn off auto-scaling while keeping a minimum of one machine running.
-
-#### Setting the minimum
-
-You can add a line to your `fly.toml` to get the pausing behavior we want:
-
-```toml
-auto_stop_machines = false
-auto_start_machines = true
-min_machines_running = 1
-```
-
-If our one machine goes down, we do want it to start another one. We don't want it to stop a machine because of no activity, so we turn off `auto_stop_machines`.
-
-#### Setting the maximum
-
-We also don't want more than one machine: (1) I don't want to pay for that, and (2) we haven't built in any deduplication mechanisms. If there are two machines running, they might both pick up the same messages.
-
-You can set the number of machines to one and turn off `ha` (horizontal autoscaling).
-```bash
-fly scale count 1
-fly deploy --ha=false
-```
-
-`fly scale` should remove one of the two default machines if you already ran `fly launch`. This was a bit finicky when I was setting it up, so you may also need to run `fly machine kill` to manually remove one.
-
-## Results and Lessons
-
-After I made this bot, there were some messages it missed. For instance, it thought some scammy crypto job postings were actually people introducing themselves. As some people in the Discord pointed out (thanks @prashanth and @mchonedev), it's pretty obvious that anyone using the word "blockchain" in their post is not a legitimate user. DSPy is obviously not a crypto server, and any real dev would hopefully know their audience. 
-
-### FAQ:
-- Is this the most robust setup? 
+### Cost
   
-  Nope, this is a discord bot without a ton of traffic.
+**Price**
 
-- Could someone prompt inject this? 
-  
-  In practice? Not in a way that matters. 
-  
-  The bot has no tool access, and it's not like the signature prompt is secret. There are no tools to access other messages, or perform destructive actions towards other users.
-  
-  Notably, I do not allow for any other messages in the thread context to be seen by the model. Showing full conversations would open up a lot of weird prompt injection avenues that I don't want to deal with.
+This is shockingly cheap to run! The LLM inference is not expensive (using gpt-5-nano), and the server costs <$1 per month (thank you Firecracker VMs + Fly.io). I'm happy to eat this cost to keep the server healthier and save myself the work I would have done otherwise.
 
-- What if someone sends a spam message into many channels?
-  
-  Processing a single message at a time means that we miss people who send a job posting in multiple channels. 
-  
-  Often what these bots do is drop a message into every channel in the server. Because each message is processed individually, we currently would take all of these and (without deduping) move them into #jobs.
-  
-  I will add some very simple dedup behavior in a future update, but for now I am just going to leave it. The goal of this bot for now is to catch the 80% of the simple cases.
+**Development Time**
 
-- How much does it cost?
+This bot did not take me that long to implement. The 25 lines of DSPy did not take long. I spent much longer writing the blog post than I did coding the bot. Especially once I had the Discord token enabled, it was incredibly easy for Amp to wire up the rest. I implemented the Gateway system for `dspy-cli` at the same time, and I took more time on that because its an important abstraction to get right.
+
+**Maintainance**
+
+If I want to make a change, all I need to do is update the signature, and run `fly deploy` to update my machine. Or, if I wanted to add more modules, I can still use the same VM.
+
+### Limitations
+
+**Volume**
   
-  This is shockingly cheap to run! The LLM inference is not expensive (using gpt-5-nano), and the server costs <$1 per month (thank you Firecracker VMs + Fly.io). I'm happy to eat this cost to keep the server healthier and save myself the work I would have done otherwise.
+This can by design, only work on 20 messages per 5 minutes. The limiting factors will be your LLM inference calls, rather than the ability of the runner to manage the requests.
+
+**Prompt Injection**
+  
+Someone might be able to sneak in a job posting via prompt injection.
+
+In practice, this doesn't actually matter. People are good at tagging the mods if a message does sneak through. 
+  
+The bot has no tool access, and it's not like the signature prompt is secret. There are no tools to access other messages, or ability to perform destructive actions towards other users.
+
+Notably, I do not allow for any other messages in the thread context to be seen by the model. Showing full conversations would open up a lot of weird prompt injection avenues that I don't want to deal with.
+
+**Spam**  
+
+Processing a single message at a time means that we miss people who send a job posting in multiple channels. 
+
+Often what these bots do is drop a message into every channel in the server. Because each message is processed individually, we currently would take all of these and (without deduping) move them into #jobs.
+
+I will add some very simple dedup behavior in a future update, but for now I am just going to leave it. The goal of this bot for now is to catch the 80% of the simple cases.
+
+Immediately after I made this bot, there were some messages it did not move when it should have. It thought some scammy crypto job postings were actually people introducing themselves. As some people in the Discord pointed out (thanks @prashanth and @mchonedev), it's pretty obvious that anyone using the word "blockchain" in their post is likely not a legitimate user. DSPy is not a crypto server, and any thoughtful dev would hopefully know their audience.
 
 ---
 
