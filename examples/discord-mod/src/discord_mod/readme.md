@@ -31,6 +31,9 @@ So what do we want this system to do? We want it to detect if the primary intent
 Our pipeline starts to look something like:
 
 ```
+TASK:
+Determine if a discord message is either a job posting, looking for a job, or neither. If it is in the wrong channel, move it.
+
 INPUTS:
 - message: str
 - metadata
