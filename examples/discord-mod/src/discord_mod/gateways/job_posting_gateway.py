@@ -33,7 +33,7 @@ class JobPostingGateway(CronGateway):
     schedule = "*/5 * * * *"  # Every 5 minutes
 
     def __init__(self):
-        self.dry_run = os.environ.get("DRY_RUN", "true").lower() == "true"
+        self.dry_run = os.environ.get("DRY_RUN", "false").lower() == "true"
         self.client: DiscordClient | None = None
         self.channel_ids: List[str] = []
         self.jobs_channel_id: str | None = None
