@@ -65,7 +65,7 @@ src/discord_mod/
    DISCORD_AUDIT_CHANNEL_ID=444555666         # Channel for moderation audit logs
 
    # Optional
-   DRY_RUN=true                               # Log actions without executing (default: true)
+   DRY_RUN=true                               # Log actions without executing (default: false)
    USE_SAMPLE_DATA=true                       # Use sample messages instead of Discord API
    ```
 
@@ -83,7 +83,7 @@ src/discord_mod/
 | `DISCORD_JOBS_CHANNEL_ID` | ✅ | Channel ID where job posts are moved to |
 | `OPENAI_API_KEY` | ✅ | OpenAI API key for LLM classification |
 | `DISCORD_AUDIT_CHANNEL_ID` | ✅ | Channel for audit logs (move/flag/delete actions) |
-| `DRY_RUN` | ❌ | Set to `false` to execute real actions (default: `true`) |
+| `DRY_RUN` | ❌ | Set to `true` to log actions without executing (default: `false`) |
 | `USE_SAMPLE_DATA` | ❌ | Set to `true` to use sample messages for testing |
 
 ## Running
@@ -101,6 +101,7 @@ The `ClassifyJobPosting` module uses a `CronGateway` with `schedule = "*/5 * * *
 
 
 ## Deployment:
+fly volumes create processed_data --size 1
 fly scale count 1
 fly deploy --ha=false
 
