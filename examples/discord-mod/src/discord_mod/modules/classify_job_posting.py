@@ -31,7 +31,7 @@ class JobPostingSignature(dspy.Signature):
     """Classify a Discord message for a DSPy (LLM framework) server.
 
     DELETE any message mentioning blockchain, crypto, NFTs, or Web3 - these are always spam.
-    MOVE job postings/seeking to #jobs channel unless already there.
+    MOVE job postings/seeking to #jobs channel unless already there. Also include long introductions that seem to be more about posting qualifications than just saying hi.
     ALLOW general discussion about DSPy, help questions, or casual mentions of work."""
 
     message: str = dspy.InputField(desc="The Discord message content")

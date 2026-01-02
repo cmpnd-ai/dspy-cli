@@ -506,7 +506,7 @@ dev = [
 requires-dist = [
     { name = "audioop-lts" },
     { name = "dspy-ai", specifier = ">=3.0.3" },
-    { name = "dspy-cli", git = "https://github.com/cmpnd-ai/dspy-cli.git?rev=isaac%2Fgateways" },
+    { name = "dspy-cli", specifier = ">=0.1.11" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "py-cord", extras = ["voice"], specifier = ">=2.6.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
@@ -608,8 +608,8 @@ wheels = [
 
 [[package]]
 name = "dspy-cli"
-version = "0.1.9"
-source = { git = "https://github.com/cmpnd-ai/dspy-cli.git?rev=isaac%2Fgateways#ae3659141df0635149bf98dc954a125a01262a71" }
+version = "0.1.11"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "apscheduler" },
     { name = "asgi-lifespan" },
@@ -622,6 +622,10 @@ dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
     { name = "uvicorn", extra = ["standard"] },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/14/fb/4a5a571869cb85c1856e3a141cb1ae9457fd6a4cc9e638253b9b97a2463e/dspy_cli-0.1.11.tar.gz", hash = "sha256:27efd1e45073cf1b598c21c349a5f6eca83ddc4cb15b69464844305d851b5c11", size = 87465, upload-time = "2026-01-02T13:43:05.001Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cf/3b/48e809595235315a8375fddeb3fa4db1c2f2071873f3afff62bfc0f5f9d0/dspy_cli-0.1.11-py3-none-any.whl", hash = "sha256:9ae4308e9b4dd30d9e50e94286ffb030a2f1511975796f6c14f4a796fb4b1925", size = 94697, upload-time = "2026-01-02T13:43:03.572Z" },
 ]
 
 [[package]]

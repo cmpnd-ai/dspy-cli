@@ -189,10 +189,10 @@ class JobPostingGateway(CronGateway):
         author = inputs.get("author", "unknown")
         intent = output.get("intent", "unknown")
         reason = output.get("reason", "")
-        message_preview = inputs.get("message", "")[:100]
+        full_message = inputs.get("message", "")
 
         dry_run_prefix = "🔍 **[DRY RUN]** " if dry_run else ""
-        
+
         action_emoji = {"move": "📦", "flag": "⚠️", "delete": "🗑️"}.get(action, "❓")
 
         audit_message = (
@@ -201,7 +201,7 @@ class JobPostingGateway(CronGateway):
             f"**Channel:** <#{channel_id}>\n"
             f"**Intent:** {intent}\n"
             f"**Reason:** {reason}\n"
-            f"**Message:** `{message_preview}{'...' if len(inputs.get('message', '')) > 100 else ''}`\n"
+            f"**Message:** {full_message}\n"
             f"**Message ID:** {message_id}"
         )
 
