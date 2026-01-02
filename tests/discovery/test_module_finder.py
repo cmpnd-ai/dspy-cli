@@ -1,18 +1,15 @@
 """Tests for module discovery including gateway extraction."""
 
 import sys
-import tempfile
-from pathlib import Path
 
 import dspy
-import pytest
 
 from dspy_cli.discovery.module_finder import (
     DiscoveredModule,
     _extract_gateway_class,
     discover_modules,
 )
-from dspy_cli.gateway import APIGateway, CronGateway, IdentityGateway
+from dspy_cli.gateway import APIGateway, IdentityGateway
 
 
 class TestExtractGatewayClass:

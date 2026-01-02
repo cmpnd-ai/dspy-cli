@@ -1,9 +1,7 @@
 """Tests for GatewayScheduler."""
 
-import asyncio
-from pathlib import Path
 from typing import Any, Dict, List
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock
 
 import dspy
 import pytest

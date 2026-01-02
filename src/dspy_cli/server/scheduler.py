@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import dspy
 from apscheduler.schedulers.asyncio import AsyncIOScheduler

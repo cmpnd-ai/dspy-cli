@@ -53,7 +53,7 @@ def get_dataset_stats() -> dict:
 
 if __name__ == "__main__":
     stats = get_dataset_stats()
-    print(f"Dataset Statistics:")
+    print("Dataset Statistics:")
     print(f"  Total examples: {stats['total']}")
     print(f"  By category: {stats['by_category']}")
     print(f"  By intent: {stats['by_intent']}")

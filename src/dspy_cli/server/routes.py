@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 import dspy
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, create_model
+from pydantic import create_model
 
 from dspy_cli.discovery import DiscoveredModule
 from dspy_cli.discovery.gateway_finder import get_gateway_for_module

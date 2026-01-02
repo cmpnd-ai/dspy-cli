@@ -343,7 +343,7 @@ def render_program(module: Any, config: Dict, program_name: str, auth_enabled: b
                             <button type="submit" class="submit-btn">Run Program</button>
                             <span class="copy-btn-wrapper">
                                 <button type="button" class="copy-btn" id="copyApiBtn">Copy API Call</button>
-                                {f'<span class="auth-hint">Replace <code>&lt;DSPY_API_KEY&gt;</code> with your API key</span>' if auth_enabled else ''}
+                                {'<span class="auth-hint">Replace <code>&lt;DSPY_API_KEY&gt;</code> with your API key</span>' if auth_enabled else ''}
                             </span>
                         </div>
                     </form>

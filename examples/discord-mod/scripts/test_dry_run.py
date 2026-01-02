@@ -8,7 +8,6 @@ Usage:
 import asyncio
 import logging
 import os
-import sys
 
 # Ensure DRY_RUN is set before any imports
 os.environ.setdefault("DRY_RUN", "true")

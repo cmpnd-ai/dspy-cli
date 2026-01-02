@@ -1,9 +1,7 @@
 """Tests for gateway discovery."""
 
-from unittest.mock import MagicMock
 
 import dspy
-import pytest
 
 from dspy_cli.discovery import DiscoveredModule
 from dspy_cli.discovery.gateway_finder import (
@@ -12,7 +10,7 @@ from dspy_cli.discovery.gateway_finder import (
     is_api_gateway,
     is_cron_gateway,
 )
-from dspy_cli.gateway import APIGateway, CronGateway, Gateway, IdentityGateway
+from dspy_cli.gateway import APIGateway, CronGateway, IdentityGateway
 
 
 class TestGetGatewayForModule:

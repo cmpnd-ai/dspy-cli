@@ -14,7 +14,7 @@ Gateways can be specified in two ways:
 """
 
 import logging
-from typing import Optional, Type, Union
+from typing import Optional, Type
 
 from dspy_cli.discovery import DiscoveredModule
 from dspy_cli.gateway import APIGateway, CronGateway, Gateway, IdentityGateway

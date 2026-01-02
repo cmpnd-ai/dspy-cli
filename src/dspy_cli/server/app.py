@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from dspy_cli.config import get_model_config, get_program_model
 from dspy_cli.discovery import discover_modules
 from dspy_cli.discovery.gateway_finder import get_gateway_for_module, is_cron_gateway
-from dspy_cli.gateway import APIGateway, CronGateway
+from dspy_cli.gateway import APIGateway
 from dspy_cli.server.logging import setup_logging
 from dspy_cli.server.metrics import get_all_metrics, get_program_metrics_cached
 from dspy_cli.server.routes import create_program_routes
