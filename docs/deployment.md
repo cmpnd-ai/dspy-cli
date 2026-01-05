@@ -256,6 +256,31 @@ flyctl scale count 3
 3. Check logs: `flyctl logs --recent`
 4. Verify env vars: `flyctl ssh console` → `env | grep API_KEY`
 
+## Frontend Integration (CORS)
+
+When your frontend runs on a different origin than the API (e.g., `app.example.com` calling `api.example.com`), configure CORS:
+
+**Environment variable:**
+
+```bash
+# Allow all origins (development)
+DSPY_CORS_ORIGINS="*" dspy-cli serve
+
+# Allow specific origins (production)
+DSPY_CORS_ORIGINS="https://app.example.com,https://admin.example.com" dspy-cli serve
+```
+
+**Config file (`dspy.config.yaml`):**
+
+```yaml
+server:
+  cors_origins:
+    - "https://app.example.com"
+    - "https://admin.example.com"
+```
+
+> **Note**: Wildcard (`*`) disables credential support. For cookie-based auth across origins, specify explicit origins. API clients using Bearer tokens work with any CORS mode.
+
 ## Related Documentation
 
 - [Configuration](configuration.md) - Model configuration and advanced settings

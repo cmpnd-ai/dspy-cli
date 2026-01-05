@@ -1,9 +1,12 @@
 """FastAPI application factory."""
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Union
+from fastapi.middleware.cors import CORSMiddleware
+
 
 import dspy
 from fastapi import FastAPI
@@ -52,6 +55,39 @@ def create_app(
         version="0.1.0",
         lifespan=lifespan,
     )
+
+    # Configure CORS if enabled (env var takes precedence over config file)
+    cors_origins: Union[str, List[str], None] = os.environ.get("DSPY_CORS_ORIGINS")
+    if cors_origins is None:
+        cors_origins = config.get("server", {}).get("cors_origins")
+
+    if cors_origins:
+
+        if cors_origins == "*" or cors_origins == ["*"]:
+            # Wildcard mode - no credentials allowed
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origins=["*"],
+                allow_credentials=False,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+            logger.info("CORS enabled for all origins (wildcard mode)")
+        else:
+            # Specific origins - allow credentials
+            origins = (
+                cors_origins
+                if isinstance(cors_origins, list)
+                else [o.strip() for o in cors_origins.split(",") if o.strip()]
+            )
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origins=origins,
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+            logger.info(f"CORS enabled for origins: {origins}")
 
     # Store logs directory and metrics cache in app state
     app.state.logs_dir = logs_dir
