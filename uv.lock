@@ -685,7 +685,7 @@ wheels = [
 
 [[package]]
 name = "dspy-cli"
-version = "0.1.11"
+version = "0.1.12"
 source = { editable = "." }
 dependencies = [
     { name = "apscheduler" },
