@@ -30,6 +30,11 @@ models:
 program_models:
   MyCoT: anthropic:sonnet-4.5
   MyPredict: openai:gpt-5-mini
+
+# Optional: server settings
+server:
+  cors_origins:
+    - "https://app.example.com"
 ```
 
 ## Fields
@@ -40,6 +45,7 @@ program_models:
 | `models.default` | Yes | Default model alias |
 | `models.registry` | Yes | Available models |
 | `program_models` | No | Per-program model overrides |
+| `server.cors_origins` | No | Allowed CORS origins (list or `"*"` for all) |
 
 ### Registry Entry
 
