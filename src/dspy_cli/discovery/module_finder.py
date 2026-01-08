@@ -28,7 +28,15 @@ class DiscoveredModule:
     forward_input_fields: Optional[Dict[str, Any]] = None  # Input field types from forward() method
     forward_output_fields: Optional[Dict[str, Any]] = None  # Output field types from forward() method
     is_forward_typed: bool = False  # True if forward() has proper type annotations
-    gateway_class: Optional[Type["Gateway"]] = None  # Gateway class if specified on module
+    gateway_classes: List[Type["Gateway"]] = None  # Gateway classes if specified on module (supports list)
+
+    # Backward compatibility: single gateway_class property
+    @property
+    def gateway_class(self) -> Optional[Type["Gateway"]]:
+        """Return first gateway class for backward compatibility."""
+        if self.gateway_classes:
+            return self.gateway_classes[0]
+        return None
 
     def instantiate(self, lm: dspy.LM | None = None) -> dspy.Module:
         """Create an instance of this module."""
@@ -124,8 +132,8 @@ def discover_modules(
                 # Also try to extract signature (for backward compatibility and fallback)
                 signature = _extract_signature(obj)
 
-                # Extract gateway class if specified
-                gateway_class = _extract_gateway_class(obj)
+                # Extract gateway classes if specified (supports single or list)
+                gateway_classes = _extract_gateway_classes(obj)
 
                 discovered.append(
                     DiscoveredModule(
@@ -136,7 +144,7 @@ def discover_modules(
                         forward_input_fields=forward_info.get("inputs"),
                         forward_output_fields=forward_info.get("outputs"),
                         is_forward_typed=forward_info.get("is_typed", False),
-                        gateway_class=gateway_class,
+                        gateway_classes=gateway_classes,
                     )
                 )
 
@@ -158,37 +166,56 @@ def discover_modules(
     return discovered
 
 
-def _extract_gateway_class(module_class: Type[dspy.Module]) -> Optional[Type["Gateway"]]:
-    """Extract the gateway class from a module if specified.
-    
-    Checks for a `gateway` class attribute on the module that should be
-    a Gateway subclass.
-    
+def _extract_gateway_classes(module_class: Type[dspy.Module]) -> List[Type["Gateway"]]:
+    """Extract gateway classes from a module if specified.
+
+    Checks for a `gateway` class attribute on the module. Supports both:
+    - Single gateway class: `gateway = MyGateway`
+    - List of gateway classes: `gateway = [Gateway1, Gateway2]`
+
     Args:
         module_class: The DSPy Module class
-        
+
     Returns:
-        Gateway subclass if specified and valid, None otherwise
+        List of Gateway subclasses (empty list if none specified)
     """
     from dspy_cli.gateway import Gateway
-    
+
     gateway_attr = getattr(module_class, 'gateway', None)
-    
+
     if gateway_attr is None:
-        return None
-    
+        return []
+
+    # Handle list/tuple of gateways
+    if isinstance(gateway_attr, (list, tuple)):
+        gateway_classes = []
+        for gw in gateway_attr:
+            try:
+                if isinstance(gw, type) and issubclass(gw, Gateway):
+                    gateway_classes.append(gw)
+                    logger.debug(f"Found gateway {gw.__name__} on {module_class.__name__}")
+                else:
+                    logger.warning(
+                        f"Module {module_class.__name__} has item in 'gateway' list that's not a Gateway subclass: "
+                        f"{type(gw)}. Ignoring."
+                    )
+            except TypeError:
+                logger.warning(f"Invalid gateway type in {module_class.__name__}: {gw}")
+        return gateway_classes
+
+    # Handle single gateway class
     try:
         if isinstance(gateway_attr, type) and issubclass(gateway_attr, Gateway):
             logger.debug(f"Found gateway {gateway_attr.__name__} on {module_class.__name__}")
-            return gateway_attr
+            return [gateway_attr]
     except TypeError:
         pass
-    
+
     logger.warning(
         f"Module {module_class.__name__} has 'gateway' attribute but it's not a Gateway subclass: "
         f"{type(gateway_attr)}. Ignoring."
     )
-    return None
+    return []
 
 
 def _extract_forward_types(module_class: Type[dspy.Module]) -> Dict[str, Any]:

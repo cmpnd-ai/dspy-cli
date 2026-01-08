@@ -11,11 +11,14 @@ requires-python = ">=3.13"
 dependencies = [
     "audioop-lts",
     "dspy-ai>=3.0.3",
-    "dspy-cli>=0.1.11",
+    "dspy-cli",
     "httpx>=0.27.0",
     "py-cord[voice]>=2.6.1",
     "python-dotenv>=1.2.1",
 ]
+
+[tool.uv.sources]
+dspy-cli = { path = "../..", editable = true }
 
 [project.optional-dependencies]
 dev = [

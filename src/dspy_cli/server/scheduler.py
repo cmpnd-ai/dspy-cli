@@ -83,7 +83,8 @@ class GatewayScheduler:
                 )
 
         trigger = CronTrigger.from_crontab(gateway.schedule)
-        job_id = f"cron_{program_name}"
+        gateway_name = gateway.__class__.__name__
+        job_id = f"cron_{program_name}_{gateway_name}"
         # max_instances=1: Don't start a new run if previous is still running
         # coalesce=True: If multiple runs were missed, only run once
         self.scheduler.add_job(
@@ -93,7 +94,7 @@ class GatewayScheduler:
             max_instances=1,
             coalesce=True,
         )
-        self._jobs[program_name] = job_id
+        self._jobs[f"{program_name}.{gateway_name}"] = job_id
         self._gateways.append(gateway)
         batch_info = f" batch={gateway.use_batch}" if gateway.use_batch else ""
         threads_info = f" threads={gateway.num_threads}" if gateway.use_batch and gateway.num_threads else ""

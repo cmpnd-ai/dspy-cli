@@ -3,12 +3,18 @@ from typing import Literal
 import dspy
 
 from discord_mod.gateways.job_posting_gateway import JobPostingGateway
+from dspy_cli.gateway import IdentityGateway
 
 
 class ClassifyJobPosting(dspy.Module):
-    """Classify Discord messages as job postings, job-seeking, or general chat."""
+    """Classify Discord messages as job postings, job-seeking, or general chat.
 
-    gateway = JobPostingGateway
+    Multiple gateways:
+    - JobPostingGateway: Polls Discord on a schedule
+    - IdentityGateway: Exposes HTTP API for direct calls (blog demo widget)
+    """
+
+    gateway = [JobPostingGateway, IdentityGateway]
 
     def __init__(self):
         super().__init__()

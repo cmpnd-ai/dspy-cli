@@ -76,7 +76,7 @@ class TestGatewayScheduler:
         )
 
         assert scheduler.job_count == 1
-        assert "TestModule" in scheduler._jobs
+        assert "TestModule.MockCronGateway" in scheduler._jobs
 
     def test_multiple_registrations(self, tmp_path, mock_lm):
         """Multiple gateways can be registered."""
@@ -121,7 +121,7 @@ class TestCronJobExecution:
             model_name="test-model",
         )
 
-        job = scheduler.scheduler.get_job("cron_TestModule")
+        job = scheduler.scheduler.get_job("cron_TestModule_MockCronGateway")
         assert job is not None
 
     def test_job_handles_empty_inputs(self, tmp_path, mock_module, mock_lm):

@@ -43,11 +43,11 @@ class TestGetGatewayForModule:
             name="ModuleWithGateway",
             class_obj=ModuleWithGateway,
             module_path="test.with_gateway",
-            gateway_class=CustomGateway,
+            gateway_classes=[CustomGateway],
         )
-        
+
         gateway = get_gateway_for_module(module)
-        
+
         assert isinstance(gateway, CustomGateway)
         assert gateway.path == "/custom"
 
@@ -97,11 +97,11 @@ class TestGetGatewayClass:
             name="ModuleWithGateway",
             class_obj=ModuleWithGateway,
             module_path="test.with_gateway",
-            gateway_class=MyGateway,
+            gateway_classes=[MyGateway],
         )
-        
+
         result = get_gateway_class(module)
-        
+
         assert result is MyGateway
 
     def test_ignores_non_gateway_class(self):

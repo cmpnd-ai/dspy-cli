@@ -9,7 +9,7 @@ from pydantic import create_model
 
 from dspy_cli.discovery import DiscoveredModule
 from dspy_cli.discovery.gateway_finder import get_gateway_for_module
-from dspy_cli.gateway import APIGateway
+from dspy_cli.gateway import APIGateway, IdentityGateway
 from dspy_cli.server.execution import _convert_dspy_types, execute_pipeline
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,16 @@ def create_program_routes(
         else:
             response_model = Dict[str, Any]
 
-    route_path = gateway.path if gateway.path else f"/{program_name}"
+    # Determine route path:
+    # 1. Use explicit gateway.path if set
+    # 2. IdentityGateway uses /{ModuleName} for backward compatibility
+    # 3. Other gateways use /{ModuleName}/{GatewayClassName} to avoid conflicts
+    if gateway.path:
+        route_path = gateway.path
+    elif isinstance(gateway, IdentityGateway):
+        route_path = f"/{program_name}"
+    else:
+        route_path = f"/{program_name}/{gateway.__class__.__name__}"
 
     async def run_program(request: request_model):
         """Execute the DSPy program with given inputs."""

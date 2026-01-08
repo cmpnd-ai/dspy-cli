@@ -6,90 +6,120 @@ import dspy
 
 from dspy_cli.discovery.module_finder import (
     DiscoveredModule,
-    _extract_gateway_class,
+    _extract_gateway_classes,
     discover_modules,
 )
-from dspy_cli.gateway import APIGateway, IdentityGateway
+from dspy_cli.gateway import APIGateway, CronGateway, IdentityGateway
 
 
-class TestExtractGatewayClass:
-    """Tests for _extract_gateway_class function."""
+class TestExtractGatewayClasses:
+    """Tests for _extract_gateway_classes function."""
 
-    def test_returns_none_when_no_gateway(self):
-        """Should return None when module has no gateway attribute."""
+    def test_returns_empty_list_when_no_gateway(self):
+        """Should return empty list when module has no gateway attribute."""
         class NoGatewayModule(dspy.Module):
             def forward(self, text: str) -> str:
                 return text
-        
-        result = _extract_gateway_class(NoGatewayModule)
-        
-        assert result is None
 
-    def test_returns_api_gateway_class(self):
-        """Should return APIGateway subclass when specified."""
+        result = _extract_gateway_classes(NoGatewayModule)
+
+        assert result == []
+
+    def test_returns_single_api_gateway_in_list(self):
+        """Should return list with single APIGateway subclass when specified."""
         class CustomGateway(APIGateway):
             path = "/custom"
-        
+
         class ModuleWithGateway(dspy.Module):
             gateway = CustomGateway
-            
+
             def forward(self, text: str) -> str:
                 return text
-        
-        result = _extract_gateway_class(ModuleWithGateway)
-        
-        assert result is CustomGateway
 
-    def test_returns_identity_gateway_class(self):
-        """Should return IdentityGateway when explicitly specified."""
+        result = _extract_gateway_classes(ModuleWithGateway)
+
+        assert result == [CustomGateway]
+
+    def test_returns_identity_gateway_in_list(self):
+        """Should return list with IdentityGateway when explicitly specified."""
         class ModuleWithIdentity(dspy.Module):
             gateway = IdentityGateway
-            
+
             def forward(self, text: str) -> str:
                 return text
-        
-        result = _extract_gateway_class(ModuleWithIdentity)
-        
-        assert result is IdentityGateway
 
-    def test_ignores_non_gateway_class(self):
-        """Should return None for non-Gateway class attributes."""
+        result = _extract_gateway_classes(ModuleWithIdentity)
+
+        assert result == [IdentityGateway]
+
+    def test_returns_multiple_gateways_from_list(self):
+        """Should return list of gateways when gateway is a list."""
+        class CustomCronGateway(CronGateway):
+            schedule = "0 * * * *"
+
+        class ModuleWithMultiple(dspy.Module):
+            gateway = [CustomCronGateway, IdentityGateway]
+
+            def forward(self, text: str) -> str:
+                return text
+
+        result = _extract_gateway_classes(ModuleWithMultiple)
+
+        assert result == [CustomCronGateway, IdentityGateway]
+
+    def test_filters_invalid_items_from_list(self):
+        """Should filter out non-Gateway items from list."""
         class NotAGateway:
             pass
-        
+
+        class ModuleWithMixed(dspy.Module):
+            gateway = [IdentityGateway, NotAGateway, "string"]
+
+            def forward(self, text: str) -> str:
+                return text
+
+        result = _extract_gateway_classes(ModuleWithMixed)
+
+        assert result == [IdentityGateway]
+
+    def test_ignores_non_gateway_class(self):
+        """Should return empty list for non-Gateway class attributes."""
+        class NotAGateway:
+            pass
+
         class ModuleWithWrongType(dspy.Module):
             gateway = NotAGateway
-            
+
             def forward(self, text: str) -> str:
                 return text
-        
-        result = _extract_gateway_class(ModuleWithWrongType)
-        
-        assert result is None
+
+        result = _extract_gateway_classes(ModuleWithWrongType)
+
+        assert result == []
 
     def test_ignores_gateway_instance(self):
-        """Should return None when gateway is an instance, not a class."""
+        """Should return empty list when gateway is an instance, not a class."""
         class ModuleWithInstance(dspy.Module):
             gateway = IdentityGateway()
-            
+
             def forward(self, text: str) -> str:
                 return text
-        
-        result = _extract_gateway_class(ModuleWithInstance)
-        
-        assert result is None
+
+        result = _extract_gateway_classes(ModuleWithInstance)
+
+        assert result == []
 
     def test_ignores_string_gateway(self):
-        """Should return None when gateway is a string."""
+        """Should return empty list when gateway is a string."""
         class ModuleWithString(dspy.Module):
             gateway = "not a gateway"
-            
+
             def forward(self, text: str) -> str:
                 return text
-        
-        result = _extract_gateway_class(ModuleWithString)
-        
-        assert result is None
+
+        result = _extract_gateway_classes(ModuleWithString)
+
+        assert result == []
 
 
 class TestDiscoverModulesWithGateway:
@@ -169,32 +199,51 @@ class SimpleModule(dspy.Module):
 class TestDiscoveredModuleDataclass:
     """Tests for DiscoveredModule dataclass."""
 
-    def test_gateway_class_defaults_to_none(self):
-        """gateway_class should default to None."""
+    def test_gateway_classes_defaults_to_none(self):
+        """gateway_classes should default to None."""
         class DummyModule(dspy.Module):
             pass
-        
+
         module = DiscoveredModule(
             name="DummyModule",
             class_obj=DummyModule,
             module_path="test.dummy",
         )
-        
-        assert module.gateway_class is None
 
-    def test_gateway_class_can_be_set(self):
-        """gateway_class can be set to a Gateway subclass."""
+        assert module.gateway_classes is None
+        assert module.gateway_class is None  # backward-compat property
+
+    def test_gateway_classes_can_be_set(self):
+        """gateway_classes can be set to a list of Gateway subclasses."""
         class DummyModule(dspy.Module):
             pass
-        
+
         class MyGateway(APIGateway):
             pass
-        
+
         module = DiscoveredModule(
             name="DummyModule",
             class_obj=DummyModule,
             module_path="test.dummy",
-            gateway_class=MyGateway,
+            gateway_classes=[MyGateway],
         )
-        
+
+        assert module.gateway_classes == [MyGateway]
+        assert module.gateway_class is MyGateway  # backward-compat property
+
+    def test_gateway_class_returns_first_from_list(self):
+        """gateway_class property should return first gateway from list."""
+        class DummyModule(dspy.Module):
+            pass
+
+        class MyGateway(APIGateway):
+            pass
+
+        module = DiscoveredModule(
+            name="DummyModule",
+            class_obj=DummyModule,
+            module_path="test.dummy",
+            gateway_classes=[MyGateway, IdentityGateway],
+        )
+
         assert module.gateway_class is MyGateway

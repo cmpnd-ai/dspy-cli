@@ -347,11 +347,11 @@
         }
       }
     },
-    "/TaggerPredict": {
+    "/public/tagger": {
       "post": {
         "summary": "Run Program",
         "description": "Execute the DSPy program with given inputs.",
-        "operationId": "run_program_TaggerPredict_post",
+        "operationId": "run_program_public_tagger_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -370,7 +370,7 @@
                 "schema": {
                   "additionalProperties": true,
                   "type": "object",
-                  "title": "Response Run Program Taggerpredict Post"
+                  "title": "Response Run Program Public Tagger Post"
                 }
               }
             }
@@ -598,10 +598,139 @@
           }
         }
       }
+    },
+    "/login": {
+      "get": {
+        "summary": "Login Form",
+        "description": "Render the login form.",
+        "operationId": "login_form_login_get",
+        "parameters": [
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Login",
+        "description": "Process login form submission.",
+        "operationId": "login_login_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_login_login_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "summary": "Logout",
+        "description": "Log out by clearing the session cookie.",
+        "operationId": "logout_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Health check endpoint (always open).",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "Body_login_login_post": {
+        "properties": {
+          "token_input": {
+            "type": "string",
+            "title": "Token Input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token_input"
+        ],
+        "title": "Body_login_login_post"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {

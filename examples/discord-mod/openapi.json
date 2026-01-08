@@ -6,14 +6,9 @@
     "version": "0.1.0",
     "x-dspy-config": {
       "default_model": null,
-      "programs_count": 2
+      "programs_count": 1
     },
     "x-dspy-programs": [
-      {
-        "name": "MyProgramPredict",
-        "module_path": "discord_mod.modules.my_program_predict",
-        "is_forward_typed": true
-      },
       {
         "name": "ClassifyJobPosting",
         "module_path": "discord_mod.modules.classify_job_posting",
@@ -21,21 +16,20 @@
       }
     ],
     "x-dspy-program-models": {
-      "MyProgramPredict": "openai:gpt-5-mini",
-      "ClassifyJobPosting": "openai:gpt-5-mini"
+      "ClassifyJobPosting": "openai:gpt-4o-mini"
     }
   },
   "paths": {
-    "/MyProgramPredict": {
+    "/ClassifyJobPosting": {
       "post": {
         "summary": "Run Program",
         "description": "Execute the DSPy program with given inputs.",
-        "operationId": "run_program_MyProgramPredict_post",
+        "operationId": "run_program_ClassifyJobPosting_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/MyProgramPredictRequest"
+                "$ref": "#/components/schemas/ClassifyJobPostingRequest"
               }
             }
           },
@@ -49,7 +43,7 @@
                 "schema": {
                   "additionalProperties": true,
                   "type": "object",
-                  "title": "Response Run Program Myprogrampredict Post"
+                  "title": "Response Run Program Classifyjobposting Post"
                 }
               }
             }
@@ -277,10 +271,162 @@
           }
         }
       }
+    },
+    "/login": {
+      "get": {
+        "summary": "Login Form",
+        "description": "Render the login form.",
+        "operationId": "login_form_login_get",
+        "parameters": [
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Login",
+        "description": "Process login form submission.",
+        "operationId": "login_login_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_login_login_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "summary": "Logout",
+        "description": "Log out by clearing the session cookie.",
+        "operationId": "logout_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Health check endpoint (always open).",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "Body_login_login_post": {
+        "properties": {
+          "token_input": {
+            "type": "string",
+            "title": "Token Input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token_input"
+        ],
+        "title": "Body_login_login_post"
+      },
+      "ClassifyJobPostingRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "author": {
+            "type": "string",
+            "title": "Author"
+          },
+          "channel_name": {
+            "type": "string",
+            "title": "Channel Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "author",
+          "channel_name"
+        ],
+        "title": "ClassifyJobPostingRequest"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -293,19 +439,6 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
-      },
-      "MyProgramPredictRequest": {
-        "properties": {
-          "comment": {
-            "type": "string",
-            "title": "Comment"
-          }
-        },
-        "type": "object",
-        "required": [
-          "comment"
-        ],
-        "title": "MyProgramPredictRequest"
       },
       "ValidationError": {
         "properties": {

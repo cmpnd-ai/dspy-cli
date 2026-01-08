@@ -13,8 +13,8 @@ from fastapi import FastAPI
 
 from dspy_cli.config import get_model_config, get_program_model
 from dspy_cli.discovery import discover_modules
-from dspy_cli.discovery.gateway_finder import get_gateway_for_module, is_cron_gateway
-from dspy_cli.gateway import APIGateway
+from dspy_cli.discovery.gateway_finder import get_gateways_for_module, is_cron_gateway
+from dspy_cli.gateway import APIGateway, IdentityGateway
 from dspy_cli.server.logging import setup_logging
 from dspy_cli.server.metrics import get_all_metrics, get_program_metrics_cached
 from dspy_cli.server.routes import create_program_routes
@@ -134,6 +134,9 @@ def create_app(
     scheduler = GatewayScheduler(logs_dir)
     app.state.scheduler = scheduler
 
+    # Track registered API paths to detect conflicts
+    registered_paths: Dict[str, str] = {}  # path -> "module.gateway" for error messages
+
     # Create routes for each discovered module
     for module in modules:
         # Get the LM instance for this program
@@ -141,23 +144,45 @@ def create_app(
         model_alias = get_program_model(config, module.name)
         model_config = get_model_config(config, model_alias)
 
-        # Get gateway and route by type
-        gateway = get_gateway_for_module(module)
+        # Get all gateways for this module and route by type
+        gateways = get_gateways_for_module(module)
 
-        if is_cron_gateway(gateway):
-            # Register with scheduler instead of creating HTTP route
-            scheduler.register_cron_gateway(
-                module=module,
-                gateway=gateway,
-                lm=lm,
-                model_name=model_config.get("model", "unknown"),
-            )
-            logger.info(f"Registered cron program: {module.name} (schedule: {gateway.schedule})")
-        elif isinstance(gateway, APIGateway):
-            create_program_routes(app, module, lm, model_config, config, gateway=gateway)
-            logger.info(f"Registered program: {module.name} (model: {model_alias})")
-        else:
-            logger.warning(f"Unknown gateway type for {module.name}: {type(gateway)}")
+        for gateway in gateways:
+            if is_cron_gateway(gateway):
+                # Register with scheduler instead of creating HTTP route
+                scheduler.register_cron_gateway(
+                    module=module,
+                    gateway=gateway,
+                    lm=lm,
+                    model_name=model_config.get("model", "unknown"),
+                )
+                logger.info(f"Registered cron gateway: {module.name} ({gateway.__class__.__name__}, schedule: {gateway.schedule})")
+            elif isinstance(gateway, APIGateway):
+                # Calculate the route path (same logic as routes.py)
+                if gateway.path:
+                    route_path = gateway.path
+                elif isinstance(gateway, IdentityGateway):
+                    route_path = f"/{module.name}"
+                else:
+                    route_path = f"/{module.name}/{gateway.__class__.__name__}"
+
+                # Check for path conflicts
+                gateway_id = f"{module.name}.{gateway.__class__.__name__}"
+                if route_path in registered_paths:
+                    existing = registered_paths[route_path]
+                    error_msg = (
+                        f"Route path conflict: '{route_path}' is used by both "
+                        f"{existing} and {gateway_id}. "
+                        f"Set explicit 'path' attribute on one of the gateways to resolve."
+                    )
+                    logger.error(error_msg)
+                    raise ValueError(error_msg)
+
+                registered_paths[route_path] = gateway_id
+                create_program_routes(app, module, lm, model_config, config, gateway=gateway)
+                logger.info(f"Registered API gateway: {module.name} ({gateway.__class__.__name__}, path: {route_path}, model: {model_alias})")
+            else:
+                logger.warning(f"Unknown gateway type for {module.name}: {type(gateway)}")
 
     # Add programs list endpoint
     @app.get("/programs")
