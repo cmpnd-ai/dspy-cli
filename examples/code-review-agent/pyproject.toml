@@ -14,6 +14,10 @@ dependencies = [
     "mlflow>=3.5.1",
     "python-dotenv>=1.2.1",
     "requests>=2.32.5",
+    # GitHub webhook integration
+    "PyJWT>=2.8.0",
+    "cryptography>=41.0",
+    "upstash-redis>=1.0",
 ]
 
 [project.optional-dependencies]
@@ -28,4 +32,9 @@ where = ["src"]
 [tool.uv]
 dev-dependencies = [
     "python-dotenv>=1.2.1",
+]
+
+# Pin pyarrow to version with pre-built wheels
+override-dependencies = [
+    "pyarrow>=17.0,<18",
 ]
