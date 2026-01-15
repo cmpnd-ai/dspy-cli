@@ -96,7 +96,7 @@ def test_cli_e2e_smoke(runner, tmp_cwd, monkeypatch):
     def fake_runner_main(**kwargs):
         calls.update(kwargs)
     
-    monkeypatch.setattr("dspy_cli.commands.serve.runner_main", fake_runner_main)
+    monkeypatch.setattr("dspy_cli.server.runner.main", fake_runner_main)
     
     res = runner.invoke(
         main,
