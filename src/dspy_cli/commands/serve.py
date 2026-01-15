@@ -9,7 +9,6 @@ from typing import NoReturn
 
 import click
 
-from dspy_cli.server.runner import main as runner_main
 from dspy_cli.utils.venv import (
     detect_venv_python,
     has_package,
@@ -118,6 +117,7 @@ def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, sy
         dspy-cli serve --python /path/to/venv/bin/python
     """
     if system:
+        from dspy_cli.server.runner import main as runner_main
         runner_main(
             port=port,
             host=host,
@@ -195,6 +195,7 @@ def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, sy
 
         _exec_clean(target_python, args)
     else:
+        from dspy_cli.server.runner import main as runner_main
         runner_main(
             port=port,
             host=host,
