@@ -20,39 +20,17 @@
     }
   },
   "paths": {
-    "/PRReviewer": {
+    "/webhooks/github": {
       "post": {
-        "summary": "Run Program",
-        "description": "Execute the DSPy program with given inputs.",
-        "operationId": "run_program_PRReviewer_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PRReviewerRequest"
-              }
-            }
-          },
-          "required": true
-        },
+        "summary": "Webhook Handler",
+        "description": "Handle GitHub webhook with signature verification and background processing.",
+        "operationId": "webhook_handler_webhooks_github_post",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PRReviewerResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
+                "schema": {}
               }
             }
           }
@@ -75,6 +53,200 @@
           }
         }
       }
+    },
+    "/api/metrics": {
+      "get": {
+        "summary": "List Metrics",
+        "description": "Get aggregated metrics for all programs.\n\nArgs:\n    sort_by: Sort key (name, calls, latency, cost, tokens, last_call)\n    order: Sort order (asc, desc)",
+        "operationId": "list_metrics_api_metrics_get",
+        "parameters": [
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "calls",
+              "title": "Sort By"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "desc",
+              "title": "Order"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/metrics/{program_name}": {
+      "get": {
+        "summary": "Program Metrics",
+        "description": "Get detailed metrics for a specific program.",
+        "operationId": "program_metrics_api_metrics__program_name__get",
+        "parameters": [
+          {
+            "name": "program_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Program Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Index",
+        "description": "Render the index page with a list of all programs.",
+        "operationId": "index__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ui/{program_name}": {
+      "get": {
+        "summary": "Program Page",
+        "description": "Render the program detail page.",
+        "operationId": "program_page_ui__program_name__get",
+        "parameters": [
+          {
+            "name": "program_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Program Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logs/{program_name}": {
+      "get": {
+        "summary": "Get Logs",
+        "description": "Get recent logs for a program.",
+        "operationId": "get_logs_api_logs__program_name__get",
+        "parameters": [
+          {
+            "name": "program_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Program Name"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -91,162 +263,6 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
-      },
-      "KeyIssue": {
-        "properties": {
-          "relevant_file": {
-            "type": "string",
-            "title": "Relevant File",
-            "description": "File path where the issue was found"
-          },
-          "issue_header": {
-            "type": "string",
-            "title": "Issue Header",
-            "description": "Short title of the issue"
-          },
-          "issue_content": {
-            "type": "string",
-            "title": "Issue Content",
-            "description": "Detailed description of the issue"
-          },
-          "start_line": {
-            "type": "integer",
-            "title": "Start Line",
-            "description": "Starting line number"
-          },
-          "end_line": {
-            "type": "integer",
-            "title": "End Line",
-            "description": "Ending line number"
-          }
-        },
-        "type": "object",
-        "required": [
-          "relevant_file",
-          "issue_header",
-          "issue_content",
-          "start_line",
-          "end_line"
-        ],
-        "title": "KeyIssue",
-        "description": "Individual issue found during review"
-      },
-      "PRReviewerRequest": {
-        "properties": {
-          "repo": {
-            "type": "string",
-            "title": "Repo"
-          },
-          "pr_number": {
-            "type": "integer",
-            "title": "Pr Number"
-          }
-        },
-        "type": "object",
-        "required": [
-          "repo",
-          "pr_number"
-        ],
-        "title": "PRReviewerRequest"
-      },
-      "PRReviewerResponse": {
-        "properties": {
-          "estimated_effort_to_review": {
-            "type": "integer",
-            "title": "Estimated Effort To Review"
-          },
-          "relevant_tests": {
-            "type": "string",
-            "title": "Relevant Tests"
-          },
-          "key_issues_to_review": {
-            "items": {
-              "$ref": "#/components/schemas/KeyIssue"
-            },
-            "type": "array",
-            "title": "Key Issues To Review"
-          },
-          "security_concerns": {
-            "type": "string",
-            "title": "Security Concerns"
-          },
-          "score": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Score"
-          },
-          "todo_sections": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/TodoSection"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Todo Sections"
-          },
-          "estimated_contribution_time_cost": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Estimated Contribution Time Cost"
-          }
-        },
-        "type": "object",
-        "required": [
-          "estimated_effort_to_review",
-          "relevant_tests",
-          "key_issues_to_review",
-          "security_concerns",
-          "score",
-          "todo_sections",
-          "estimated_contribution_time_cost"
-        ],
-        "title": "PRReviewerResponse"
-      },
-      "TodoSection": {
-        "properties": {
-          "relevant_file": {
-            "type": "string",
-            "title": "Relevant File"
-          },
-          "todo_content": {
-            "type": "string",
-            "title": "Todo Content"
-          },
-          "start_line": {
-            "type": "integer",
-            "title": "Start Line"
-          },
-          "end_line": {
-            "type": "integer",
-            "title": "End Line"
-          }
-        },
-        "type": "object",
-        "required": [
-          "relevant_file",
-          "todo_content",
-          "start_line",
-          "end_line"
-        ],
-        "title": "TodoSection",
-        "description": "TODO/FIXME found in the PR"
       },
       "ValidationError": {
         "properties": {

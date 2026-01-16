@@ -4,8 +4,13 @@ import dspy
 from dotenv import load_dotenv
 from code_review_agent.signatures.review_pr import PRReview, ReviewPR
 from code_review_agent.utils import download_and_format_pr, build_github_tools
+from code_review_agent.gateways import GitHubWebhookGateway
+
 
 class PRReviewer(dspy.Module):
+    # Enable GitHub webhook integration for automated PR reviews
+    gateway = GitHubWebhookGateway
+
     def __init__(self):
         super().__init__()
         self.predictor = dspy.ReAct(ReviewPR, tools=build_github_tools())
