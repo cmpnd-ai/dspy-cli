@@ -40,7 +40,6 @@ ENV/
 *.swp
 *.swo
 *~
-.claude/
 CLAUDE.md
 
 # Logs
