@@ -349,6 +349,7 @@ def _create_lm_instance(model_config: Dict) -> dspy.LM:
     max_tokens = model_config.get("max_tokens")
     api_key = model_config.get("api_key")
     api_base = model_config.get("api_base")
+    cache = model_config.get("cache")
 
     # Build kwargs
     kwargs = {}
@@ -360,6 +361,8 @@ def _create_lm_instance(model_config: Dict) -> dspy.LM:
         kwargs["api_key"] = api_key
     if api_base is not None:
         kwargs["api_base"] = api_base
+    if cache is not None:
+        kwargs["cache"] = cache
 
     # Create and return LM instance
     return dspy.LM(
