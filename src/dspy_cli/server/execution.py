@@ -1,5 +1,6 @@
 """Shared pipeline execution logic for HTTP, MCP, and gateways."""
 
+import asyncio
 import base64
 import logging
 import time
@@ -280,7 +281,7 @@ async def execute_pipeline(
             if hasattr(instance, 'aforward'):
                 result = await instance.acall(**inputs)
             else:
-                result = instance(**inputs)
+                result = await asyncio.to_thread(instance, **inputs)
 
         output = _normalize_output(result, module)
         duration_ms = (time.time() - start_time) * 1000
