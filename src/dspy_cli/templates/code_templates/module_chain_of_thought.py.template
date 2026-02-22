@@ -10,3 +10,6 @@ class {class_name}(dspy.Module):
 
     def forward(self, {forward_params}) -> dspy.Prediction:
         return self.predictor({forward_kwargs})
+
+    async def aforward(self, {forward_params}) -> dspy.Prediction:
+        return await self.predictor.acall({forward_kwargs})

@@ -50,6 +50,19 @@ curl -X POST http://localhost:8000/{program_name} \\
   -d '{{"question": "your question here"}}'
 ```
 
+## Production
+
+Always disable hot reload when deploying:
+```bash
+dspy-cli serve --no-reload --host 0.0.0.0
+```
+
+Or use the included Dockerfile, which has `--no-reload` set by default:
+```bash
+docker build -t {project_name} .
+docker run -p 8000:8000 --env-file .env {project_name}
+```
+
 ## Testing
 
 Run tests:

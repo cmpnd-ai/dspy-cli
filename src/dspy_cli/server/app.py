@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, List, Union
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 
 import dspy
@@ -15,7 +16,8 @@ from dspy_cli.config import get_model_config, get_program_model
 from dspy_cli.discovery import discover_modules
 from dspy_cli.discovery.gateway_finder import get_gateways_for_module, is_cron_gateway
 from dspy_cli.gateway import APIGateway, IdentityGateway
-from dspy_cli.server.logging import setup_logging
+from dspy_cli.server.executor import init_executor, shutdown_executor, DEFAULT_SYNC_WORKERS
+from dspy_cli.server.logging import setup_logging, start_log_writer, stop_log_writer
 from dspy_cli.server.metrics import get_all_metrics, get_program_metrics_cached
 from dspy_cli.server.routes import create_program_routes
 from dspy_cli.server.scheduler import GatewayScheduler
@@ -31,6 +33,7 @@ def create_app(
     logs_dir: Path,
     enable_ui: bool = True,
     enable_auth: bool = False,
+    sync_workers: int | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -41,12 +44,21 @@ def create_app(
         logs_dir: Directory for log files
         enable_ui: Whether to enable the web UI (always True, kept for compatibility)
         enable_auth: Whether to enable API authentication via DSPY_API_KEY
+        sync_workers: Number of threads for sync module execution (overrides config)
 
     Returns:
         Configured FastAPI application
     """
     # Setup logging
     setup_logging()
+
+    # Initialize bounded executor for sync module execution
+    # Priority: CLI flag > config file > default
+    worker_count = sync_workers or config.get("server", {}).get("sync_worker_threads") or DEFAULT_SYNC_WORKERS
+    init_executor(max_workers=worker_count)
+
+    # Start background log writer
+    start_log_writer()
 
     # Create FastAPI app
     app = FastAPI(
@@ -184,6 +196,22 @@ def create_app(
             else:
                 logger.warning(f"Unknown gateway type for {module.name}: {type(gateway)}")
 
+    # Health check endpoints
+    @app.get("/health/live")
+    async def liveness():
+        """Liveness probe — returns 200 if the process is running."""
+        return {"status": "alive"}
+
+    @app.get("/health/ready")
+    async def readiness():
+        """Readiness probe — returns 200 when all LM instances are initialized."""
+        if not modules:
+            return JSONResponse(status_code=503, content={"status": "not_ready", "reason": "no modules discovered"})
+        missing = [m.name for m in modules if m.name not in app.state.program_lms]
+        if missing:
+            return JSONResponse(status_code=503, content={"status": "not_ready", "reason": f"LMs not initialized: {missing}"})
+        return {"status": "ready", "programs": len(modules)}
+
     # Add programs list endpoint
     @app.get("/programs")
     async def list_programs():
@@ -319,18 +347,22 @@ async def lifespan(app: FastAPI):
     scheduler = getattr(app.state, "scheduler", None)
     if scheduler and scheduler.job_count > 0:
         scheduler.start()
-    
+
     yield
-    
+
     # Shutdown
     if scheduler and scheduler.job_count > 0:
         scheduler.shutdown()
-    
+
     for shutdown_fn in getattr(app.state, "_gateway_shutdowns", []):
         try:
             shutdown_fn()
         except Exception as e:
             logger.warning(f"Gateway shutdown error: {e}")
+
+    # Shutdown executor and log writer
+    shutdown_executor()
+    stop_log_writer()
 
 
 def _create_lm_instance(model_config: Dict) -> dspy.LM:
@@ -382,7 +414,9 @@ def _configure_dspy_model(model_config: Dict):
     lm = _create_lm_instance(model_config)
 
     # Configure DSPy
-    dspy.settings.configure(lm=lm)
+    # Disable global history: it's an unprotected plain list that races under
+    # concurrent async/threaded requests. Inference logs capture everything we need.
+    dspy.settings.configure(lm=lm, disable_history=True)
 
     model = model_config.get("model")
     model_type = model_config.get("model_type", "chat")
