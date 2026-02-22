@@ -3,18 +3,24 @@ Minimal OpenAI-compatible mock server for load testing.
 
 Echoes the requested model name back in the answer so load tests can
 verify that per-program model routing is correct under concurrency.
+
+Environment variables:
+    MOCK_PORT        - Port to listen on (default: 9999)
+    MOCK_DELAY_MS    - Simulated LLM latency in ms (default: 50)
+    MOCK_ERROR_RATE  - Fraction of requests that return 500 (0.0-1.0, default: 0.0)
 """
 import asyncio
 import os
+import random
 import time
 
 import uvicorn
 from fastapi import FastAPI, Request
-from typing import Any
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
-MOCK_DELAY_MS = 50  # Simulate minimal LLM latency. Set via env var MOCK_DELAY_MS.
+MOCK_DELAY_MS = 50
 
 
 @app.post("/v1/chat/completions")
@@ -31,6 +37,21 @@ async def chat(request: Request):
     model = body.get("model", "unknown")
     delay = float(os.environ.get("MOCK_DELAY_MS", MOCK_DELAY_MS)) / 1000
     await asyncio.sleep(delay)
+
+    # Simulate LLM errors
+    error_rate = float(os.environ.get("MOCK_ERROR_RATE", "0.0"))
+    if error_rate > 0 and random.random() < error_rate:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": {
+                    "message": "Mock LLM internal error",
+                    "type": "server_error",
+                    "code": "internal_error",
+                }
+            },
+        )
+
     return {
         "id": "mock-completion",
         "object": "chat.completion",
