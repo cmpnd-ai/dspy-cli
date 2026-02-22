@@ -1,6 +1,8 @@
 """Bounded thread pool executor for sync DSPy module execution."""
 
 import asyncio
+import contextvars
+import functools
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
@@ -67,15 +69,10 @@ async def run_sync_in_executor(fn: Callable[..., Any], *args: Any, **kwargs: Any
     loop = asyncio.get_running_loop()
     executor = _executor
 
-    if kwargs:
-        # ThreadPoolExecutor.submit doesn't support kwargs directly,
-        # so we wrap in a lambda.
-        call = lambda: fn(*args, **kwargs)  # noqa: E731
-    else:
-        call = lambda: fn(*args)  # noqa: E731
+    # Copy the current context so that contextvars (including dspy.context
+    # overrides like per-request LM) propagate into the worker thread.
+    # This mirrors what asyncio.to_thread() does internally.
+    ctx = contextvars.copy_context()
+    func_call = functools.partial(ctx.run, fn, *args, **kwargs)
 
-    if executor is not None:
-        return await loop.run_in_executor(executor, call)
-    else:
-        # Fallback: use default executor (same as asyncio.to_thread)
-        return await loop.run_in_executor(None, call)
+    return await loop.run_in_executor(executor, func_call)

@@ -1,6 +1,10 @@
 """
 Locust load test for dspy-cli.
 
+Validates both throughput and correctness: each program must receive
+responses routed through its configured model. The mock LLM server
+echoes the model name back in the answer, so we can verify it.
+
 Single-scenario run:
     locust -f tests/load/locustfile.py \
            --host http://localhost:8000 \
@@ -21,7 +25,7 @@ def unique_payload():
 
 
 class SyncModuleUser(HttpUser):
-    """Hits the sync-fallback module (no aforward)."""
+    """Hits the sync-fallback module (no aforward). Expects model-alpha."""
     wait_time = between(0.01, 0.1)
     weight = 1
 
@@ -34,12 +38,17 @@ class SyncModuleUser(HttpUser):
         ) as response:
             if response.status_code != 200:
                 response.failure(f"Got {response.status_code}: {response.text[:200]}")
-            elif "answer" not in response.json():
-                response.failure("Missing 'answer' in response")
+                return
+            body = response.json()
+            answer = body.get("answer", "")
+            if "model=mock-alpha" not in answer:
+                response.failure(
+                    f"SimplePredict model mismatch: expected mock-alpha, got: {answer[:100]}"
+                )
 
 
 class AsyncModuleUser(HttpUser):
-    """Hits the native async module (has aforward)."""
+    """Hits the native async module (has aforward). Expects model-beta."""
     wait_time = between(0.01, 0.1)
     weight = 1
 
@@ -52,8 +61,13 @@ class AsyncModuleUser(HttpUser):
         ) as response:
             if response.status_code != 200:
                 response.failure(f"Got {response.status_code}: {response.text[:200]}")
-            elif "answer" not in response.json():
-                response.failure("Missing 'answer' in response")
+                return
+            body = response.json()
+            answer = body.get("answer", "")
+            if "model=mock-beta" not in answer:
+                response.failure(
+                    f"AsyncPredict model mismatch: expected mock-beta, got: {answer[:100]}"
+                )
 
 
 @events.quitting.add_listener

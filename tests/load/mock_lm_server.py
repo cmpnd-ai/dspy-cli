@@ -1,6 +1,8 @@
 """
 Minimal OpenAI-compatible mock server for load testing.
-Returns a canned response immediately with configurable delay.
+
+Echoes the requested model name back in the answer so load tests can
+verify that per-program model routing is correct under concurrency.
 """
 import asyncio
 import os
@@ -21,20 +23,24 @@ async def chat(request: Request):
 
     LiteLLM sends varying extra fields (stream, n, tools, etc.)
     depending on the call path. A strict Pydantic model rejects those.
+
+    The response embeds the requested model name in the answer field
+    so callers can verify the correct model was routed.
     """
     body = await request.json()
+    model = body.get("model", "unknown")
     delay = float(os.environ.get("MOCK_DELAY_MS", MOCK_DELAY_MS)) / 1000
     await asyncio.sleep(delay)
     return {
         "id": "mock-completion",
         "object": "chat.completion",
         "created": int(time.time()),
-        "model": body.get("model", "mock"),
+        "model": model,
         "choices": [{
             "index": 0,
             "message": {
                 "role": "assistant",
-                "content": '[[ ## answer ## ]]\nMock answer.\n\n[[ ## completed ## ]]'
+                "content": f'[[ ## answer ## ]]\nmodel={model}\n\n[[ ## completed ## ]]'
             },
             "finish_reason": "stop"
         }],
