@@ -212,6 +212,7 @@ class TestExecutePipeline:
         module = MagicMock()
         module.is_forward_typed = False
         module.forward_output_fields = None
+        module.has_native_async = False
 
         # Use spec to ensure instance doesn't have aforward (sync execution path)
         instance = MagicMock(spec=['__call__'])
@@ -242,6 +243,7 @@ class TestExecutePipeline:
         module = MagicMock()
         module.is_forward_typed = False
         module.forward_output_fields = None
+        module.has_native_async = True
 
         instance = MagicMock(spec=['aforward', 'acall'])
         instance.acall = AsyncMock(return_value={"async_result": "done"})
@@ -271,6 +273,7 @@ class TestExecutePipeline:
         module = MagicMock()
         module.is_forward_typed = False
         module.forward_output_fields = None
+        module.has_native_async = False
 
         # Use spec to ensure instance doesn't have aforward (sync execution path)
         instance = MagicMock(spec=['__call__'])
@@ -306,6 +309,7 @@ class TestExecutePipeline:
         module = MagicMock()
         module.is_forward_typed = False
         module.forward_output_fields = None
+        module.has_native_async = False
 
         # Use spec to ensure instance doesn't have aforward (sync execution path)
         instance = MagicMock(spec=['__call__'])
@@ -344,6 +348,7 @@ class TestExecutePipeline:
         module = MagicMock()
         module.is_forward_typed = False
         module.forward_output_fields = None
+        module.has_native_async = False
 
         # Use spec to ensure instance doesn't have aforward (sync execution path)
         instance = MagicMock(spec=['__call__'])

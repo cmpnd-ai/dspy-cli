@@ -28,6 +28,7 @@ class DiscoveredModule:
     forward_input_fields: Optional[Dict[str, Any]] = None  # Input field types from forward() method
     forward_output_fields: Optional[Dict[str, Any]] = None  # Output field types from forward() method
     is_forward_typed: bool = False  # True if forward() has proper type annotations
+    has_native_async: bool = False  # True if the module has a user-implemented aforward()
     gateway_classes: List[Type["Gateway"]] = None  # Gateway classes if specified on module (supports list)
 
     # Backward compatibility: single gateway_class property
@@ -41,6 +42,27 @@ class DiscoveredModule:
     def instantiate(self, lm: dspy.LM | None = None) -> dspy.Module:
         """Create an instance of this module."""
         return self.class_obj()
+
+
+def _has_user_implemented_aforward(cls: Type[dspy.Module]) -> bool:
+    """Check if a class defines its own aforward() (not inherited from dspy.Module).
+
+    This prevents false positives where a base class provides a default
+    aforward that just delegates to forward().
+
+    Args:
+        cls: The DSPy Module class to check.
+
+    Returns:
+        True if the class (not a parent) defines aforward.
+    """
+    # Check if 'aforward' is defined directly on the class (not inherited)
+    if 'aforward' not in cls.__dict__:
+        return False
+
+    # Extra guard: make sure it's actually callable
+    method = cls.__dict__['aforward']
+    return callable(method) or isinstance(method, (staticmethod, classmethod))
 
 
 def discover_modules(
@@ -135,6 +157,11 @@ def discover_modules(
                 # Extract gateway classes if specified (supports single or list)
                 gateway_classes = _extract_gateway_classes(obj)
 
+                # Detect user-implemented aforward
+                native_async = _has_user_implemented_aforward(obj)
+                if native_async:
+                    logger.info(f"Module {name} has native async support (aforward)")
+
                 discovered.append(
                     DiscoveredModule(
                         name=name,
@@ -144,6 +171,7 @@ def discover_modules(
                         forward_input_fields=forward_info.get("inputs"),
                         forward_output_fields=forward_info.get("outputs"),
                         is_forward_typed=forward_info.get("is_typed", False),
+                        has_native_async=native_async,
                         gateway_classes=gateway_classes,
                     )
                 )

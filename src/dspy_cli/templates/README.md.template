@@ -50,6 +50,47 @@ curl -X POST http://localhost:8000/{program_name} \\
   -d '{{"question": "your question here"}}'
 ```
 
+### Async Modules
+
+`dspy-cli serve` runs `forward()` in a thread pool so it doesn't block the
+server. This handles concurrency well for most workloads.
+
+If the thread pool becomes a bottleneck, you can add `aforward()` to a module.
+The server detects it at startup and calls it directly on the event loop,
+bypassing the thread pool:
+
+```python
+class MyModule(dspy.Module):
+    def __init__(self):
+        self.predict = dspy.Predict("question -> answer")
+
+    def forward(self, question: str) -> dspy.Prediction:
+        return self.predict(question=question)
+
+    async def aforward(self, question: str) -> dspy.Prediction:
+        return await self.predict.acall(question=question)
+```
+
+You _can_ delete `forward` and use `aforward` only — the server will work fine.
+But be aware that DSPy's `__call__` dispatches to `forward`, so optimizers,
+notebooks, scripts, and tests all depend on it. If you keep both, any logic in
+`forward` must be replicated in `aforward` or the server will skip it. For most
+projects the thread pool is fast enough and `forward` alone is the simpler
+choice.
+
+## Production
+
+Always disable hot reload when deploying:
+```bash
+dspy-cli serve --no-reload --host 0.0.0.0
+```
+
+Or use the included Dockerfile, which has `--no-reload` set by default:
+```bash
+docker build -t {project_name} .
+docker run -p 8000:8000 --env-file .env {project_name}
+```
+
 ## Testing
 
 Run tests:

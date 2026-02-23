@@ -1,5 +1,6 @@
 """Shared pipeline execution logic for HTTP, MCP, and gateways."""
 
+import asyncio
 import base64
 import logging
 import time
@@ -10,6 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import dspy
 
 from dspy_cli.discovery import DiscoveredModule
+from dspy_cli.server.executor import run_sync_in_executor
 from dspy_cli.server.logging import log_inference
 
 logger = logging.getLogger(__name__)
@@ -277,10 +279,10 @@ async def execute_pipeline(
         logger.info(f"Executing {program_name} with inputs: {inputs}")
 
         with dspy.context(lm=request_lm):
-            if hasattr(instance, 'aforward'):
+            if module.has_native_async:
                 result = await instance.acall(**inputs)
             else:
-                result = instance(**inputs)
+                result = await run_sync_in_executor(instance, **inputs)
 
         output = _normalize_output(result, module)
         duration_ms = (time.time() - start_time) * 1000
@@ -393,7 +395,11 @@ async def execute_pipeline_batch(
             if max_errors is not None:
                 batch_kwargs["max_errors"] = max_errors
 
-            batch_result = instance.batch(examples, **batch_kwargs)
+            # batch() is always sync — run it in the bounded executor
+            # to avoid blocking the event loop
+            batch_result = await run_sync_in_executor(
+                instance.batch, examples, **batch_kwargs
+            )
 
             if isinstance(batch_result, tuple) and len(batch_result) == 3:
                 successful, failed_examples, exceptions = batch_result

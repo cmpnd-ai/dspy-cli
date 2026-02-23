@@ -68,7 +68,7 @@ def _exec_clean(target_python: Path, args: list[str]) -> NoReturn:
 @click.option(
     "--reload/--no-reload",
     default=True,
-    help="Enable auto-reload on file changes (default: enabled)",
+    help="Enable auto-reload on file changes (default: enabled). Use --no-reload for production.",
 )
 @click.option(
     "--save-openapi/--no-save-openapi",
@@ -102,7 +102,13 @@ def _exec_clean(target_python: Path, args: list[str]) -> NoReturn:
     default=False,
     help="Enable API authentication via DSPY_API_KEY (default: disabled)",
 )
-def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, system, mcp, auth):
+@click.option(
+    "--sync-workers",
+    default=None,
+    type=click.IntRange(1, 200),
+    help="Number of threads for sync module execution (default: 10, or server.sync_worker_threads in config)",
+)
+def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, system, mcp, auth, sync_workers):
     """Start an HTTP API server that exposes your DSPy programs.
 
     This command:
@@ -127,6 +133,7 @@ def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, sy
             openapi_format=openapi_format,
             mcp=mcp,
             auth=auth,
+            sync_workers=sync_workers,
         )
         return
     
@@ -192,6 +199,8 @@ def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, sy
             args.append("--mcp")
         if auth:
             args.append("--auth")
+        if sync_workers is not None:
+            args.extend(["--sync-workers", str(sync_workers)])
 
         _exec_clean(target_python, args)
     else:
@@ -205,4 +214,5 @@ def serve(port, host, logs_dir, reload, save_openapi, openapi_format, python, sy
             openapi_format=openapi_format,
             mcp=mcp,
             auth=auth,
+            sync_workers=sync_workers,
         )
