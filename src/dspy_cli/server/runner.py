@@ -20,6 +20,7 @@ MCP_DEFAULT_PATH = "/mcp"
 ENV_ENABLE_MCP = "DSPY_CLI_ENABLE_MCP"
 ENV_LOGS_DIR = "DSPY_CLI_LOGS_DIR"
 ENV_AUTH_ENABLED = "DSPY_CLI_AUTH_ENABLED"
+ENV_SYNC_WORKERS = "DSPY_CLI_SYNC_WORKERS"
 
 
 def _maybe_mount_mcp(app, enable: bool, *, path: str = MCP_DEFAULT_PATH, notify=None) -> bool:
@@ -86,6 +87,8 @@ def create_app_instance():
     logs_dir = os.environ.get(ENV_LOGS_DIR, "./logs")
     enable_mcp = os.environ.get(ENV_ENABLE_MCP, "false").lower() == "true"
     enable_auth = os.environ.get(ENV_AUTH_ENABLED, "false").lower() == "true"
+    sync_workers_str = os.environ.get(ENV_SYNC_WORKERS)
+    sync_workers = int(sync_workers_str) if sync_workers_str else None
 
     # Validate project structure
     if not validate_project_structure():
@@ -118,6 +121,7 @@ def create_app_instance():
         logs_dir=logs_path,
         enable_ui=True,
         enable_auth=enable_auth,
+        sync_workers=sync_workers,
     )
 
     # Mount MCP if enabled
@@ -135,6 +139,7 @@ def main(
     openapi_format: str = "json",
     mcp: bool = False,
     auth: bool = False,
+    sync_workers: int | None = None,
 ):
     """Main server execution logic.
 
@@ -192,6 +197,7 @@ def main(
             logs_dir=logs_path,
             enable_ui=True,
             enable_auth=auth,
+            sync_workers=sync_workers,
         )
 
         # Mount MCP if enabled
@@ -275,6 +281,8 @@ def main(
             os.environ[ENV_LOGS_DIR] = str(logs_path)
             os.environ[ENV_ENABLE_MCP] = str(mcp).lower()
             os.environ[ENV_AUTH_ENABLED] = str(auth).lower()
+            if sync_workers is not None:
+                os.environ[ENV_SYNC_WORKERS] = str(sync_workers)
 
             # Get project root and src directory for watching
             project_root = Path.cwd()
@@ -318,6 +326,7 @@ if __name__ == "__main__":
     parser.add_argument("--openapi-format", choices=["json", "yaml"], default="json")
     parser.add_argument("--mcp", action="store_true", help="Enable MCP server at /mcp")
     parser.add_argument("--auth", action="store_true", help="Enable API authentication")
+    parser.add_argument("--sync-workers", type=int, default=None, help="Number of sync worker threads")
     args = parser.parse_args()
 
     main(
@@ -329,4 +338,5 @@ if __name__ == "__main__":
         openapi_format=args.openapi_format,
         mcp=args.mcp,
         auth=args.auth,
+        sync_workers=args.sync_workers,
     )
