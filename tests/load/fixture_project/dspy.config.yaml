@@ -1,0 +1,24 @@
+app_id: load-test-app
+models:
+  default: model-alpha
+  registry:
+    model-alpha:
+      model: openai/mock-alpha
+      api_base: http://127.0.0.1:9999/v1
+      api_key: mock-key
+      model_type: chat
+      max_tokens: 100
+      temperature: 1.0
+      cache: false
+    model-beta:
+      model: openai/mock-beta
+      api_base: http://127.0.0.1:9999/v1
+      api_key: mock-key
+      model_type: chat
+      max_tokens: 100
+      temperature: 1.0
+      cache: false
+
+program_models:
+  SimplePredict: model-alpha
+  AsyncPredict: model-beta
