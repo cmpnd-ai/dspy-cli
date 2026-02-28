@@ -15,7 +15,7 @@ from dspy_cli.config import get_model_config, get_program_model
 from dspy_cli.discovery import discover_modules
 from dspy_cli.discovery.gateway_finder import get_gateways_for_module, is_cron_gateway
 from dspy_cli.gateway import APIGateway, IdentityGateway
-from dspy_cli.server.logging import setup_logging
+from dspy_cli.server.logging import setup_logging, start_log_writer, stop_log_writer
 from dspy_cli.server.metrics import get_all_metrics, get_program_metrics_cached
 from dspy_cli.server.routes import create_program_routes
 from dspy_cli.server.scheduler import GatewayScheduler
@@ -47,6 +47,7 @@ def create_app(
     """
     # Setup logging
     setup_logging()
+    start_log_writer()
 
     # Create FastAPI app
     app = FastAPI(
@@ -331,6 +332,8 @@ async def lifespan(app: FastAPI):
             shutdown_fn()
         except Exception as e:
             logger.warning(f"Gateway shutdown error: {e}")
+
+    stop_log_writer()
 
 
 def _create_lm_instance(model_config: Dict) -> dspy.LM:
