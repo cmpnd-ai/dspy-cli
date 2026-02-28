@@ -221,7 +221,8 @@ def main(
         click.echo("  2. Subclass dspy.Module")
         click.echo("  3. Are not named with a leading underscore")
         click.echo("  4. If you are using external dependencies:")
-        click.echo("     - Ensure your venv is activated")
+        from dspy_cli.utils.venv import venv_activate_command
+        click.echo(f"     - Ensure your venv is activated ({venv_activate_command()})")
         click.echo("     - Make sure you have dspy-cli as a local dependency")
         click.echo("     - Install them using pip install -e .")
 

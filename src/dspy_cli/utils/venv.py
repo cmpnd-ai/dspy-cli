@@ -143,8 +143,26 @@ def validate_python_version(python: Path, min_version: tuple = (3, 9)) -> tuple[
         return False, ""
 
 
+def _is_fish_shell() -> bool:
+    """Return True when the current interactive shell is fish."""
+    if os.environ.get("FISH_VERSION"):
+        return True
+    return os.environ.get("SHELL", "").endswith("/fish")
+
+
+def venv_activate_command(venv_dir: str = ".venv") -> str:
+    """Return the shell-appropriate venv activation command."""
+    if sys.platform == "win32":
+        return f"{venv_dir}\\Scripts\\activate"
+    if _is_fish_shell():
+        return f"source {venv_dir}/bin/activate.fish"
+    return f"source {venv_dir}/bin/activate"
+
+
 def show_venv_warning():
     """Display warning and guidance when no venv is detected."""
+    activate_cmd = venv_activate_command()
+
     click.echo(click.style("⚠ Warning: No virtual environment detected", fg="yellow"))
     click.echo()
     click.echo("Running without a project venv may cause import errors if dependencies")
@@ -154,7 +172,7 @@ def show_venv_warning():
     click.echo("  1. Add dspy-cli to your project:")
     click.echo("     uv add dspy-cli")
     click.echo("  2. Create and activate a venv:")
-    click.echo("     uv sync  (or python -m venv .venv && source .venv/bin/activate)")
+    click.echo(f"     uv sync  (or python -m venv .venv && {activate_cmd})")
     click.echo("  3. Use a task runner:")
     click.echo("     uv run dspy-cli serve")
     click.echo("  4. Specify Python interpreter:")

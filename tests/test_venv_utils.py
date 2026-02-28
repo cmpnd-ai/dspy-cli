@@ -7,7 +7,12 @@ import tempfile
 from pathlib import Path
 
 
-from dspy_cli.utils.venv import sanitize_env_for_exec, validate_python_version
+from dspy_cli.utils.venv import (
+    _is_fish_shell,
+    sanitize_env_for_exec,
+    validate_python_version,
+    venv_activate_command,
+)
 
 
 class TestValidatePythonVersion:
@@ -119,3 +124,29 @@ class TestSanitizeEnv:
         
         # Cleanup
         os.environ.pop("MY_CUSTOM_VAR", None)
+
+
+class TestVenvActivateCommand:
+    """Tests for shell-aware activation command."""
+
+    def test_fish_via_env_var(self, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "darwin")
+        monkeypatch.setenv("FISH_VERSION", "3.6.1")
+        assert _is_fish_shell()
+        assert venv_activate_command() == "source .venv/bin/activate.fish"
+
+    def test_fish_via_shell_path(self, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "darwin")
+        monkeypatch.delenv("FISH_VERSION", raising=False)
+        monkeypatch.setenv("SHELL", "/usr/local/bin/fish")
+        assert _is_fish_shell()
+
+    def test_non_fish_unix(self, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "darwin")
+        monkeypatch.delenv("FISH_VERSION", raising=False)
+        monkeypatch.setenv("SHELL", "/bin/bash")
+        assert venv_activate_command() == "source .venv/bin/activate"
+
+    def test_windows(self, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "win32")
+        assert venv_activate_command() == r".venv\Scripts\activate"
