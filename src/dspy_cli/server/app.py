@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, List, Union
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 
 import dspy
@@ -184,6 +185,22 @@ def create_app(
             else:
                 logger.warning(f"Unknown gateway type for {module.name}: {type(gateway)}")
 
+    # Health check endpoints
+    @app.get("/health/live")
+    async def liveness():
+        """Liveness probe -- returns 200 if the process is running."""
+        return {"status": "alive"}
+
+    @app.get("/health/ready")
+    async def readiness():
+        """Readiness probe -- returns 200 when all LM instances are initialized."""
+        if not modules:
+            return JSONResponse(status_code=503, content={"status": "not_ready", "reason": "no modules discovered"})
+        missing = [m.name for m in modules if m.name not in app.state.program_lms]
+        if missing:
+            return JSONResponse(status_code=503, content={"status": "not_ready", "reason": f"LMs not initialized: {missing}"})
+        return {"status": "ready", "programs": len(modules)}
+
     # Add programs list endpoint
     @app.get("/programs")
     async def list_programs():
@@ -319,13 +336,13 @@ async def lifespan(app: FastAPI):
     scheduler = getattr(app.state, "scheduler", None)
     if scheduler and scheduler.job_count > 0:
         scheduler.start()
-    
+
     yield
-    
+
     # Shutdown
     if scheduler and scheduler.job_count > 0:
         scheduler.shutdown()
-    
+
     for shutdown_fn in getattr(app.state, "_gateway_shutdowns", []):
         try:
             shutdown_fn()
@@ -349,6 +366,7 @@ def _create_lm_instance(model_config: Dict) -> dspy.LM:
     max_tokens = model_config.get("max_tokens")
     api_key = model_config.get("api_key")
     api_base = model_config.get("api_base")
+    cache = model_config.get("cache")
 
     # Build kwargs
     kwargs = {}
@@ -360,6 +378,8 @@ def _create_lm_instance(model_config: Dict) -> dspy.LM:
         kwargs["api_key"] = api_key
     if api_base is not None:
         kwargs["api_base"] = api_base
+    if cache is not None:
+        kwargs["cache"] = cache
 
     # Create and return LM instance
     return dspy.LM(
@@ -378,8 +398,9 @@ def _configure_dspy_model(model_config: Dict):
     # Create LM instance
     lm = _create_lm_instance(model_config)
 
-    # Configure DSPy
-    dspy.settings.configure(lm=lm)
+    # Disable global history: it's an unprotected plain list that races under
+    # concurrent async/threaded requests. Inference logs capture everything we need.
+    dspy.settings.configure(lm=lm, disable_history=True)
 
     model = model_config.get("model")
     model_type = model_config.get("model_type", "chat")

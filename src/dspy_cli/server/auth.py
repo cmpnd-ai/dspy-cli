@@ -27,7 +27,7 @@ ENV_API_TOKEN = "DSPY_API_KEY"
 ENV_AUTH_ENABLED = "DSPY_CLI_AUTH_ENABLED"
 
 # Paths that don't require authentication (defaults)
-DEFAULT_OPEN_PATHS = {"/login", "/health", "/favicon.ico"}
+DEFAULT_OPEN_PATHS = {"/login", "/health", "/health/live", "/health/ready", "/favicon.ico"}
 
 
 def get_api_token() -> str | None:
