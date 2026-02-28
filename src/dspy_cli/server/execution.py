@@ -277,7 +277,7 @@ async def execute_pipeline(
         logger.info(f"Executing {program_name} with inputs: {inputs}")
 
         with dspy.context(lm=request_lm):
-            if hasattr(instance, 'aforward'):
+            if module.has_native_async:
                 result = await instance.acall(**inputs)
             else:
                 result = instance(**inputs)

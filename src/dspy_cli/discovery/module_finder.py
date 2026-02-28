@@ -28,6 +28,7 @@ class DiscoveredModule:
     forward_input_fields: Optional[Dict[str, Any]] = None  # Input field types from forward() method
     forward_output_fields: Optional[Dict[str, Any]] = None  # Output field types from forward() method
     is_forward_typed: bool = False  # True if forward() has proper type annotations
+    has_native_async: bool = False  # True if the module defines its own aforward()
     gateway_classes: List[Type["Gateway"]] = None  # Gateway classes if specified on module (supports list)
 
     # Backward compatibility: single gateway_class property
@@ -41,6 +42,23 @@ class DiscoveredModule:
     def instantiate(self, lm: dspy.LM | None = None) -> dspy.Module:
         """Create an instance of this module."""
         return self.class_obj()
+
+
+def _has_user_implemented_aforward(cls: Type[dspy.Module]) -> bool:
+    """Check if a class (or an intermediate base) defines aforward().
+
+    Walks the MRO but stops before dspy.Module itself, so the default
+    base-class aforward is ignored while user-defined aforward on any
+    intermediate superclass is still detected.
+    """
+    for klass in cls.__mro__:
+        if klass is dspy.Module or klass is object:
+            break
+        if 'aforward' in klass.__dict__:
+            method = klass.__dict__['aforward']
+            if callable(method) or isinstance(method, (staticmethod, classmethod)):
+                return True
+    return False
 
 
 def discover_modules(
@@ -135,6 +153,10 @@ def discover_modules(
                 # Extract gateway classes if specified (supports single or list)
                 gateway_classes = _extract_gateway_classes(obj)
 
+                native_async = _has_user_implemented_aforward(obj)
+                if native_async:
+                    logger.info(f"Module {name} has native async support (aforward)")
+
                 discovered.append(
                     DiscoveredModule(
                         name=name,
@@ -144,6 +166,7 @@ def discover_modules(
                         forward_input_fields=forward_info.get("inputs"),
                         forward_output_fields=forward_info.get("outputs"),
                         is_forward_typed=forward_info.get("is_typed", False),
+                        has_native_async=native_async,
                         gateway_classes=gateway_classes,
                     )
                 )

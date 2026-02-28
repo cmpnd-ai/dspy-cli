@@ -7,6 +7,7 @@ import dspy
 from dspy_cli.discovery.module_finder import (
     DiscoveredModule,
     _extract_gateway_classes,
+    _has_user_implemented_aforward,
     discover_modules,
 )
 from dspy_cli.gateway import APIGateway, CronGateway, IdentityGateway
@@ -120,6 +121,65 @@ class TestExtractGatewayClasses:
         result = _extract_gateway_classes(ModuleWithString)
 
         assert result == []
+
+
+class TestHasUserImplementedAforward:
+    """Tests for _has_user_implemented_aforward."""
+
+    def test_returns_false_for_plain_module(self):
+        class PlainModule(dspy.Module):
+            def forward(self, x: str) -> str:
+                return x
+
+        assert _has_user_implemented_aforward(PlainModule) is False
+
+    def test_returns_true_for_direct_aforward(self):
+        class AsyncModule(dspy.Module):
+            def forward(self, x: str) -> str:
+                return x
+
+            async def aforward(self, x: str) -> str:
+                return x
+
+        assert _has_user_implemented_aforward(AsyncModule) is True
+
+    def test_returns_true_for_inherited_aforward_from_intermediate_base(self):
+        """aforward defined on an intermediate class (not dspy.Module) should be detected."""
+        class AsyncBase(dspy.Module):
+            def forward(self, x: str) -> str:
+                return x
+
+            async def aforward(self, x: str) -> str:
+                return x
+
+        class ConcreteChild(AsyncBase):
+            pass
+
+        assert _has_user_implemented_aforward(ConcreteChild) is True
+
+    def test_returns_false_for_dspy_module_default_aforward(self):
+        """The base dspy.Module aforward (if any) should not count."""
+        class BasicModule(dspy.Module):
+            def forward(self, x: str) -> str:
+                return x
+
+        assert _has_user_implemented_aforward(BasicModule) is False
+
+    def test_deep_inheritance_chain(self):
+        class Base(dspy.Module):
+            def forward(self, x: str) -> str:
+                return x
+
+            async def aforward(self, x: str) -> str:
+                return x
+
+        class Mid(Base):
+            pass
+
+        class Leaf(Mid):
+            pass
+
+        assert _has_user_implemented_aforward(Leaf) is True
 
 
 class TestDiscoverModulesWithGateway:
