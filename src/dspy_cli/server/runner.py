@@ -124,8 +124,11 @@ def create_app_instance():
         sync_workers=sync_workers,
     )
 
-    # Mount MCP if enabled
-    _maybe_mount_mcp(app, enable_mcp)
+    # Register post-init callbacks (run by the lifespan after module discovery)
+    def _on_ready():
+        _maybe_mount_mcp(app, enable_mcp)
+
+    app.state._on_ready_callbacks = [_on_ready]
 
     return app
 
@@ -199,61 +202,26 @@ def main(
             enable_auth=auth,
             sync_workers=sync_workers,
         )
-
-        # Mount MCP if enabled
-        def notify_cli(msg: str, level: str = "info"):
-            color = "green" if level == "info" else "yellow"
-            click.echo(click.style(msg, fg=color))
-
-        _maybe_mount_mcp(app, mcp, notify=notify_cli)
-
     except Exception as e:
         click.echo(click.style(f"Error creating application: {e}", fg="red"))
         raise click.Abort()
 
-    click.echo()
-    click.echo(click.style("Discovered Programs:", fg="cyan", bold=True))
-    click.echo()
+    # Register post-init callbacks (run by the lifespan after module discovery)
+    def _on_ready():
+        _maybe_mount_mcp(app, mcp)
+        if save_openapi:
+            try:
+                spec = generate_openapi_spec(app)
+                spec_filename = f"openapi.{openapi_format}"
+                spec_path = Path.cwd() / spec_filename
+                save_openapi_spec(spec, spec_path, format=openapi_format)
+                logger.info("OpenAPI spec saved: %s", spec_filename)
+            except Exception as e:
+                logger.warning("Could not save OpenAPI spec: %s", e)
 
-    if hasattr(app.state, "modules") and app.state.modules:
-        for module in app.state.modules:
-            click.echo(f"  • {module.name}")
-            click.echo(f"    POST /{module.name}")
-    else:
-        click.echo(click.style("  No programs discovered", fg="yellow"))
-        click.echo()
-        click.echo("Make sure your DSPy modules:")
-        click.echo("  1. Are in src/<package>/modules/")
-        click.echo("  2. Subclass dspy.Module")
-        click.echo("  3. Are not named with a leading underscore")
-        click.echo("  4. If you are using external dependencies:")
-        from dspy_cli.utils.venv import venv_activate_command
-        click.echo(f"     - Ensure your venv is activated ({venv_activate_command()})")
-        click.echo("     - Make sure you have dspy-cli as a local dependency")
-        click.echo("     - Install them using pip install -e .")
+    app.state._on_ready_callbacks = [_on_ready]
 
     click.echo()
-    click.echo(click.style("Additional Endpoints:", fg="cyan", bold=True))
-    click.echo()
-    click.echo("  GET /programs - List all programs and their schemas")
-    click.echo("  GET /openapi.json - OpenAPI specification")
-    click.echo("  GET / - Web UI for interactive testing")
-    if mcp:
-        click.echo("  POST /mcp - Model Context Protocol server")
-    click.echo()
-
-    # Generate and save OpenAPI spec if requested
-    if save_openapi:
-        try:
-            spec = generate_openapi_spec(app)
-            spec_filename = f"openapi.{openapi_format}"
-            spec_path = Path.cwd() / spec_filename
-            save_openapi_spec(spec, spec_path, format=openapi_format)
-            click.echo(click.style(f"✓ OpenAPI spec saved: {spec_filename}", fg="green"))
-            click.echo()
-        except Exception as e:
-            click.echo(click.style(f"Warning: Could not save OpenAPI spec: {e}", fg="yellow"))
-            click.echo()
 
     host_string = "localhost" if host == "0.0.0.0" else host
     click.echo(click.style("=" * 60, fg="cyan"))

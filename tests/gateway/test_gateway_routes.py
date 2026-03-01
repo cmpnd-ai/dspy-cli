@@ -184,9 +184,10 @@ class TestAPIGatewayRoutes:
             enable_ui=False
         )
         
-        routes = [r.path for r in app.routes if hasattr(r, "path")]
-        assert "/webhooks/process" in routes
-        assert "/WebhookProcessor" not in routes
+        with TestClient(app):
+            routes = [r.path for r in app.routes if hasattr(r, "path")]
+            assert "/webhooks/process" in routes
+            assert "/WebhookProcessor" not in routes
 
     def test_custom_gateway_input_transform(self, gateway_project, test_config):
         """Gateway should transform webhook payload to pipeline inputs."""
@@ -246,8 +247,9 @@ class TestIdentityGatewayRoutes:
             enable_ui=False
         )
         
-        routes = [r.path for r in app.routes if hasattr(r, "path")]
-        assert "/Echo" in routes
+        with TestClient(app):
+            routes = [r.path for r in app.routes if hasattr(r, "path")]
+            assert "/Echo" in routes
 
     def test_identity_gateway_passthrough(self, identity_gateway_project, test_config):
         """IdentityGateway should pass inputs/outputs unchanged."""
