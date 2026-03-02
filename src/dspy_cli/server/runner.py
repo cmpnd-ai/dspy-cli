@@ -21,6 +21,8 @@ ENV_ENABLE_MCP = "DSPY_CLI_ENABLE_MCP"
 ENV_LOGS_DIR = "DSPY_CLI_LOGS_DIR"
 ENV_AUTH_ENABLED = "DSPY_CLI_AUTH_ENABLED"
 ENV_SYNC_WORKERS = "DSPY_CLI_SYNC_WORKERS"
+ENV_SAVE_OPENAPI = "DSPY_CLI_SAVE_OPENAPI"
+ENV_OPENAPI_FORMAT = "DSPY_CLI_OPENAPI_FORMAT"
 
 
 def _maybe_mount_mcp(app, enable: bool, *, path: str = MCP_DEFAULT_PATH, notify=None) -> bool:
@@ -89,6 +91,8 @@ def create_app_instance():
     enable_auth = os.environ.get(ENV_AUTH_ENABLED, "false").lower() == "true"
     sync_workers_str = os.environ.get(ENV_SYNC_WORKERS)
     sync_workers = int(sync_workers_str) if sync_workers_str else None
+    save_openapi = os.environ.get(ENV_SAVE_OPENAPI, "true").lower() == "true"
+    openapi_format = os.environ.get(ENV_OPENAPI_FORMAT, "json")
 
     # Validate project structure
     if not validate_project_structure():
@@ -127,6 +131,15 @@ def create_app_instance():
     # Register post-init callbacks (run by the lifespan after module discovery)
     def _on_ready():
         _maybe_mount_mcp(app, enable_mcp)
+        if save_openapi:
+            try:
+                spec = generate_openapi_spec(app)
+                spec_filename = f"openapi.{openapi_format}"
+                spec_path = Path.cwd() / spec_filename
+                save_openapi_spec(spec, spec_path, format=openapi_format)
+                logger.info("OpenAPI spec saved: %s", spec_filename)
+            except Exception as e:
+                logger.warning("Could not save OpenAPI spec: %s", e)
 
     app.state._on_ready_callbacks = [_on_ready]
 
@@ -250,6 +263,8 @@ def main(
             os.environ[ENV_LOGS_DIR] = str(logs_path)
             os.environ[ENV_ENABLE_MCP] = str(mcp).lower()
             os.environ[ENV_AUTH_ENABLED] = str(auth).lower()
+            os.environ[ENV_SAVE_OPENAPI] = str(save_openapi).lower()
+            os.environ[ENV_OPENAPI_FORMAT] = openapi_format
             if sync_workers is not None:
                 os.environ[ENV_SYNC_WORKERS] = str(sync_workers)
 
