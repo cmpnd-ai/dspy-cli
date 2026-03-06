@@ -103,21 +103,22 @@ def test_create_app_discovers_modules(temp_project, test_config):
         enable_ui=False
     )
     
-    # Verify Echo module was discovered
-    assert hasattr(app.state, "modules")
-    module_names = [m.name for m in app.state.modules]
-    assert "Echo" in module_names
-    
-    # Verify POST /Echo route exists
-    routes = [r for r in app.routes]
-    echo_route = None
-    for route in routes:
-        if hasattr(route, "path") and route.path == "/Echo":
-            echo_route = route
-            break
-    
-    assert echo_route is not None, "POST /Echo route not found"
-    assert "POST" in echo_route.methods
+    with TestClient(app):
+        # Verify Echo module was discovered
+        assert hasattr(app.state, "modules")
+        module_names = [m.name for m in app.state.modules]
+        assert "Echo" in module_names
+        
+        # Verify POST /Echo route exists
+        routes = [r for r in app.routes]
+        echo_route = None
+        for route in routes:
+            if hasattr(route, "path") and route.path == "/Echo":
+                echo_route = route
+                break
+        
+        assert echo_route is not None, "POST /Echo route not found"
+        assert "POST" in echo_route.methods
 
 
 def test_openapi_spec_generation(temp_project, test_config):
@@ -130,17 +131,18 @@ def test_openapi_spec_generation(temp_project, test_config):
         enable_ui=False
     )
     
-    # Generate spec
-    spec = generate_openapi_spec(app)
-    
-    # Verify basic structure
-    assert "openapi" in spec
-    assert "paths" in spec
-    assert "/Echo" in spec["paths"]
-    assert "post" in spec["paths"]["/Echo"]
-    
-    # Verify other standard endpoints
-    assert "/programs" in spec["paths"]
+    with TestClient(app):
+        # Generate spec (routes registered during lifespan)
+        spec = generate_openapi_spec(app)
+        
+        # Verify basic structure
+        assert "openapi" in spec
+        assert "paths" in spec
+        assert "/Echo" in spec["paths"]
+        assert "post" in spec["paths"]["/Echo"]
+        
+        # Verify other standard endpoints
+        assert "/programs" in spec["paths"]
 
 
 def test_save_openapi_spec_json(temp_project, test_config):
@@ -153,17 +155,17 @@ def test_save_openapi_spec_json(temp_project, test_config):
         enable_ui=False
     )
     
-    spec = generate_openapi_spec(app)
-    output_path = temp_project["root"] / "openapi.json"
-    
-    save_openapi_spec(spec, output_path, format="json")
-    
-    assert output_path.exists()
-    
-    # Verify it's valid JSON
-    import json
-    content = json.loads(output_path.read_text())
-    assert "/Echo" in content["paths"]
+    with TestClient(app):
+        spec = generate_openapi_spec(app)
+        output_path = temp_project["root"] / "openapi.json"
+        
+        save_openapi_spec(spec, output_path, format="json")
+        
+        assert output_path.exists()
+        
+        import json
+        content = json.loads(output_path.read_text())
+        assert "/Echo" in content["paths"]
 
 
 def test_save_openapi_spec_yaml(temp_project, test_config):
@@ -176,17 +178,17 @@ def test_save_openapi_spec_yaml(temp_project, test_config):
         enable_ui=False
     )
     
-    spec = generate_openapi_spec(app)
-    output_path = temp_project["root"] / "openapi.yaml"
-    
-    save_openapi_spec(spec, output_path, format="yaml")
-    
-    assert output_path.exists()
-    
-    # Verify it's valid YAML
-    import yaml
-    content = yaml.safe_load(output_path.read_text())
-    assert "/Echo" in content["paths"]
+    with TestClient(app):
+        spec = generate_openapi_spec(app)
+        output_path = temp_project["root"] / "openapi.yaml"
+        
+        save_openapi_spec(spec, output_path, format="yaml")
+        
+        assert output_path.exists()
+        
+        import yaml
+        content = yaml.safe_load(output_path.read_text())
+        assert "/Echo" in content["paths"]
 
 
 def test_runner_main_no_reload(temp_project, test_config, monkeypatch):
@@ -196,7 +198,7 @@ def test_runner_main_no_reload(temp_project, test_config, monkeypatch):
     # Mock load_config to return test config
     monkeypatch.setattr("dspy_cli.server.runner.load_config", lambda: test_config)
     
-    # Mock uvicorn.run to avoid starting server
+    # Mock uvicorn.run to trigger the lifespan (via TestClient) so _on_ready runs
     calls = []
     def fake_run(app_or_str, **kw):
         calls.append({
@@ -206,6 +208,10 @@ def test_runner_main_no_reload(temp_project, test_config, monkeypatch):
             "reload": kw.get("reload", False),
             "factory": kw.get("factory", False)
         })
+        # Simulate startup so _on_ready callbacks fire (e.g. OpenAPI save)
+        if not isinstance(app_or_str, str):
+            with TestClient(app_or_str):
+                pass
     
     monkeypatch.setattr("uvicorn.run", fake_run)
     
@@ -226,7 +232,7 @@ def test_runner_main_no_reload(temp_project, test_config, monkeypatch):
     assert calls[0]["port"] == 1234
     assert calls[0]["reload"] is False
     
-    # Verify OpenAPI was saved
+    # Verify OpenAPI was saved (by _on_ready callback during lifespan)
     assert (temp_project["root"] / "openapi.json").exists()
 
 
