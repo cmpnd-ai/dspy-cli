@@ -61,3 +61,9 @@ mlartifacts
 
 # Documentation
 /site/
+
+# Load test results
+tests/load/results/*.csv
+tests/load/results/*.html
+tests/load/fixture_project/openapi.json
+tests/load/fixture_project/logs/*.log
